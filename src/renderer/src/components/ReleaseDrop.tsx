@@ -5,11 +5,10 @@
  * the other thing: a page the release author designs, shown once, at the size the
  * work deserves.
  *
- * The chrome follows the landing site (docs/DESIGN.md), not the app's pixel
- * idiom and not a generic rounded sheet: warm paper, square corners, a thick
- * ink border, a hard offset shadow with no blur, and a dark mono title bar with
- * three square dots. It is the `.win` window from munderdiffl.in, so the moment
- * a user opens the drop it reads as the same product they downloaded from.
+ * The chrome follows the app (fork perso, Orca style): a theme-token surface,
+ * a 1px border, rounded corners and a soft shadow, with a plain title bar. The
+ * authored page inside the frame keeps its own palette and fonts
+ * (shared/releaseDrop.ts); only this chrome around it is app-styled.
  *
  * There is NO chrome button here, on purpose. The app frames the drop and gets
  * out of the way; every action the release wants to offer (read the notes, star
@@ -35,6 +34,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { buildDropSrcDoc } from '../../../shared/releaseDrop';
+import { Icon } from './Icon';
 
 export interface ReleaseDropProps {
   version: string;
@@ -43,16 +43,6 @@ export interface ReleaseDropProps {
   onDismiss: () => void;
 }
 
-// Landing site palette (docs/DESIGN.md §2). Restated here because the modal is
-// app chrome and cannot reach the site's stylesheet; kept in one place so the
-// frame's tokens in shared/releaseDrop.ts and this chrome never drift apart.
-const PAPER = '#FFFDF7';
-const INK = '#1B1B1B';
-const INK_FAINT = '#8A867A';
-const YELLOW = '#FFCA54';
-const SKY = '#72C2DF';
-const MAROON = '#B23A4E';
-const MONO = '"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 
 // How long the loader may cover the frame before it is revealed regardless.
 //
@@ -92,14 +82,11 @@ export function ReleaseDrop({ version, html, onDismiss }: ReleaseDropProps) {
 
   return (
     <div
-      // Backdrop. Clicking it dismisses, same meaning as "later". Warm ink over
-      // the app with the site's dotted paper grid, so the window sits on paper
-      // rather than floating in a grey void.
+      // Backdrop. Clicking it dismisses, same meaning as "later".
       onClick={onDismiss}
       style={{
         position: 'fixed', inset: 0, zIndex: 600,
-        background:
-          'radial-gradient(rgba(255,253,247,0.16) 1px, transparent 1px) 0 0 / 22px 22px, rgba(27,27,27,0.72)',
+        background: 'rgba(0, 0, 0, 0.6)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 28,
         // Center with auto margins on the child and let the overlay scroll, so a
@@ -121,40 +108,35 @@ export function ReleaseDrop({ version, html, onDismiss }: ReleaseDropProps) {
           width: 'min(calc(82vh * 1.28), 92vw, 920px)',
           minHeight: 420,
           display: 'flex', flexDirection: 'column',
-          background: PAPER,
-          // The neo-brutalist window: square, 3px ink border, hard 10px offset
-          // shadow with no blur. Depth comes from the offset, not elevation.
-          border: `3px solid ${INK}`,
-          borderRadius: 0,
-          boxShadow: `12px 12px 0 ${INK}`,
+          background: 'var(--cth-paper-100)',
+          color: 'var(--cth-ink-900)',
+          border: '1px solid var(--cth-ink-300)',
+          borderRadius: 'var(--cth-radius-lg)',
+          boxShadow: '0 16px 48px rgba(0, 0, 0, 0.4)',
           overflow: 'hidden',
-          fontFamily: MONO
+          fontFamily: 'var(--cth-font-ui)'
         }}
       >
-        {/* Title bar: the site's `.win` header. Dark band, three square dots,
-            white mono title, and the only control the chrome owns: close. */}
+        {/* Title bar: product + version, an Esc hint, and the only control the
+            chrome owns: close. */}
         <div style={{
-          flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12,
-          padding: '10px 14px', background: INK, color: PAPER,
-          borderBottom: `3px solid ${INK}`
+          flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10,
+          padding: '10px 12px 10px 16px',
+          borderBottom: '1px solid var(--cth-ink-100)'
         }}>
-          <span aria-hidden style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-            <i style={{ width: 10, height: 10, background: YELLOW, display: 'block' }} />
-            <i style={{ width: 10, height: 10, background: '#72C2DF', display: 'block' }} />
-            <i style={{ width: 10, height: 10, background: '#B23A4E', display: 'block' }} />
-          </span>
           <span style={{
-            flex: 1, minWidth: 0, fontSize: 12, fontWeight: 700, letterSpacing: '.08em', whiteSpace: 'nowrap', overflow: 'hidden',
-            textOverflow: 'ellipsis'
+            flex: 1, minWidth: 0, fontSize: 13, fontWeight: 500, lineHeight: '18px',
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
           }}>
-            Munder Difflin <span style={{ color: YELLOW }}>v{version.replace(/^v/, '')}</span>
-            <span style={{ color: INK_FAINT, fontWeight: 500, marginLeft: 10, letterSpacing: '.12em' }}>
-              / release notes
+            Munder Difflin <span style={{ color: 'var(--cth-ink-700)' }}>v{version.replace(/^v/, '')}</span>
+            <span style={{ color: 'var(--cth-ink-500)', fontWeight: 400, marginLeft: 8 }}>
+              · Release notes
             </span>
           </span>
           <span aria-hidden style={{
-            flexShrink: 0, fontSize: 11, fontWeight: 500, letterSpacing: '.12em',
-            color: INK_FAINT
+            flexShrink: 0, fontSize: 11, lineHeight: '16px', padding: '0 5px',
+            fontFamily: 'var(--cth-font-mono)', color: 'var(--cth-ink-500)',
+            border: '1px solid var(--cth-ink-300)', borderRadius: 4
           }}>
             esc
           </span>
@@ -164,12 +146,11 @@ export function ReleaseDrop({ version, html, onDismiss }: ReleaseDropProps) {
             title="Close (Esc)"
             style={{
               flexShrink: 0, width: 26, height: 26, padding: 0,
-              background: PAPER, color: INK, border: `2px solid ${PAPER}`,
-              borderRadius: 0, cursor: 'pointer',
-              fontFamily: MONO, fontSize: 13, fontWeight: 700, lineHeight: 1,
+              background: 'transparent', color: 'var(--cth-ink-700)',
+              border: 'none', borderRadius: 'var(--cth-radius-sm)', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}
-          >✕</button>
+          ><Icon name="x" /></button>
         </div>
 
         {/* The frame area. Relative so the loader can sit exactly over the drop,
@@ -177,7 +158,7 @@ export function ReleaseDrop({ version, html, onDismiss }: ReleaseDropProps) {
             loader is a separate overlay that is REMOVED on reveal, so the failure
             mode of a broken reveal is a brief extra spinner, never a permanently
             hidden frame. */}
-        <div style={{ position: 'relative', flex: 1, minHeight: 0, background: PAPER }}>
+        <div style={{ position: 'relative', flex: 1, minHeight: 0, background: 'var(--cth-paper-100)' }}>
           {/* The drop itself. `allow-popups` is the ONLY grant: it is what lets an
               authored <a target="_blank"> reach the OS browser, and it carries no
               script, same-origin, form or navigation rights with it. */}
@@ -192,7 +173,7 @@ export function ReleaseDrop({ version, html, onDismiss }: ReleaseDropProps) {
             onLoad={reveal}
             style={{
               position: 'absolute', inset: 0, width: '100%', height: '100%',
-              border: 'none', background: PAPER
+              border: 'none', background: 'var(--cth-paper-100)'
             }}
           />
           {!revealed && <DropLoader />}
@@ -202,8 +183,8 @@ export function ReleaseDrop({ version, html, onDismiss }: ReleaseDropProps) {
   );
 }
 
-/** The window before the frame paints. Warm paper (never a white flash) with the
- *  title bar's three square dots marching, in the landing-site palette. Pure
+/** The window before the frame paints: the dialog surface with three soft
+ *  pulsing dots, in the app's tokens. Pure
  *  chrome — it carries no control; dismissal stays Esc / close / backdrop. It is
  *  removed the instant the frame is revealed, so it is only ever seen briefly. */
 function DropLoader() {
@@ -217,7 +198,7 @@ function DropLoader() {
       style={{
         position: 'absolute', inset: 0, zIndex: 1,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        gap: 18, background: PAPER
+        gap: 14, background: 'var(--cth-paper-100)'
       }}
     >
       <style>{`
@@ -230,12 +211,12 @@ function DropLoader() {
         }
       `}</style>
       <span aria-hidden style={{ display: 'flex', gap: 8 }}>
-        {[YELLOW, SKY, MAROON].map((c, i) => (
+        {[0, 1, 2].map((i) => (
           <i
-            key={c}
+            key={i}
             className="drop-load-dot"
             style={{
-              width: 12, height: 12, background: c, display: 'block',
+              width: 8, height: 8, borderRadius: '50%', background: 'var(--cth-ink-500)', display: 'block',
               animation: 'drop-load-pulse 1.1s ease-in-out infinite',
               animationDelay: `${i * 0.16}s`
             }}
@@ -243,7 +224,7 @@ function DropLoader() {
         ))}
       </span>
       <span style={{
-        fontFamily: MONO, fontSize: 11, fontWeight: 500, letterSpacing: '.18em', color: INK_FAINT
+        fontFamily: 'var(--cth-font-ui)', fontSize: 12, color: 'var(--cth-ink-500)'
       }}>
         Loading
       </span>
