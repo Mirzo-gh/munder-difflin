@@ -3,7 +3,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { PixelPanel } from './PixelPanel';
 import { PixelButton } from './PixelButton';
 import { Icon, type IconName } from './Icon';
-import { SpritePortrait } from './SpritePortrait';
+import { AgentMonogram } from './AgentMonogram';
 import { ProviderLogo } from './ProviderLogo';
 import { modelsForProvider, onboardingEngineChoices, type AgentProvider, type HarnessConfig } from '@/store/config';
 import { providerPreset } from '@shared/agentProvider';
@@ -268,14 +268,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             {step === 'persona' && (
               <>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <div style={{
-                    width: 56, height: 56, flexShrink: 0,
-                    background: 'var(--cth-sky-light)',
-                    boxShadow: 'inset 0 0 0 1.5px var(--cth-ink-500)',
-                    display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden'
-                  }}>
-                    <SpritePortrait character="michael" scale={2} />
-                  </div>
+                  <AgentMonogram name={godName || 'mi'} accent="sky" size={40} />
                   <div>
                     <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 12, lineHeight: '18px' }}>
                       {t('onboarding.persona.headline')}
@@ -312,14 +305,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             {step === 'welcome' && (
               <>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <div style={{
-                    width: 56, height: 56, flexShrink: 0,
-                    background: 'var(--cth-sky-light)',
-                    boxShadow: 'inset 0 0 0 1.5px var(--cth-ink-500)',
-                    display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden'
-                  }}>
-                    <SpritePortrait character="michael" scale={2} />
-                  </div>
+                  <AgentMonogram name={godName || 'mi'} accent="sky" size={40} />
                   <div>
                     <div style={{
                       fontFamily: 'var(--cth-font-display)',

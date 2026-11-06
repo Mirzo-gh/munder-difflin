@@ -3,16 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { PixelPanel } from './PixelPanel';
 import { PixelBadge, StatusKind } from './PixelBadge';
 import { useHasTerminalDraft } from './terminalPool';
-import { SpritePortrait } from './SpritePortrait';
+import { AgentMonogram } from './AgentMonogram';
 import { RealtimeMichaelToggle } from './RealtimeMichaelToggle';
 import { CostHud } from '@/realtime/CostHud';
 import { AccentColorName } from '@/design/tokens';
-import { OfficeCharacterName } from '@/scene/office/cast';
 import { AgentNameEditor } from './AgentNameEditor';
 
 export interface AgentCardProps {
   name: string;
-  character: OfficeCharacterName;
   accent: AccentColorName;
   status: StatusKind;
   /** This agent's pty, if it has one. Only used to notice that the USER has
@@ -55,7 +53,7 @@ const fmtK = (n: number): string => `${Math.round(n / 1000)}k`;
  * and a slim gauge pinned to the bottom edge. Nothing overlaps anything.
  */
 export function AgentCard({
-  name, character, accent, status, ptyId, project, action, progress = 0,
+  name, accent, status, ptyId, project, action, progress = 0,
   contextTokens, contextLimit, selected, isGod, onClick, onRename,
   doingCount = 0, onTaskNoteClick, draggable, note, onEditNote
 }: AgentCardProps) {
@@ -184,20 +182,9 @@ export function AgentCard({
         noPadding
       >
         <div style={{ display: 'flex', gap: 8, height: '100%' }}>
-          {/* Portrait tile — vertically centred so the card reads calm and even. */}
-          <div style={{
-            width: 36, height: isGod ? 50 : 46, alignSelf: 'center',
-            // God's CARD is now accent-light, so the tile cannot be — it would
-            // vanish into its own background. Paper reads as an inset frame
-            // against the tint, which is what the tile is meant to look like.
-            background: isGod ? 'var(--cth-paper-100)' : `var(--cth-${accent}-light)`,
-            boxShadow: `inset 0 0 0 1px var(--cth-ink-${isGod ? '300' : '100'})`,
-            // Anchor the sprite's TOP: the 56px-tall portrait overflows this
-            // tile, and bottom-anchoring cropped the head — crop feet, not face.
-            display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflow: 'hidden',
-            flexShrink: 0
-          }}>
-            <SpritePortrait character={character} scale={2} />
+          {/* Monogram tile — vertically centred so the card reads calm and even. */}
+          <div style={{ alignSelf: 'center', flexShrink: 0 }}>
+            <AgentMonogram name={name} accent={accent} size={30} />
           </div>
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>

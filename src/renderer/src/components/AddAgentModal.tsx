@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useState, type CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next';
 import { PixelPanel } from './PixelPanel';
 import { PixelButton } from './PixelButton';
-import { SpritePortrait } from './SpritePortrait';
+import { AgentMonogram } from './AgentMonogram';
 import { Icon } from './Icon';
 import { ProviderLogo } from './ProviderLogo';
 import { useStore, type Agent } from '@/store/store';
@@ -670,43 +670,19 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                 {section === 'identity' && (
                   <>
                     <Row label={tr('addAgent.name')}>
-                      <input
-                        value={name}
-                        onChange={(e) => {
-                          const next = e.target.value;
-                          setName(next);
-                          const match = characterForName(next);
-                          if (match) setCharacter(match);
-                        }}
-                        placeholder={tr('addAgent.namePlaceholder')}
-                        style={inputStyle}
-                      />
-                    </Row>
-
-                    <Row label={tr('addAgent.character')}>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {OFFICE_CAST.map(c => (
-                          <button
-                            key={c.name}
-                            onClick={() => { setCharacter(c.name); setName(c.displayName); }}
-                            title={c.blurb}
-                            style={{
-                              padding: 4,
-                              background: character === c.name ? `var(--cth-${accent}-light)` : 'var(--cth-cream-100)',
-                              boxShadow: character === c.name
-                                ? 'inset 0 0 0 1.5px var(--cth-ink-500)'
-                                : 'inset 0 0 0 1px var(--cth-ink-100)',
-                              cursor: 'pointer',
-                              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                              border: 'none', width: 56
-                            }}
-                          >
-                            <div style={{ width: 44, height: 56, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden' }}>
-                              <SpritePortrait character={c.name} scale={2} />
-                            </div>
-                            <span style={{ fontSize: 11, color: 'var(--cth-ink-700)' }}>{c.displayName}</span>
-                          </button>
-                        ))}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <AgentMonogram name={name} accent={accent} size={36} />
+                        <input
+                          value={name}
+                          onChange={(e) => {
+                            const next = e.target.value;
+                            setName(next);
+                            const match = characterForName(next);
+                            if (match) setCharacter(match);
+                          }}
+                          placeholder={tr('addAgent.namePlaceholder')}
+                          style={{ ...inputStyle, flex: 1, minWidth: 0 }}
+                        />
                       </div>
                     </Row>
 

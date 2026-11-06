@@ -10,8 +10,7 @@ import { AgentControlStrip } from './AgentControlStrip';
 import { CommandCenterPanel } from './CommandCenterPanel';
 import { EditAgentModal } from './EditAgentModal';
 import { Icon } from './Icon';
-import { SpritePortrait } from './SpritePortrait';
-import { PORTRAIT_W } from '@/scene/office/portraitArt';
+import { AgentMonogram } from './AgentMonogram';
 import { RealtimeMichaelToggle } from './RealtimeMichaelToggle';
 import { CostHud } from '@/realtime/CostHud';
 import { useStore, type Agent } from '@/store/store';
@@ -38,20 +37,10 @@ const ROSTER_COLLAPSED_KEY = 'cth.fullscreen.rosterCollapsed';
  *  to the name however far the terminal is zoomed. */
 function rosterScale(zoom: number) {
   const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Math.round(n)));
-  // The portrait is sized in SPRITE steps, not free pixels. The art is an 18×28
-  // pixel stamp: widening the tile alone just pads it (which is what the old
-  // `clamp(zoom * 1.2, 18, 40)` did past 18px — a bigger frame around the same
-  // small figure), and a scale like 1.37× renders some pixel rows one device
-  // pixel tall and others two. Half-steps double every other row cleanly, so
-  // that is the grid the size moves on. Floor is 1.5× — 1× was too small to
-  // tell two hires apart at a glance, which is the tile's whole job.
-  const portraitScale = Math.min(2.5, Math.max(1.5, Math.round(zoom * 0.11 * 2) / 2));
   return {
     name: clamp(zoom * 0.48, 7, 14),
     group: clamp(zoom * 0.45, 7, 13),
-    note: clamp(zoom * 0.68, 10, 20),
-    portraitScale,
-    portrait: Math.round(PORTRAIT_W * portraitScale)
+    note: clamp(zoom * 0.68, 10, 20)
   };
 }
 
@@ -743,19 +732,7 @@ function SidebarRow({
           transition: 'opacity 120ms ease'
         }}
       >
-        <div style={{
-          width: scale.portrait, height: Math.round(scale.portrait * 1.3), flexShrink: 0,
-          background: `var(--cth-${agent.accent}-light)`,
-          boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
-          // Anchor the sprite's TOP: the portrait is taller than this tile, and
-          // bottom-anchoring cropped the head — crop feet, not face (v0.3.4).
-          display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-          overflow: 'hidden'
-        }}>
-          {/* The sprite is drawn at exactly the tile's width, so the figure
-              grows with the tile instead of floating in it. */}
-          <SpritePortrait character={agent.character} scale={scale.portraitScale} />
-        </div>
+        <AgentMonogram name={agent.name} accent={agent.accent} size={36} />
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
             <span style={{

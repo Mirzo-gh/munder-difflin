@@ -94,6 +94,9 @@
   --cth-panel-border-inset:    inset 0 0 0 1px var(--cth-ink-100);
   --cth-panel-border-terminal: inset 0 0 0 1px var(--cth-ink-300);
   --cth-panel-border-dialog:   inset 0 0 0 1px var(--cth-ink-500);
+
+  /* Agent monogram tile (dark square, accent-tinted letters) */
+  --cth-monogram-bg: #171717;
 }
 
 /* ── Dark theme ──────────────────────────────────────────────────────────────
@@ -170,4 +173,6 @@
 
   /* Hard shadow reads as depth, not void */
   --cth-shadow-hard: 4px 4px 0 rgba(0, 0, 0, 0.45);
+
+  --cth-monogram-bg: #262626;
 }

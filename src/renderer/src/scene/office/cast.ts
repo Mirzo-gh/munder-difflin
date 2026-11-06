@@ -7,7 +7,7 @@
 // sheets are no longer used for the cast. See assets/ATTRIBUTION.md.
 
 import { Texture } from 'pixi.js';
-import { paintPortrait, sceneFrameBufs, SCENE_W, SCENE_H } from './portraitArt';
+import { sceneFrameBufs, SCENE_W, SCENE_H } from './portraitArt';
 
 export type OfficeCharacterName =
   | 'michael' | 'jim' | 'pam' | 'dwight' | 'kevin' | 'angela'
@@ -85,16 +85,4 @@ export async function getCastFrames(name: OfficeCharacterName): Promise<Texture[
   const frames: Texture[][] = [frontRow, toRow(back), frontRow]; // down, up, right
   frameCache.set(name, frames);
   return frames;
-}
-
-/**
- * Paint a character's static portrait for cards / the picker (delegates to the
- * custom procedural composer in portraitArt.ts).
- */
-export async function paintCastPortrait(
-  ctx: CanvasRenderingContext2D,
-  name: OfficeCharacterName,
-  scale = 2,
-): Promise<void> {
-  paintPortrait(ctx, name, scale);
 }
