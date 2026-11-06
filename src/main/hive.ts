@@ -52,7 +52,8 @@ type McpDefaultsMap = { [id: string]: { enabled: boolean } } | undefined;
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-export type MessageAct = 'request' | 'inform' | 'propose' | 'query' | 'agree' | 'refuse' | 'done';
+import type { MessageAct } from '../shared/messageAct';
+export type { MessageAct };
 
 /** What `settleInbox` did to a released worker's mailbox. */
 export interface SettledInbox {

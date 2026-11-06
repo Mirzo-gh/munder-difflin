@@ -121,9 +121,9 @@ export interface HarnessConfig {
   circuitBreaker?: CircuitBreakerConfig;
   /** Enterprise Knowledge Graph (multimodal context for agents). Default OFF. */
   knowledgeGraph?: KnowledgeGraphConfig;
-  /** TV-show office themes feature flag (Settings picker + switch flow). Default OFF. */
+  /** Legacy (office scene removed): kept optional so older configs still load. */
   tvShowOffices?: boolean;
-  /** Active office map/cast theme (honored only when tvShowOffices is on). */
+  /** Legacy (office scene removed): kept optional so older configs still load. */
   officeTheme?: 'office' | 'friends' | 'brooklyn99' | 'siliconvalley' | 'got' | 'hogwarts';
   /** Per-CLI-provider local/self-hosted base URL (Ollama/LM Studio/vLLM, …) for the
    *  OpenCode/Crush/pi/qwen engines; applied at spawn. API KEYS are NOT stored here —
