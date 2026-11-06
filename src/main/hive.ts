@@ -43,6 +43,7 @@ import { preferredAgentRole } from '../shared/agentRole';
 import { mergeTaskLedger } from '../shared/taskLedger';
 import { expandTilde } from './fs';
 import { resolveGodName } from '../shared/godIdentity';
+import { INBOX_NUDGE_PROTOCOL, GOD_INBOX_REPORT } from '../shared/hiveNudge';
 
 /** The subset of HarnessConfig the hive consumes for the default-MCP merge.
  *  Kept as a local shape so hive.ts never imports the foundation-owned config
@@ -1601,6 +1602,8 @@ export class HiveManager {
       `2. Record durable facts, decisions, and context by appending to ${inDir('memory.md')}.`,
       `3. To ask another agent for something or share information, write ONE message JSON into ${inDir('outbox')} (schema in PROTOCOL.md). NEVER write into another agent's folder — the orchestrator delivers your outbox.`,
       '4. At the END of a task, append what you learned to memory.md so future-you remembers.',
+      INBOX_NUDGE_PROTOCOL,
+      meta.isGod ? GOD_INBOX_REPORT : '',
       guardrailsLine,
       memoryLine,
       knowledgeLine,

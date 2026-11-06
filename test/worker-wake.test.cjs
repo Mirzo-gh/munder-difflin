@@ -190,7 +190,8 @@ test('classifyHook: idle-waiting shapes are idle, other events are null', () => 
 });
 
 test('the nudge text matches the renderer guardrail exactly', () => {
-  // If the renderer's nudge wording ever changes, update WORKER_WAKE_NUDGE to match.
-  assert.equal(WORKER_WAKE_NUDGE.length > 100, true);
-  assert.match(WORKER_WAKE_NUDGE, /read your inbox/i);
+  // WORKER_WAKE_NUDGE is derived from the shared builder, so it cannot drift.
+  const { inboxNudgeText, isInboxNudge } = loadTs('src/shared/hiveNudge.ts');
+  assert.equal(WORKER_WAKE_NUDGE, inboxNudgeText([]));
+  assert.equal(isInboxNudge(WORKER_WAKE_NUDGE), true);
 });

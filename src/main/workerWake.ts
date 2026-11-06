@@ -32,9 +32,11 @@
  * No electron import — unit-testable (mirrors ControlRegistry).
  */
 
-/** The exact nudge the renderer's inbox-wake loop would have typed. */
-export const WORKER_WAKE_NUDGE =
-  'You have new hive inbox message(s) — read your inbox, act on them now, and move handled ones to inbox/.done/. Act autonomously; only message god if you genuinely need a decision.';
+import { inboxNudgeText } from '../shared/hiveNudge';
+
+/** The exact nudge the renderer's inbox-wake loop would have typed (no ids).
+ *  Derived, never hard-coded, so the two wake paths cannot drift apart. */
+export const WORKER_WAKE_NUDGE = inboxNudgeText([]);
 
 /** No PTY output for this long = genuinely idle (renderer QUIESCE_IDLE_MS). */
 export const WORKER_WAKE_IDLE_MS = 12_000;

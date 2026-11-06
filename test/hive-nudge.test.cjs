@@ -21,7 +21,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const loadTs = require('./load-ts.cjs');
 
-const { inboxNudgeText, isInboxNudge } = loadTs('src/shared/hiveNudge.ts');
+const { inboxNudgeText, isInboxNudge, INBOX_NUDGE_PROTOCOL } = loadTs('src/shared/hiveNudge.ts');
 
 // — the queue's one-pending-nudge invariant depends entirely on this predicate —
 
@@ -55,12 +55,14 @@ test('the nudge names the messages that prompted it', () => {
   assert.match(text, /2026-08-19T17-10-00-000Z-broadcast-retro-rule/);
 });
 
-test('the nudge keeps the pending inbox authoritative, not the id list', () => {
-  // A nudge suppressed by the one-pending rule leaves its ids unnamed, so an
-  // agent that stopped at the list would miss that mail entirely.
-  const text = inboxNudgeText(['msg-1']);
-  assert.match(text, /authoritative/);
-  assert.match(text, /inbox\/\.done\//);
+test('the protocol keeps the pending inbox authoritative, not the id list', () => {
+  // The nudge itself is a one-liner now; the standing instruction lives in the
+  // injected prompt (INBOX_NUDGE_PROTOCOL). A nudge suppressed by the one-pending
+  // rule leaves its ids unnamed, so an agent that stopped at the list would miss
+  // that mail entirely.
+  assert.match(INBOX_NUDGE_PROTOCOL, /authoritative/);
+  assert.match(INBOX_NUDGE_PROTOCOL, /inbox\/\.done\//);
+  assert.ok(INBOX_NUDGE_PROTOCOL.includes('📬 inbox'), 'the prompt names the nudge head it explains');
 });
 
 test('a nudge with no ids is still a well-formed nudge', () => {
@@ -68,3 +70,17 @@ test('a nudge with no ids is still a well-formed nudge', () => {
   assert.equal(isInboxNudge(text), true);
   assert.doesNotMatch(text, /at least:/);
 });
+
+// — the short one-line nudge (fork perso, chantier 3) —
+
+test('nudge court', () => {
+  assert.equal(inboxNudgeText([]), '📬 inbox');
+  assert.equal(inboxNudgeText(['a', 'b-2']), '📬 inbox: a, b-2');
+  assert.ok(!inboxNudgeText(['a']).includes('\n'));
+});
+
+test('ancien nudge persisté toujours reconnu', () => {
+  assert.equal(isInboxNudge('You have new hive inbox message(s) — at least: x. Read your inbox…'), true);
+});
+
+test('texte utilisateur non reconnu', () => assert.equal(isInboxNudge('check my inbox please'), false));

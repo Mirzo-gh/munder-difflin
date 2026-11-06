@@ -10,30 +10,50 @@
  */
 
 /** The fixed head of every nudge; the ids that follow differ per nudge. */
-const NUDGE_HEAD = 'You have new hive inbox message(s)';
+const NUDGE_HEAD = '📬 inbox';
 
 /**
- * Build the nudge, naming the messages that prompted it.
+ * The head of the long nudge older builds queued. Kept only so a nudge persisted
+ * in the message queue by such a build (it survives a renderer reload) is still
+ * recognised by the one-pending rule below instead of slipping through as text.
+ */
+const LEGACY_NUDGE_HEAD = 'You have new hive inbox message(s)';
+
+/**
+ * The standing instruction behind the one-line nudge, injected into EVERY agent's
+ * prompt. The nudge itself stays a single short line (typed into the PTY with no
+ * bracketed paste, so it must never carry a newline); what it means lives here.
+ */
+export const INBOX_NUDGE_PROTOCOL =
+  'When you receive a line starting with "📬 inbox", it means new hive mail: read your inbox, act on everything still pending there, and move handled files to inbox/.done/. Your inbox directory is authoritative; listed ids are hints, and an id already in inbox/.done/ was handled earlier. Act autonomously; only message god if you genuinely need a decision.';
+
+/** God only: how to close an inbox-processing turn for the human watching it. */
+export const GOD_INBOX_REPORT =
+  'When you process inbox mail, never echo or paste the messages you received. Finish with a short report for the human, in French, 1 to 3 lines: who said what in substance, and what you decided, dispatched or followed up.';
+
+/**
+ * Build the nudge, naming the messages that prompted it: `📬 inbox` alone, or
+ * `📬 inbox: id1, id2`.
  *
  * The ids are diagnostic, NOT a work list: they let an agent tell "I already
  * handled this last turn" (the id sits in `inbox/.done/`) from "the harness woke
- * me for nothing", which is the distinction it otherwise cannot make and burns a
- * round-trip guessing at. The pending inbox stays authoritative — an agent that
- * has a nudge suppressed by the one-pending rule below still finds its mail by
- * reading the directory, so the text must never invite it to stop at the ids.
+ * me for nothing". The pending inbox stays authoritative — INBOX_NUDGE_PROTOCOL
+ * says so in the prompt, since a nudge suppressed by the one-pending rule below
+ * leaves its ids unnamed.
  */
 export function inboxNudgeText(ids: string[]): string {
-  const named = ids.length ? ` — at least: ${ids.join(', ')}` : '';
-  return `${NUDGE_HEAD}${named}. Read your inbox, act on what is pending there, and move handled ones to inbox/.done/. Your inbox directory is authoritative: work everything still pending in it, and if a named id is already in inbox/.done/ you handled it on an earlier turn and can ignore that one. Act autonomously; only message god if you genuinely need a decision.`;
+  return ids.length ? `${NUDGE_HEAD}: ${ids.join(', ')}` : NUDGE_HEAD;
 }
 
 /**
  * Is this queued text an inbox-wake nudge?
  *
- * Matches the fixed head only, since every nudge carries different ids — the
- * point is to recognise the COMMAND, not one instance of it. Mirrors
- * `isCompactionCommand`, and the queue's one-pending rule leans on it the same way.
+ * Matches the fixed head only (current or legacy), since every nudge carries
+ * different ids — the point is to recognise the COMMAND, not one instance of it.
+ * Mirrors `isCompactionCommand`, and the queue's one-pending rule leans on it the
+ * same way.
  */
 export function isInboxNudge(text: string): boolean {
-  return text.trim().startsWith(NUDGE_HEAD);
+  const t = text.trim();
+  return t.startsWith(NUDGE_HEAD) || t.startsWith(LEGACY_NUDGE_HEAD);
 }
