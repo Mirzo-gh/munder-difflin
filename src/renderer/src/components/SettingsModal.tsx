@@ -72,15 +72,15 @@ const slackInputStyle: CSSProperties = {
   fontFamily: 'var(--cth-font-ui)',
   fontSize: 13,
   color: 'var(--cth-ink-900)',
-  outline: 'none'
+  outline: 'none',
+  borderRadius: 'var(--cth-radius-sm)'
 };
 
 const slackLabelStyle: CSSProperties = {
   fontFamily: 'var(--cth-font-display)',
-  fontSize: 8,
-  lineHeight: '12px',
-  color: 'var(--cth-ink-700)',
-  textTransform: 'uppercase'
+  fontSize: 11,
+  lineHeight: '16px',
+  color: 'var(--cth-ink-700)'
 };
 
 /** The exact connect walkthrough shown behind the i icon. Steps 6 & 7 spell out
@@ -165,8 +165,8 @@ function clearLocalState(): void {
    seventeen times, in three slightly different forms, which is how a tab ends
    up looking subtly unlike its neighbours. */
 const sectionHead = {
-  fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
-  color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 10
+  fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
+  color: 'var(--cth-ink-500)', marginBottom: 10
 } as const;
 /** Same heading, tight under a section that supplies its own spacing. */
 const sectionHeadTight = { ...sectionHead, marginBottom: 2 } as const;
@@ -741,7 +741,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
       onClick={busy ? undefined : onClose}
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(26, 19, 32, 0.7)',
+        background: 'rgba(0, 0, 0, 0.6)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 300
       }}
@@ -751,7 +751,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
         style={{
           width: 840, maxWidth: '92vw', maxHeight: '88vh',
           display: 'flex', flexDirection: 'column',
-          filter: 'drop-shadow(4px 4px 0 rgba(26, 19, 32, 0.25))'
+          filter: 'drop-shadow(0 8px 24px rgba(0, 0, 0, 0.3))'
         }}
       >
         <PixelPanel
@@ -804,7 +804,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
               </div>
 
               {changeErr && (
-                <div style={{ fontSize: 12, lineHeight: '18px', color: '#6E1423' }}>{changeErr}</div>
+                <div style={{ fontSize: 12, lineHeight: '18px', color: 'var(--cth-status-blocked)' }}>{changeErr}</div>
               )}
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -824,7 +824,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                 <div style={{
                   width: 32, height: 32,
                   background: 'var(--cth-coral-light)',
-                  boxShadow: 'inset 0 0 0 1.5px var(--cth-ink-500)',
+                  boxShadow: 'inset 0 0 0 1px var(--cth-ink-500)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0
                 }}>
@@ -873,8 +873,8 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           background: active ? 'var(--cth-ink-900)' : 'transparent',
                           color: active ? 'var(--cth-cream-50)' : 'var(--cth-ink-700)',
                           fontFamily: 'var(--cth-font-display)',
-                          fontSize: 8,
-                          lineHeight: '12px',
+                          fontSize: 11,
+                          lineHeight: '16px',
                           cursor: 'pointer',
                           letterSpacing: 0
                         }}
@@ -1133,7 +1133,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                                   padding: '3px 8px 1px', border: 'none', cursor: 'pointer',
                                   fontFamily: 'var(--cth-font-ui)', fontSize: 12, color: 'var(--cth-ink-900)',
                                   background: defaultModelSel === m.id ? 'var(--cth-sky-light)' : 'var(--cth-cream-100)',
-                                  boxShadow: defaultModelSel === m.id ? 'inset 0 0 0 1.5px var(--cth-ink-500)' : 'inset 0 0 0 1px var(--cth-ink-100)'
+                                  boxShadow: defaultModelSel === m.id ? 'inset 0 0 0 1px var(--cth-ink-500)' : 'inset 0 0 0 1px var(--cth-ink-100)'
                                 }}
                               >{m.label}</button>
                             ))}
@@ -1382,7 +1382,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                                   border: 'none', borderRadius: '50%',
                                   background: showSlackHelp ? 'var(--cth-ink-700)' : 'var(--cth-ink-300)',
                                   color: showSlackHelp ? 'var(--cth-paper-100)' : 'var(--cth-ink-900)',
-                                  fontFamily: 'var(--cth-font-display)', fontSize: 10, lineHeight: '16px'
+                                  fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px'
                                 }}
                               >i</button>
                             </span>
@@ -1556,7 +1556,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                                   border: 'none', borderRadius: '50%',
                                   background: showWebhookHelp ? 'var(--cth-ink-700)' : 'var(--cth-ink-300)',
                                   color: showWebhookHelp ? 'var(--cth-paper-100)' : 'var(--cth-ink-900)',
-                                  fontFamily: 'var(--cth-font-display)', fontSize: 10, lineHeight: '16px'
+                                  fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px'
                                 }}
                               >i</button>
                             </span>
@@ -1588,7 +1588,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                         )}
 
                         {/* Public surface warning. Loud, not buried. */}
-                        <span style={{ fontSize: 12, lineHeight: '16px', color: '#6E1423' }}>
+                        <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-status-blocked)' }}>
                           {t('settings.connections.webhookWarning')}
                         </span>
 
@@ -1819,8 +1819,8 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                   {activeSection === 'General' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                       <div style={{
-                        fontFamily: 'var(--cth-font-display)', fontSize: 10, lineHeight: '14px',
-                        color: '#6E1423'
+                        fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '14px',
+                        color: 'var(--cth-status-blocked)'
                       }}>{t('settings.general.dangerZone')}</div>
                       <p style={{ margin: 0, fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-700)' }}>
                         {t('settings.general.dangerDesc', { godName })}

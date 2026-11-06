@@ -162,7 +162,6 @@ export function Icon({ name, size = 1, style }: IconProps) {
       viewBox="0 0 16 16"
       width={dim}
       height={dim}
-      shapeRendering="crispEdges"
       style={{ display: 'inline-block', ...style }}
       aria-hidden
     >

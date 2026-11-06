@@ -131,8 +131,8 @@ export function UpdatesSection() {
   return (
     <div>
       <div style={{
-        fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
-        color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 10
+        fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
+        color: 'var(--cth-ink-500)', marginBottom: 10
       }}>
         {t('updatesSection.title')}
       </div>
@@ -186,7 +186,7 @@ export function UpdatesSection() {
         <div style={{
           marginTop: 10, padding: '10px 12px', fontSize: 12, lineHeight: 1.5,
           color: 'var(--cth-ink-900)', background: 'var(--cth-paper-100)',
-          border: '2px solid var(--cth-ink-900)'
+          border: '1px solid var(--cth-ink-300)'
         }}>
           <Trans i18nKey="updatesSection.manualDownloadingTitle" values={{ version: manualStarted }} components={{ b: <b /> }}>
             v{manualStarted} is downloading in your browser.

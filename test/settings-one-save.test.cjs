@@ -73,7 +73,7 @@ test('API keys still save immediately: there is no staged value to hold', () => 
 
 test('the section heading is defined once, not written out seventeen times', () => {
   assert.match(MODAL, /const sectionHead = \{/);
-  const inline = MODAL.match(/fontFamily: 'var\(--cth-font-display\)', fontSize: 8, lineHeight: '12px',/g) ?? [];
+  const inline = MODAL.match(/fontFamily: 'var\(--cth-font-display\)', fontSize: 11, lineHeight: '16px',/g) ?? [];
   assert.equal(inline.length, 1, `${inline.length} inline copies remain — only the const should define it`);
 });
 

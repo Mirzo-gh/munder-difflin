@@ -158,7 +158,7 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '6px 8px', background: 'var(--cth-cream-100)',
-        borderBottom: '1px solid var(--cth-ink-700)', flexShrink: 0
+        borderBottom: '1px solid var(--cth-ink-100)', flexShrink: 0
       }}>
         <AgentMonogram name={agent.name} accent={agent.accent} size={24} />
         {/* Title + subtitle truncate; the control cluster never shrinks. At
@@ -167,7 +167,7 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
             wide buttons — everything here is single-line by construction. */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontFamily: 'var(--cth-font-display)', fontSize: 10, lineHeight: '14px', color: 'var(--cth-ink-900)',
+            fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '14px', color: 'var(--cth-ink-900)',
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
           }}>{t('commandCenter.title')}</div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 1, minWidth: 0 }}>
@@ -252,7 +252,7 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
         flexWrap: fullscreen ? 'nowrap' : 'wrap',
         overflowX: fullscreen ? 'auto' : 'visible',
         padding: '6px 8px', background: 'var(--cth-cream-100)',
-        borderBottom: '1px solid var(--cth-ink-700)', flexShrink: 0
+        borderBottom: '1px solid var(--cth-ink-100)', flexShrink: 0
       }}>
         {visibleTabs.map((tabDef) => (
           <button
@@ -639,9 +639,9 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
 
   return (
     <Scroll>
-      <Section title={t('commandCenter.dispatchViaMichael', { godName: godName.toUpperCase() })}>
+      <Section title={t('commandCenter.dispatchViaMichael', { godName: godName })}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-          <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 8, color: 'var(--cth-ink-500)', flexShrink: 0 }}>
+          <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 11, color: 'var(--cth-ink-500)', flexShrink: 0 }}>
             {t('commandCenter.suggestedOwner')}
           </span>
           <Select value={dispatchTo} onChange={setDispatchTo}>
@@ -723,7 +723,7 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {hasSpark ? (
                 <span style={{ flex: 1, minWidth: 0, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 10, color: 'var(--cth-ink-500)', flexShrink: 0 }}>{rateLabel}</span>
+                  <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 11, color: 'var(--cth-ink-500)', flexShrink: 0 }}>{rateLabel}</span>
                   <Sparkline series={sparkSeries} />
                 </span>
               ) : (
@@ -731,11 +731,11 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
               )}
               {lastTool[a.id] && (
                 <span style={{
-                  fontSize: 10, lineHeight: '14px', padding: '0 5px', flexShrink: 0,
+                  fontSize: 11, lineHeight: '14px', padding: '0 5px', flexShrink: 0,
                   background: 'var(--cth-paper-200)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)', color: 'var(--cth-ink-700)'
                 }}>{lastTool[a.id]}</span>
               )}
-              <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 10, color: 'var(--cth-ink-300)', flexShrink: 0 }}>{t('commandCenter.budget')}</span>
+              <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 11, color: 'var(--cth-ink-300)', flexShrink: 0 }}>{t('commandCenter.budget')}</span>
               <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 11, color: 'var(--cth-ink-900)', width: 56, textAlign: 'right' }}>{fmtTokens(tokens)}</span>
               <div
                 title={t('commandCenter.meterTitle', {
@@ -756,7 +756,7 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
                 spend, this one is headroom before compaction. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ flex: 1 }} />
-              <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 10, color: 'var(--cth-ink-300)', flexShrink: 0 }}>{t('commandCenter.ctx')}</span>
+              <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 11, color: 'var(--cth-ink-300)', flexShrink: 0 }}>{t('commandCenter.ctx')}</span>
               {a.contextTokens !== undefined && a.contextLimit ? (() => {
                 const cpct = Math.min(100, Math.round((a.contextTokens! / a.contextLimit!) * 100));
                 const ccolor = cpct >= 88 ? 'var(--cth-coral)' : cpct >= 75 ? 'var(--cth-lemon)' : `var(--cth-${a.accent})`;
@@ -998,7 +998,7 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                     {issue.labels.map((label) => (
                       <span key={label} style={{
-                        fontSize: 10, lineHeight: '14px', padding: '0 5px',
+                        fontSize: 11, lineHeight: '14px', padding: '0 5px',
                         background: 'var(--cth-cream-200)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
                         color: 'var(--cth-ink-700)'
                       }}>{label}</span>
@@ -1161,7 +1161,7 @@ function Sparkline({ series }: { series: number[] }) {
     ? series.map((v) => blocks[Math.min(blocks.length - 1, Math.round((v / max) * (blocks.length - 1)))]).join('')
     : '▁▁▁▁▁▁';
   return (
-    <span style={{ flex: 1, fontFamily: 'var(--cth-font-mono)', fontSize: 12, lineHeight: '12px', color: 'var(--cth-sky)', whiteSpace: 'nowrap', overflow: 'hidden', minWidth: 0 }}>
+    <span style={{ flex: 1, fontFamily: 'var(--cth-font-mono)', fontSize: 12, lineHeight: '16px', color: 'var(--cth-sky)', whiteSpace: 'nowrap', overflow: 'hidden', minWidth: 0 }}>
       {text}
     </span>
   );
@@ -1294,7 +1294,7 @@ function Scroll({ children }: { children: React.ReactNode }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 9, lineHeight: '12px', color: 'var(--cth-ink-500)', marginBottom: 6 }}>{title}</div>
+      <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px', color: 'var(--cth-ink-500)', marginBottom: 6 }}>{title}</div>
       {children}
     </div>
   );

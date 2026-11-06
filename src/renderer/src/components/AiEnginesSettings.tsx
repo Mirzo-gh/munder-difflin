@@ -45,18 +45,18 @@ const inputStyle: CSSProperties = {
   fontFamily: 'var(--cth-font-ui)',
   fontSize: 13,
   color: 'var(--cth-ink-900)',
-  outline: 'none'
+  outline: 'none',
+  borderRadius: 'var(--cth-radius-sm)'
 };
 const labelStyle: CSSProperties = {
   fontFamily: 'var(--cth-font-display)',
-  fontSize: 8,
-  lineHeight: '12px',
-  color: 'var(--cth-ink-700)',
-  textTransform: 'uppercase'
+  fontSize: 11,
+  lineHeight: '16px',
+  color: 'var(--cth-ink-700)'
 };
 const headStyle: CSSProperties = {
-  fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
-  color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 2
+  fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
+  color: 'var(--cth-ink-500)', marginBottom: 2
 };
 const linkStyle: CSSProperties = { color: 'var(--cth-ink-900)', textDecoration: 'underline', cursor: 'pointer' };
 

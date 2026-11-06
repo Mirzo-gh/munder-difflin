@@ -74,7 +74,7 @@ export function HivePicker({ config, onOpenCurrent }: HivePickerProps) {
       padding: 32
     }}>
       <div style={{ width: 560, maxWidth: '94vw' }}>
-        <PixelPanel variant="dialog" title="SELECT A HARNESS CONFIG" noPadding>
+        <PixelPanel variant="dialog" title="Select a harness config" noPadding>
           <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
             <p style={{ margin: 0, fontSize: 12, lineHeight: '19px', color: 'var(--cth-ink-700)' }}>
               A <strong>harness config</strong> is the folder where the app keeps everything for one
@@ -86,12 +86,12 @@ export function HivePicker({ config, onOpenCurrent }: HivePickerProps) {
             {/* CURRENT — the last-used home, the one-click default. */}
             {current && (
               <div>
-                <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 9, color: 'var(--cth-ink-500)', marginBottom: 4 }}>
+                <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 11, color: 'var(--cth-ink-500)', marginBottom: 4 }}>
                   CURRENT
                 </div>
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-                  background: 'var(--cth-mint-light)', boxShadow: 'inset 0 0 0 2px var(--cth-mint)'
+                  background: 'var(--cth-mint-light)', boxShadow: 'inset 0 0 0 1px var(--cth-mint)'
                 }}>
                   <Icon name="folder" />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -113,7 +113,7 @@ export function HivePicker({ config, onOpenCurrent }: HivePickerProps) {
             {/* RECENTS — other homes this install has opened before. */}
             {recents.length > 0 && (
               <div>
-                <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 9, color: 'var(--cth-ink-500)', marginBottom: 4 }}>
+                <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 11, color: 'var(--cth-ink-500)', marginBottom: 4 }}>
                   RECENT
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>

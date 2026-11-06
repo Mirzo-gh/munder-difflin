@@ -27,9 +27,8 @@ export function RecentText({ accent, text, seed }: RecentTextProps) {
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         fontFamily: 'var(--cth-font-display)',
-        fontSize: 8, lineHeight: '12px',
-        color: 'var(--cth-ink-700)',
-        textTransform: 'uppercase'
+        fontSize: 11, lineHeight: '16px',
+        color: 'var(--cth-ink-700)'
       }}>
         <span>recent</span>
         <span style={{
@@ -40,7 +39,7 @@ export function RecentText({ accent, text, seed }: RecentTextProps) {
             width: 6, height: 6,
             background: done ? 'var(--cth-ink-500)' : `var(--cth-${accent})`,
             boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
-            animation: done ? 'none' : 'cth-pulse 800ms steps(2, end) infinite'
+            animation: done ? 'none' : 'cth-pulse 1.2s ease-in-out infinite'
           }} />
           {done ? 'idle' : 'live'}
         </span>
@@ -60,7 +59,7 @@ export function RecentText({ accent, text, seed }: RecentTextProps) {
           marginLeft: 2,
           verticalAlign: '-2px',
           background: 'var(--cth-ink-900)',
-          animation: 'cth-blink 700ms steps(2, end) infinite',
+          animation: 'cth-blink 1s ease-in-out infinite',
           opacity: done ? 0 : 1
         }} />
       </div>

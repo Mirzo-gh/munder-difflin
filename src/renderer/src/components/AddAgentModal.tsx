@@ -37,13 +37,13 @@ const ACCENTS: AccentColorName[] = ['coral', 'mint', 'sky', 'lemon', 'lilac', 'p
 const ossChip = (active: boolean, accent: AccentColorName): CSSProperties => ({
   padding: '3px 8px 1px',
   background: active ? `var(--cth-${accent}-light)` : 'var(--cth-cream-100)',
-  boxShadow: active ? 'inset 0 0 0 1.5px var(--cth-ink-500)' : 'inset 0 0 0 1px var(--cth-ink-100)',
+  boxShadow: active ? 'inset 0 0 0 1px var(--cth-ink-500)' : 'inset 0 0 0 1px var(--cth-ink-100)',
   fontFamily: 'var(--cth-font-ui)', fontSize: 12,
   color: 'var(--cth-ink-900)', cursor: 'pointer', border: 'none'
 });
 const ossGroupHead: CSSProperties = {
-  fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
-  color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 4
+  fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
+  color: 'var(--cth-ink-500)', marginBottom: 4
 };
 const ossLink: CSSProperties = { color: 'var(--cth-ink-900)', textDecoration: 'underline', cursor: 'pointer' };
 
@@ -509,7 +509,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(26, 19, 32, 0.6)',
+        background: 'rgba(0, 0, 0, 0.6)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         // Must sit above fullscreen terminal/file overlays (250/280) and their
         // hover popovers. The fullscreen Add Agent button uses this same modal.
@@ -644,14 +644,14 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                         textAlign: 'left', padding: '6px 9px 5px', border: 'none', cursor: 'pointer',
                         background: active ? `var(--cth-${accent}-light)` : 'var(--cth-cream-100)',
                         boxShadow: active
-                          ? 'inset 0 0 0 1.5px var(--cth-ink-500)'
+                          ? 'inset 0 0 0 1px var(--cth-ink-500)'
                           : 'inset 0 0 0 1px var(--cth-ink-100)',
                         display: 'flex', flexDirection: 'column', gap: 1
                       }}
                     >
                       <span style={{
-                        fontFamily: 'var(--cth-font-display)', fontSize: 9, lineHeight: '13px',
-                        color: 'var(--cth-ink-900)', textTransform: 'uppercase',
+                        fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '13px',
+                        color: 'var(--cth-ink-900)',
                         display: 'flex', alignItems: 'baseline', gap: 6
                       }}>
                         <span style={{ color: active ? 'var(--cth-ink-900)' : 'var(--cth-ink-500)' }}>{i + 1}</span>
@@ -696,7 +696,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                               width: 32, height: 32,
                               background: `var(--cth-${a})`,
                               boxShadow: accent === a
-                                ? 'inset 0 0 0 1.5px var(--cth-ink-500), 0 0 0 2px var(--cth-ink-900)'
+                                ? 'inset 0 0 0 1px var(--cth-ink-500), 0 0 0 2px var(--cth-ink-900)'
                                 : 'inset 0 0 0 1px var(--cth-ink-300)',
                               cursor: 'pointer',
                               border: 'none'
@@ -743,7 +743,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                                 alignItems: 'stretch',
                                 background: cwd === r ? `var(--cth-${accent}-light)` : 'var(--cth-cream-100)',
                                 boxShadow: cwd === r
-                                  ? 'inset 0 0 0 1.5px var(--cth-ink-500)'
+                                  ? 'inset 0 0 0 1px var(--cth-ink-500)'
                                   : 'inset 0 0 0 1px var(--cth-ink-100)'
                               }}
                             >
@@ -870,7 +870,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                                 padding: '3px 8px 1px',
                                 background: active ? `var(--cth-${accent}-light)` : 'var(--cth-cream-100)',
                                 boxShadow: active
-                                  ? 'inset 0 0 0 1.5px var(--cth-ink-500)'
+                                  ? 'inset 0 0 0 1px var(--cth-ink-500)'
                                   : 'inset 0 0 0 1px var(--cth-ink-100)',
                                 fontFamily: 'var(--cth-font-ui)', fontSize: 12,
                                 color: 'var(--cth-ink-900)', cursor: 'pointer', border: 'none',
@@ -907,7 +907,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                                 padding: '3px 8px 1px',
                                 background: active ? `var(--cth-${accent}-light)` : 'var(--cth-cream-100)',
                                 boxShadow: active
-                                  ? 'inset 0 0 0 1.5px var(--cth-ink-500)'
+                                  ? 'inset 0 0 0 1px var(--cth-ink-500)'
                                   : 'inset 0 0 0 1px var(--cth-ink-100)',
                                 fontFamily: 'var(--cth-font-ui)', fontSize: 12,
                                 color: 'var(--cth-ink-900)', cursor: 'pointer', border: 'none'
@@ -1150,7 +1150,8 @@ const inputStyle: React.CSSProperties = {
   fontFamily: 'var(--cth-font-ui)',
   fontSize: 16,
   color: 'var(--cth-ink-900)',
-  outline: 'none'
+  outline: 'none',
+  borderRadius: 'var(--cth-radius-sm)'
 };
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -1158,9 +1159,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <span style={{
         fontFamily: 'var(--cth-font-display)',
-        fontSize: 8, lineHeight: '12px',
-        color: 'var(--cth-ink-700)',
-        textTransform: 'uppercase'
+        fontSize: 11, lineHeight: '16px',
+        color: 'var(--cth-ink-700)'
       }}>{label}</span>
       {children}
     </label>

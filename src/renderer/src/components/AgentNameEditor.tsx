@@ -14,7 +14,7 @@ export function AgentNameEditor({
   name,
   onCommit,
   uppercase = false,
-  fontSize = 'var(--cth-text-display-sm)'
+  fontSize = 13
 }: AgentNameEditorProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
@@ -85,11 +85,12 @@ export function AgentNameEditor({
           }
         }}
         style={{
-          width: '100%', minWidth: 0, height: 20, padding: '1px 4px', boxSizing: 'border-box',
-          border: 'none', outline: 'none',
-          background: 'var(--cth-paper-100)',
-          boxShadow: `inset 0 0 0 1px var(--cth-${error ? 'coral' : 'ink-300'})`,
-          fontFamily: 'var(--cth-font-display)', fontSize,
+          width: '100%', minWidth: 0, height: 22, padding: '1px 6px', boxSizing: 'border-box',
+          outline: 'none',
+          background: 'var(--cth-cream-300)',
+          border: `1px solid var(--cth-${error ? 'status-blocked' : 'ink-300'})`,
+          borderRadius: 'var(--cth-radius-sm)',
+          fontFamily: 'var(--cth-font-ui)', fontSize, fontWeight: 500,
           color: 'var(--cth-ink-900)', textTransform: uppercase ? 'uppercase' : undefined
         }}
       />
@@ -102,7 +103,7 @@ export function AgentNameEditor({
         onDoubleClick={(event) => { event.stopPropagation(); beginEditing(); }}
         title={`${name} — double-click to rename`}
         style={{
-          fontFamily: 'var(--cth-font-display)', fontSize,
+          fontFamily: 'var(--cth-font-ui)', fontSize, fontWeight: 500, lineHeight: '18px',
           color: 'var(--cth-ink-900)',
           minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
         }}
@@ -118,7 +119,7 @@ export function AgentNameEditor({
           flexShrink: 0, width: 14, height: 14, padding: 0,
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           border: 'none', background: 'transparent', cursor: 'text',
-          color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-ui)', fontSize: 9, lineHeight: 1
+          color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-ui)', fontSize: 11, lineHeight: 1
         }}
       >✎</button>
     </span>

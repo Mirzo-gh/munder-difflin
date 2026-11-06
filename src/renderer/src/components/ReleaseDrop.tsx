@@ -144,8 +144,7 @@ export function ReleaseDrop({ version, html, onDismiss }: ReleaseDropProps) {
             <i style={{ width: 10, height: 10, background: '#B23A4E', display: 'block' }} />
           </span>
           <span style={{
-            flex: 1, minWidth: 0, fontSize: 12, fontWeight: 700, letterSpacing: '.08em',
-            textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden',
+            flex: 1, minWidth: 0, fontSize: 12, fontWeight: 700, letterSpacing: '.08em', whiteSpace: 'nowrap', overflow: 'hidden',
             textOverflow: 'ellipsis'
           }}>
             Munder Difflin <span style={{ color: YELLOW }}>v{version.replace(/^v/, '')}</span>
@@ -155,7 +154,7 @@ export function ReleaseDrop({ version, html, onDismiss }: ReleaseDropProps) {
           </span>
           <span aria-hidden style={{
             flexShrink: 0, fontSize: 11, fontWeight: 500, letterSpacing: '.12em',
-            color: INK_FAINT, textTransform: 'uppercase'
+            color: INK_FAINT
           }}>
             esc
           </span>
@@ -244,8 +243,7 @@ function DropLoader() {
         ))}
       </span>
       <span style={{
-        fontFamily: MONO, fontSize: 11, fontWeight: 500, letterSpacing: '.18em',
-        textTransform: 'uppercase', color: INK_FAINT
+        fontFamily: MONO, fontSize: 11, fontWeight: 500, letterSpacing: '.18em', color: INK_FAINT
       }}>
         Loading
       </span>

@@ -53,6 +53,7 @@ export function PixelBadge({ status, label, style }: PixelBadgeProps) {
   const { t } = useTranslation();
   const key = labelKeyByStatus[status];
   const text = label ?? (key ? t(key) : status);
+  // Fork perso (Orca style): a round 7px status dot + a quiet 11px label.
   return (
     <span
       style={{
@@ -62,26 +63,45 @@ export function PixelBadge({ status, label, style }: PixelBadgeProps) {
         // under the controls beside it instead of holding its own width.
         flexShrink: 0,
         gap: 6,
-        padding: '2px 8px 0',
-        background: 'var(--cth-cream-100)',
-        boxShadow: `inset 0 0 0 1px ${colorByStatus[status]}`,
         fontFamily: 'var(--cth-font-ui)',
-        fontSize: 'var(--cth-text-body-sm)',
-        lineHeight: '18px',
-        color: 'var(--cth-ink-900)',
+        fontSize: 11,
+        lineHeight: '16px',
+        color: 'var(--cth-ink-500)',
         userSelect: 'none',
         ...style
       }}
     >
       <span
+        aria-hidden
         style={{
-          width: 8,
-          height: 8,
-          background: colorByStatus[status],
-          boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)'
+          width: 7,
+          height: 7,
+          flexShrink: 0,
+          borderRadius: '50%',
+          background: colorByStatus[status]
         }}
       />
       {text}
     </span>
+  );
+}
+
+/** Just the round status dot (no label) — for dense rows like the agent
+ *  column. The status text stays available as the tooltip / accessible name. */
+export function StatusDot({ status, size = 7 }: { status: StatusKind; size?: number }) {
+  const { t } = useTranslation();
+  const key = labelKeyByStatus[status];
+  const text = key ? t(key) : status;
+  return (
+    <span
+      role="img"
+      aria-label={text}
+      title={text}
+      style={{
+        display: 'inline-block', flexShrink: 0,
+        width: size, height: size, borderRadius: '50%',
+        background: colorByStatus[status]
+      }}
+    />
   );
 }

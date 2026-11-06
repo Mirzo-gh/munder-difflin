@@ -30,15 +30,14 @@ const ROSTER_COLLAPSED_KEY = 'cth.fullscreen.rosterCollapsed';
 /** Roster type scale, derived from the shared terminal zoom so Cmd +/- resizes
  *  the whole roster along with the terminal — one knob for the whole view
  *  instead of a size that only looked right on the display it was tuned on.
- *  Each is clamped: names are a pixel display face that turns to mush when it
- *  strays too far from its native size, and the bullets have to stay subordinate
- *  to the name however far the terminal is zoomed. */
+ *  Each is clamped: never below 11px (legibility), and the bullets have to stay
+ *  subordinate to the name however far the terminal is zoomed. */
 function rosterScale(zoom: number) {
   const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Math.round(n)));
   return {
-    name: clamp(zoom * 0.48, 7, 14),
-    group: clamp(zoom * 0.45, 7, 13),
-    note: clamp(zoom * 0.68, 10, 20)
+    name: clamp(zoom * 0.9, 12, 15),
+    group: clamp(zoom * 0.8, 11, 13),
+    note: clamp(zoom * 0.8, 11, 16)
   };
 }
 
@@ -295,7 +294,7 @@ export function FullscreenTerminal({ config }: FullscreenTerminalProps) {
         <span style={{
           fontFamily: 'var(--cth-font-display)', fontSize: 12, lineHeight: '20px',
           color: 'var(--cth-ink-900)'
-        }}>MUNDER DIFFLIN · FOCUS MODE</span>
+        }}>Munder Difflin · Focus mode</span>
         {/* Same top-right controls as the main title bar — fullscreen covers
             it, so theme / exit-fullscreen / IDE must live here too. */}
         <div className="cth-titlebar-nodrag" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -459,7 +458,7 @@ export function FullscreenTerminal({ config }: FullscreenTerminalProps) {
                   <span style={{
                     minWidth: 0,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                  }}>{label.toUpperCase()}</span>
+                  }}>{label}</span>
                 </div>
                 {members.map(a => (
                   <SidebarRow
@@ -632,7 +631,7 @@ function ContextBar({ tokens, limit, accent }: { tokens?: number; limit?: number
       }}>
         <span style={{ display: 'block', width: `${pct}%`, height: '100%', background: color }} />
       </span>
-      <span style={{ flexShrink: 0, fontSize: 9, color: 'var(--cth-ink-500)' }}>{pct}%</span>
+      <span style={{ flexShrink: 0, fontSize: 11, color: 'var(--cth-ink-500)' }}>{pct}%</span>
     </div>
   );
 }
@@ -738,7 +737,7 @@ function SidebarRow({
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
               fontFamily: 'var(--cth-font-display)',
               fontSize: scale.name, lineHeight: 1.5
-            }}>{agent.name.toUpperCase()}</span>
+            }}>{agent.name}</span>
             {/* Your unsent text outranks the agent's own state here: an idle
                 agent with a draft on its prompt is not idle-and-free, it is
                 idle-and-held, and nothing else on screen said so. */}
@@ -771,7 +770,7 @@ function SidebarRow({
               terminal is the whole screen and the sidebar is your only index. */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 6, minWidth: 0,
-            fontSize: Math.max(9, scale.name - 3), lineHeight: 1.4,
+            fontSize: Math.max(11, scale.name - 2), lineHeight: 1.4,
             color: 'var(--cth-ink-500)'
           }}>
             <span style={{
@@ -838,7 +837,8 @@ function SidebarRow({
             zIndex: 450,
             padding: 8,
             background: 'var(--cth-paper-100)',
-            boxShadow: 'inset 0 0 0 1.5px var(--cth-ink-500), 4px 4px 0 rgba(26,19,32,0.25)',
+            border: '1px solid var(--cth-ink-300)', borderRadius: 'var(--cth-radius-lg)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.28)',
             boxSizing: 'border-box'
           }}
         >
@@ -848,7 +848,7 @@ function SidebarRow({
             fontSize: noteLabelSize,
             lineHeight: `${Math.round(noteLabelSize * 1.5)}px`,
             color: 'var(--cth-ink-700)'
-          }}>PRIVATE NOTE</div>
+          }}>Private note</div>
           {/* A textarea, not an input: the note is a bullet list, so Enter has
               to make a new line rather than doing nothing. autoFocus is safe
               now that opening is an explicit click, not a pointer fly-by. */}
@@ -883,7 +883,7 @@ function SidebarRow({
             }}
           />
           <div style={{
-            marginTop: 5, fontSize: 10, color: 'var(--cth-ink-500)'
+            marginTop: 5, fontSize: 11, color: 'var(--cth-ink-500)'
           }}>one line = one bullet · esc to close</div>
         </div>
         </>,
@@ -934,9 +934,9 @@ function Header({ agent, onEdit }: { agent: Agent; onEdit: () => void }) {
       boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)'
     }}>
       <span style={{
-        fontFamily: 'var(--cth-font-display)', fontSize: 10, lineHeight: '16px',
+        fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
         color: 'var(--cth-ink-900)'
-      }}>{agent.name.toUpperCase()}</span>
+      }}>{agent.name}</span>
       {/* Edit belongs with the NAME, not with the action cluster on the right:
           it changes who this agent is, and the right-hand group is things you do
           with the agent. Icon-only because it sits inside the identity line —

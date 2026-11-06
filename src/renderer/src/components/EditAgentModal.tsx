@@ -92,7 +92,7 @@ export function EditAgentModal({ agent, onClose }: EditAgentModalProps) {
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(26, 19, 32, 0.6)',
+        background: 'rgba(0, 0, 0, 0.6)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 500
       }}
@@ -101,7 +101,7 @@ export function EditAgentModal({ agent, onClose }: EditAgentModalProps) {
           one job — describe an agent — and a tall narrow dialog next to a wide
           one reads as two unrelated screens. */}
       <div onClick={(e) => e.stopPropagation()} style={{ width: 940, maxWidth: '95vw' }}>
-        <PixelPanel variant="dialog" title="EDIT AGENT" style={{ padding: 16 }} noPadding>
+        <PixelPanel variant="dialog" title="Edit agent" style={{ padding: 16 }} noPadding>
           <div style={{
             display: 'flex', flexDirection: 'column', gap: 14,
             padding: 16, maxHeight: '86vh', overflowY: 'auto'
@@ -141,7 +141,7 @@ export function EditAgentModal({ agent, onClose }: EditAgentModalProps) {
                         width: 28, height: 28,
                         background: `var(--cth-${a})`,
                         boxShadow: accent === a
-                          ? 'inset 0 0 0 1.5px var(--cth-ink-500), 0 0 0 2px var(--cth-ink-900)'
+                          ? 'inset 0 0 0 1px var(--cth-ink-500), 0 0 0 2px var(--cth-ink-900)'
                           : 'inset 0 0 0 1px var(--cth-ink-300)',
                         cursor: 'pointer', border: 'none'
                       }}
@@ -166,7 +166,7 @@ export function EditAgentModal({ agent, onClose }: EditAgentModalProps) {
                           padding: '3px 8px 1px',
                           background: active ? `var(--cth-${accent}-light)` : 'var(--cth-cream-100)',
                           boxShadow: active
-                            ? 'inset 0 0 0 1.5px var(--cth-ink-500)'
+                            ? 'inset 0 0 0 1px var(--cth-ink-500)'
                             : 'inset 0 0 0 1px var(--cth-ink-100)',
                           fontFamily: 'var(--cth-font-ui)', fontSize: 12,
                           color: 'var(--cth-ink-900)', cursor: 'pointer', border: 'none',
@@ -201,7 +201,7 @@ export function EditAgentModal({ agent, onClose }: EditAgentModalProps) {
                             padding: '3px 8px 1px',
                             background: active ? `var(--cth-${accent}-light)` : 'var(--cth-cream-100)',
                             boxShadow: active
-                              ? 'inset 0 0 0 1.5px var(--cth-ink-500)'
+                              ? 'inset 0 0 0 1px var(--cth-ink-500)'
                               : 'inset 0 0 0 1px var(--cth-ink-100)',
                             fontFamily: 'var(--cth-font-ui)', fontSize: 12,
                             color: 'var(--cth-ink-900)', cursor: 'pointer', border: 'none'
@@ -267,7 +267,8 @@ const inputStyle: CSSProperties = {
   fontSize: 16,
   color: 'var(--cth-ink-900)',
   outline: 'none',
-  boxSizing: 'border-box'
+  boxSizing: 'border-box',
+  borderRadius: 'var(--cth-radius-sm)'
 };
 
 function Section({
@@ -284,9 +285,8 @@ function Section({
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
         <span style={{
           fontFamily: 'var(--cth-font-display)',
-          fontSize: 9, lineHeight: '12px',
-          color: 'var(--cth-ink-900)',
-          textTransform: 'uppercase'
+          fontSize: 11, lineHeight: '16px',
+          color: 'var(--cth-ink-900)'
         }}>{label}</span>
         <span style={{ fontSize: 11, color: 'var(--cth-ink-500)' }}>{hint}</span>
       </div>
@@ -300,9 +300,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <span style={{
         fontFamily: 'var(--cth-font-display)',
-        fontSize: 8, lineHeight: '12px',
-        color: 'var(--cth-ink-700)',
-        textTransform: 'uppercase'
+        fontSize: 11, lineHeight: '16px',
+        color: 'var(--cth-ink-700)'
       }}>{label}</span>
       {children}
     </label>

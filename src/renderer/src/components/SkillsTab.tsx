@@ -25,8 +25,8 @@ const PROVIDER_LABEL: Record<LocalSkill['provider'], string> = {
 function Chip({ text, tone = 'quiet' }: { text: string; tone?: 'quiet' | 'accent' }) {
   return (
     <span style={{
-      fontSize: 10, fontFamily: 'var(--cth-font-display)', letterSpacing: 0.4,
-      padding: '2px 6px', flexShrink: 0, textTransform: 'uppercase',
+      fontSize: 11, fontFamily: 'var(--cth-font-display)', letterSpacing: 0.4,
+      padding: '2px 6px', flexShrink: 0,
       color: 'var(--cth-ink-900)',
       background: tone === 'accent' ? 'var(--cth-mint-light)' : 'var(--cth-cream-200)',
       boxShadow: `inset 0 0 0 1px ${tone === 'accent' ? 'var(--cth-mint)' : 'var(--cth-ink-300)'}`
@@ -242,7 +242,7 @@ export function SkillsTab({ agentCwd }: { agentCwd?: string }) {
                 <div key={s.id + s.path} style={rowStyle}>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 11, flex: 1, minWidth: 0 }}>
-                      {s.name.toUpperCase()}
+                      {s.name}
                     </span>
                     <Chip text={PROVIDER_LABEL[s.provider]} />
                     <Chip text={s.scope} tone={s.scope === 'project' ? 'accent' : 'quiet'} />
@@ -253,7 +253,7 @@ export function SkillsTab({ agentCwd }: { agentCwd?: string }) {
                     </div>
                   )}
                   <div style={{
-                    fontFamily: 'var(--cth-font-mono)', fontSize: 10.5,
+                    fontFamily: 'var(--cth-font-mono)', fontSize: 11,
                     color: 'var(--cth-ink-500)', wordBreak: 'break-all'
                   }}>{s.path}</div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -311,7 +311,7 @@ export function SkillsTab({ agentCwd }: { agentCwd?: string }) {
                 <div key={s.url + s.name} style={rowStyle}>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 11, flex: 1, minWidth: 0 }}>
-                      {s.name.toUpperCase()}
+                      {s.name}
                     </span>
                     <Chip text={s.category} />
                     <Chip text={s.owner} />

@@ -20,21 +20,20 @@ export function MichaelBooting() {
       pointerEvents: 'none'
     }}>
       <div style={{ pointerEvents: 'auto', width: 360 }}>
-        <PixelPanel variant="dialog" title="CLOCKING IN" noPadding>
+        <PixelPanel variant="dialog" title="Clocking in" noPadding>
           <div style={{
             padding: 20,
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14
           }}>
-            {/* Stepped pixel blocks — staggered blink, no easing (matches aesthetic) */}
+            {/* Loading dots — staggered soft pulse. */}
             <div style={{ display: 'flex', gap: 6 }}>
               {[0, 1, 2, 3].map((i) => (
                 <span
                   key={i}
                   style={{
-                    width: 14, height: 14,
-                    background: '#6E1423',
-                    boxShadow: 'var(--cth-shadow-hard)',
-                    animation: 'cth-blink 1s steps(1, end) infinite',
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: 'var(--cth-ink-500)',
+                    animation: 'cth-blink 1.2s ease-in-out infinite',
                     animationDelay: `${i * 0.2}s`
                   }}
                 />

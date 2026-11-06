@@ -51,7 +51,7 @@ export function FilesTab({ cwd }: FilesTabProps) {
       <div style={{
         width: treeWidth, flexShrink: 0,
         height: '100%', minHeight: 0, overflow: 'hidden',
-        borderRight: '1px solid var(--cth-ink-700)'
+        borderRight: '1px solid var(--cth-ink-100)'
       }}>
         <FileTree
           root={cwd}

@@ -22,12 +22,14 @@ export const inputStyle: CSSProperties = {
   background: 'var(--cth-paper-100)', border: 'none',
   boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)',
   fontFamily: 'var(--cth-font-ui)', fontSize: 12, lineHeight: '17px',
-  color: 'var(--cth-ink-900)', outline: 'none'
+  color: 'var(--cth-ink-900)', outline: 'none',
+  borderRadius: 'var(--cth-radius-sm)'
 };
 
 export const monoInputStyle: CSSProperties = {
   ...inputStyle,
-  fontFamily: 'var(--cth-font-mono)'
+  fontFamily: 'var(--cth-font-mono)',
+  borderRadius: 'var(--cth-radius-sm)'
 };
 
 export const textareaStyle: CSSProperties = {
@@ -60,7 +62,7 @@ export function Chip({ children, tone = 'plain' }: { children: ReactNode; tone?:
   return (
     <span style={{
       flexShrink: 0, padding: '2px 5px 1px',
-      fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
+      fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
       background: bg, boxShadow: `inset 0 0 0 1px ${line}`, color: 'var(--cth-ink-900)'
     }}>{children}</span>
   );
@@ -134,7 +136,7 @@ export function Field({ label, children }: { label: string; children: ReactNode 
   return (
     <div style={{ marginTop: 8 }}>
       <div style={{
-        fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
+        fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
         color: 'var(--cth-ink-500)', marginBottom: 4
       }}>{label}</div>
       {children}
@@ -181,7 +183,7 @@ export function TriggerCard({ title, blurb, summary, defaultOpen = false, childr
         </span>
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{
-            display: 'block', fontFamily: 'var(--cth-font-display)', fontSize: 9, lineHeight: '13px',
+            display: 'block', fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '13px',
             color: 'var(--cth-ink-900)'
           }}>{title}</span>
           <span style={{ display: 'block', fontFamily: 'var(--cth-font-ui)', fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)', marginTop: 2 }}>
@@ -446,7 +448,7 @@ export function WeeklyPicker({ value, onChange }: {
                 width: 26, height: 24, border: 'none', cursor: 'pointer',
                 background: on ? 'var(--cth-mint)' : 'var(--cth-cream-200)',
                 boxShadow: on
-                  ? 'inset 0 0 0 1.5px var(--cth-ink-500)'
+                  ? 'inset 0 0 0 1px var(--cth-ink-500)'
                   : 'inset 0 0 0 1px var(--cth-ink-100)',
                 fontFamily: 'var(--cth-font-ui)', fontSize: 11,
                 color: on ? 'var(--cth-ink-900)' : 'var(--cth-ink-500)'
@@ -496,7 +498,7 @@ export function SchedulePicker({ intervalMs, weekly, onInterval, onWeekly }: {
   const tab = (active: boolean): CSSProperties => ({
     padding: '3px 10px 2px', border: 'none', cursor: 'pointer',
     background: active ? 'var(--cth-cream-100)' : 'transparent',
-    boxShadow: active ? 'inset 0 0 0 1.5px var(--cth-ink-500)' : 'inset 0 0 0 1px var(--cth-ink-100)',
+    boxShadow: active ? 'inset 0 0 0 1px var(--cth-ink-500)' : 'inset 0 0 0 1px var(--cth-ink-100)',
     fontFamily: 'var(--cth-font-ui)', fontSize: 11,
     color: active ? 'var(--cth-ink-900)' : 'var(--cth-ink-500)'
   });

@@ -92,14 +92,14 @@ export function SettingsHeroCard() {
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
             <span style={{
               fontFamily: 'var(--cth-font-display)', fontSize: 13, lineHeight: '20px', color: INK
-            }}>MUNDER DIFFLIN</span>
+            }}>Munder Difflin</span>
             {version && (
               <span style={{
                 fontFamily: MONO, fontSize: 15, fontWeight: 700, color: INK
               }}>v{version}</span>
             )}
             <span style={{
-              fontFamily: MONO, fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase',
+              fontFamily: MONO, fontSize: 11, letterSpacing: '.12em',
               padding: '2px 7px', background: 'var(--cth-mint-light)',
               boxShadow: 'inset 0 0 0 1px var(--cth-mint)', color: INK
             }}>{PLAN.label}</span>
@@ -136,8 +136,7 @@ export function SettingsHeroCard() {
           border: `2px solid ${INK}`
         }}>
           <span style={{
-            display: 'inline-block', fontFamily: MONO, fontSize: 9, letterSpacing: '.18em',
-            textTransform: 'uppercase', padding: '2px 7px',
+            display: 'inline-block', fontFamily: MONO, fontSize: 11, letterSpacing: '.18em', padding: '2px 7px',
             background: INK, color: 'var(--cth-paper-100)'
           }}>{t('settingsHero.announcement')}</span>
           <div style={{
@@ -161,7 +160,7 @@ export function SettingsHeroCard() {
             letterSpacing: '-.05em', color: 'var(--cth-lemon)', textAlign: 'center', flexShrink: 0
           }}>
             50<span style={{
-              display: 'block', fontSize: 8, letterSpacing: '.2em', fontWeight: 500,
+              display: 'block', fontSize: 11, letterSpacing: '.2em', fontWeight: 500,
               color: 'var(--cth-paper-100)', opacity: 0.7, marginTop: 5
             }}>% OFF</span>
           </div>
@@ -190,8 +189,7 @@ export function SettingsHeroCard() {
             border: `2px solid ${INK}`
           }}>
             <span style={{
-              fontFamily: MONO, fontSize: 9, letterSpacing: '.18em',
-              textTransform: 'uppercase', color: 'var(--cth-ink-500)', flexShrink: 0
+              fontFamily: MONO, fontSize: 11, letterSpacing: '.18em', color: 'var(--cth-ink-500)', flexShrink: 0
             }}>{t('settingsHero.sponsoredBy')}</span>
             <span style={{ fontSize: 13, color: INK, flexShrink: 0 }}>{SPONSOR.name}</span>
             <span style={{ flex: 1, minWidth: 120, fontSize: 12, color: 'var(--cth-ink-700)' }}>{SPONSOR.blurb}</span>

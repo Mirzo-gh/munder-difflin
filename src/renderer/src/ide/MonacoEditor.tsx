@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
-import { setupMonaco, CTH_MONACO_THEME, languageForPath } from './monaco';
+import { setupMonaco, cthMonacoTheme, languageForPath } from './monaco';
+import { useAppTheme } from '@/design/theme';
 
 // Pin @monaco-editor/react to the bundled monaco + register themes at module load,
 // before any <Editor/> mounts (avoids a CDN fetch / unthemed first paint).
@@ -19,6 +20,7 @@ export interface MonacoEditorProps {
 export function MonacoEditor({ path, value, onChange, onSave, readOnly }: MonacoEditorProps) {
   // Keep the latest onSave in a ref so the editor command (bound once at mount)
   // always calls the current handler without rebinding.
+  const appTheme = useAppTheme();
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
 
@@ -30,7 +32,7 @@ export function MonacoEditor({ path, value, onChange, onSave, readOnly }: Monaco
 
   return (
     <Editor
-      theme={CTH_MONACO_THEME}
+      theme={cthMonacoTheme(appTheme)}
       language={languageForPath(path)}
       value={value}
       onChange={(v) => onChange(v ?? '')}

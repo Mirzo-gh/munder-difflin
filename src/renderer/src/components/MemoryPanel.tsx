@@ -153,7 +153,7 @@ export function MemoryPanel() {
             {/* Model: a benefit-framed choice, not a codename dump. */}
             {status?.available && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={{ fontSize: 11, color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-display)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                <span style={{ fontSize: 11, color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-display)', letterSpacing: 0.5 }}>
                   {t('memoryPanel.searchLanguage')}
                 </span>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -167,7 +167,7 @@ export function MemoryPanel() {
                           flex: 1, textAlign: 'left', cursor: 'pointer', border: 'none',
                           padding: '7px 9px 6px',
                           background: sel ? 'var(--cth-lemon-light)' : 'var(--cth-cream-100)',
-                          boxShadow: sel ? 'inset 0 0 0 1.5px var(--cth-ink-500)' : 'inset 0 0 0 1px var(--cth-ink-300)',
+                          boxShadow: sel ? 'inset 0 0 0 1px var(--cth-ink-500)' : 'inset 0 0 0 1px var(--cth-ink-300)',
                           fontFamily: 'var(--cth-font-ui)'
                         }}
                       >
@@ -238,7 +238,7 @@ export function MemoryPanel() {
           width: '100%',
           padding: '5px 10px 3px',
           background: open || active ? 'var(--cth-lemon-light)' : 'var(--cth-cream-200)',
-          boxShadow: 'inset 0 0 0 1.5px var(--cth-ink-500)',
+          boxShadow: 'inset 0 0 0 1px var(--cth-ink-500)',
           fontFamily: 'var(--cth-font-ui)',
           fontSize: 12,
           color: 'var(--cth-ink-900)',

@@ -45,7 +45,7 @@ export function SidebarTabs({ current, accent, onChange }: SidebarTabsProps) {
                 ? `inset 0 -3px 0 var(--cth-${accent}), inset 1px 0 0 var(--cth-ink-900), inset -1px 0 0 var(--cth-ink-900)`
                 : 'inset 0 0 0 0',
               fontFamily: 'var(--cth-font-display)',
-              fontSize: 10,
+              fontSize: 11,
               lineHeight: '14px',
               color: active ? 'var(--cth-ink-900)' : 'var(--cth-ink-500)',
               display: 'inline-flex',
@@ -54,7 +54,7 @@ export function SidebarTabs({ current, accent, onChange }: SidebarTabsProps) {
               gap: 6
             }}
           >
-            <Icon name={tab.icon} /> {t(tab.labelKey).toUpperCase()}
+            <Icon name={tab.icon} /> {t(tab.labelKey)}
           </button>
         );
       })}

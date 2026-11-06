@@ -132,7 +132,7 @@ export function SchedulesSection({ onSummary }: { onSummary?: (s: string) => voi
       )}
       {adding && (
         <SubCard>
-          <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 8, color: 'var(--cth-ink-500)' }}>{t('schedulesSection.newSchedule')}</div>
+          <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 11, color: 'var(--cth-ink-500)' }}>{t('schedulesSection.newSchedule')}</div>
           <Field label={t('schedulesSection.label')}>
             <input
               value={mLabel}

@@ -13,7 +13,7 @@ export function BlockedBanner({ reason, onAction }: BlockedBannerProps) {
   return (
     <div style={{
       background: 'var(--cth-coral-light)',
-      boxShadow: 'inset 0 0 0 1.5px var(--cth-ink-500), inset 0 0 0 4px var(--cth-coral)',
+      boxShadow: 'inset 0 0 0 1px var(--cth-ink-500), inset 0 0 0 4px var(--cth-coral)',
       padding: 12,
       display: 'flex',
       flexDirection: 'column',
@@ -22,9 +22,8 @@ export function BlockedBanner({ reason, onAction }: BlockedBannerProps) {
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
         fontFamily: 'var(--cth-font-display)',
-        fontSize: 8, lineHeight: '12px',
-        color: 'var(--cth-ink-900)',
-        textTransform: 'uppercase'
+        fontSize: 11, lineHeight: '16px',
+        color: 'var(--cth-ink-900)'
       }}>
         <Icon name="bell" /> {t('blockedBanner.needsYou')}
       </div>

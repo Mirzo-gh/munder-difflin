@@ -108,7 +108,7 @@ export function ThreadsPanel({ agentId }: ThreadsPanelProps) {
             >
               <span style={{ width: 12, flexShrink: 0 }}>{open ? '▾' : '▸'}</span>
               <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {thread.subject.toUpperCase()}
+                {thread.subject}
               </span>
               <span style={{ fontSize: 12, color: 'var(--cth-ink-500)' }}>{thread.messages.length}</span>
             </button>
@@ -156,7 +156,7 @@ export function ThreadsPanel({ agentId }: ThreadsPanelProps) {
                       resize: 'vertical', width: '100%', boxSizing: 'border-box', padding: '6px 8px',
                       fontFamily: 'var(--cth-font-ui)', fontSize: 13, lineHeight: '18px',
                       color: 'var(--cth-ink-900)', background: 'var(--cth-cream-50)',
-                      border: 'none', boxShadow: 'inset 0 0 0 2px var(--cth-ink-700)'
+                      border: 'none', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)'
                     }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

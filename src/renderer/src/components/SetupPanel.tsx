@@ -33,7 +33,7 @@ function StatusChip({ tool }: { tool: ToolStatus }) {
   const ready = tool.found;
   return (
     <span style={{
-      fontFamily: 'var(--cth-font-display)', fontSize: 9, letterSpacing: 0.5,
+      fontFamily: 'var(--cth-font-display)', fontSize: 11, letterSpacing: 0.5,
       padding: '2px 6px', flexShrink: 0, whiteSpace: 'nowrap',
       background: ready ? 'var(--cth-mint-light)' : 'var(--cth-cream-200)',
       boxShadow: `inset 0 0 0 1px ${ready ? 'var(--cth-mint)' : 'var(--cth-ink-300)'}`,
@@ -60,10 +60,10 @@ function ToolRow({ tool }: { tool: ToolStatus }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 11, flex: 1, minWidth: 0 }}>
-          {tool.label.toUpperCase()}
+          {tool.label}
         </span>
         {tool.essential && !tool.found && (
-          <span style={{ fontSize: 10, color: 'var(--cth-ink-500)', flexShrink: 0 }}>{t('setupPanel.recommended')}</span>
+          <span style={{ fontSize: 11, color: 'var(--cth-ink-500)', flexShrink: 0 }}>{t('setupPanel.recommended')}</span>
         )}
         <StatusChip tool={tool} />
       </div>
@@ -194,8 +194,8 @@ export function SetupPanel({ onDone }: { onDone?: () => void } = {}) {
         return (
           <div key={section.kind} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{
-              fontFamily: 'var(--cth-font-display)', fontSize: 10, letterSpacing: 0.5,
-              color: 'var(--cth-ink-500)', textTransform: 'uppercase'
+              fontFamily: 'var(--cth-font-display)', fontSize: 11, letterSpacing: 0.5,
+              color: 'var(--cth-ink-500)'
             }}>{t(section.titleKey)}</div>
             <div style={{ fontSize: 11, color: 'var(--cth-ink-500)', marginTop: -2 }}>{t(section.blurbKey)}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

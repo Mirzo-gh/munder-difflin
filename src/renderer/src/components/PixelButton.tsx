@@ -27,7 +27,6 @@ export function PixelButton({
   style,
   title
 }: PixelButtonProps) {
-  const [pressed, setPressed] = useState(false);
   const [hover, setHover] = useState(false);
 
   // DISABLED TEXT IS ITS OWN COLOR, not the variant's.
@@ -45,35 +44,32 @@ export function PixelButton({
   // disabled control should look like anyway.
   const disabledText = 'var(--cth-ink-500)';
 
+  // Fork perso (Orca style): flat fills, one 1px border, rounded corners.
   const palette = (() => {
     switch (variant) {
       case 'primary':
         return {
-          fill:    disabled ? 'var(--cth-cream-300)' : (hover ? 'var(--cth-ink-700)' : 'var(--cth-ink-900)'),
-          text:    disabled ? disabledText : 'var(--cth-cream-50)',
-          border:  'var(--cth-ink-900)',
-          shadow:  'var(--cth-ink-900)'
+          fill:   disabled ? 'var(--cth-cream-300)' : (hover ? 'var(--cth-ink-700)' : 'var(--cth-ink-900)'),
+          text:   disabled ? disabledText : 'var(--cth-cream-50)',
+          border: disabled ? 'var(--cth-cream-300)' : (hover ? 'var(--cth-ink-700)' : 'var(--cth-ink-900)')
         };
       case 'secondary':
         return {
-          fill:    disabled ? 'var(--cth-cream-300)' : (hover ? 'var(--cth-cream-200)' : 'var(--cth-cream-100)'),
-          text:    disabled ? disabledText : 'var(--cth-ink-900)',
-          border:  'var(--cth-ink-300)',
-          shadow:  'var(--cth-ink-100)'
+          fill:   disabled ? 'var(--cth-cream-300)' : (hover ? 'var(--cth-cream-200)' : 'var(--cth-paper-100)'),
+          text:   disabled ? disabledText : 'var(--cth-ink-900)',
+          border: 'var(--cth-ink-300)'
         };
       case 'ghost':
         return {
-          fill:    hover ? 'var(--cth-cream-200)' : 'transparent',
-          text:    disabled ? disabledText : 'var(--cth-ink-700)',
-          border:  'var(--cth-ink-300)',
-          shadow:  'var(--cth-ink-100)'
+          fill:   hover && !disabled ? 'var(--cth-cream-200)' : 'transparent',
+          text:   disabled ? disabledText : 'var(--cth-ink-700)',
+          border: 'transparent'
         };
       case 'destructive':
         return {
-          fill:    disabled ? 'var(--cth-cream-300)' : (hover ? 'var(--cth-coral-light)' : 'var(--cth-coral)'),
-          text:    disabled ? disabledText : 'var(--cth-ink-900)',
-          border:  'var(--cth-ink-500)',
-          shadow:  'var(--cth-ink-300)'
+          fill:   disabled ? 'var(--cth-cream-300)' : (hover ? 'var(--cth-coral)' : 'var(--cth-status-blocked)'),
+          text:   disabled ? disabledText : '#ffffff',
+          border: disabled ? 'var(--cth-cream-300)' : 'var(--cth-status-blocked)'
         };
     }
   })();
@@ -82,9 +78,7 @@ export function PixelButton({
     <button
       title={title}
       onClick={disabled ? undefined : onClick}
-      onMouseDown={() => setPressed(true)}
-      onMouseUp={() => setPressed(false)}
-      onMouseLeave={() => { setPressed(false); setHover(false); }}
+      onMouseLeave={() => setHover(false)}
       onMouseEnter={() => setHover(true)}
       disabled={disabled}
       style={{
@@ -116,12 +110,11 @@ export function PixelButton({
         padding: padBySize[size],
         background: palette.fill,
         color: palette.text,
-        border: 'none',
-        // v0.3.4: 1px hairline + 1px lift — the 2px chrome read as heavy boxes
-        boxShadow: pressed && !disabled
-          ? `inset 0 0 0 1px ${palette.border}`
-          : `inset 0 0 0 1px ${palette.border}, 0 1px 0 ${palette.shadow}`,
-        transform: pressed && !disabled ? 'translateY(1px)' : 'none',
+        border: `1px solid ${palette.border}`,
+        borderRadius: 'var(--cth-radius-sm)',
+        boxSizing: 'border-box',
+        transition: 'background 120ms ease-out, border-color 120ms ease-out',
+        fontWeight: 500,
         fontFamily: 'var(--cth-font-ui)',
         fontSize: size === 'lg' ? 'var(--cth-text-body-md)' : 'var(--cth-text-body-sm)',
         cursor: disabled ? 'not-allowed' : 'pointer',

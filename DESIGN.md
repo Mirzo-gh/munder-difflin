@@ -1,5 +1,7 @@
 # Munder Difflin — Design System
 
+> **Fork perso :** ce document décrit le design upstream ; le fork suit `docs/superpowers/specs/2026-11-05-ui-perso-design.md` (chantier 4).
+
 > The aesthetic is **Animal Crossing × Earthbound × SNES menu UI**. Pixel-snapped, chunky, friendly. Every UI element should feel like it could appear in a Nintendo game from 1995–2005. This document is canonical: any new component must derive from these tokens.
 
 ---

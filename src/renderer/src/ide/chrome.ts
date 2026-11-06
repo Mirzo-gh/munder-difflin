@@ -17,7 +17,7 @@ import type { CSSProperties } from 'react';
 /** The horizontal bar above an editor / preview body. */
 export const ideBarStyle: CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px',
-  background: 'var(--cth-cream-200)', borderBottom: '1px solid var(--cth-ink-700)',
+  background: 'var(--cth-cream-200)', borderBottom: '1px solid var(--cth-ink-100)',
   fontFamily: 'var(--cth-font-ui)', fontSize: 12, color: 'var(--cth-ink-700)'
 };
 

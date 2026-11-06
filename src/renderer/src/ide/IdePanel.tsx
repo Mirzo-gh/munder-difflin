@@ -397,7 +397,7 @@ export function IdePanel() {
             >{target.agent.name}</span>
             {target.agent.isGod && (
               <span style={{
-                fontFamily: 'var(--cth-font-display)', fontSize: 7, padding: '1px 3px',
+                fontFamily: 'var(--cth-font-display)', fontSize: 11, padding: '1px 3px',
                 background: 'var(--cth-lilac-light)', color: 'var(--cth-ink-900)'
               }}>god</span>
             )}
@@ -452,7 +452,7 @@ export function IdePanel() {
           <div style={{
             width: treeWidth, flexShrink: 0, minHeight: 0,
             display: 'flex', flexDirection: 'column',
-            borderRight: '1px solid var(--cth-ink-700)', background: 'var(--cth-cream-50)'
+            borderRight: '1px solid var(--cth-ink-100)', background: 'var(--cth-cream-50)'
           }}>
             {/* Git rail: CHANGES · HISTORY · COMPARE (v0.3.4). History/compare
                 run at the repo's MAIN root so worktree branches all appear. */}
@@ -475,7 +475,7 @@ export function IdePanel() {
                   // folds, and together they are a bigger hit target than the
                   // caret alone was.
                   display: 'flex', alignItems: 'center', gap: 3, width: 'auto', padding: '0 3px',
-                  fontFamily: 'var(--cth-font-mono)', fontSize: 10, lineHeight: '14px',
+                  fontFamily: 'var(--cth-font-mono)', fontSize: 11, lineHeight: '14px',
                   color: 'var(--cth-ink-700)'
                 }}
               >
@@ -490,8 +490,7 @@ export function IdePanel() {
                   onClick={() => { setRailTab(k); if (gitCollapsed) toggleGitRail(); }}
                   style={{
                     padding: '1px 8px', border: 'none', cursor: 'pointer',
-                    fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '14px',
-                    textTransform: 'uppercase', color: 'var(--cth-ink-700)',
+                    fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '14px', color: 'var(--cth-ink-700)',
                     background: railTab === k && !gitCollapsed ? 'var(--cth-sky-light)' : 'transparent',
                     boxShadow: railTab === k && !gitCollapsed ? 'inset 0 0 0 1px var(--cth-ink-300)' : 'none'
                   }}
@@ -568,7 +567,7 @@ export function IdePanel() {
             {/* Tab bar */}
             <div style={{
               display: 'flex', alignItems: 'stretch', overflowX: 'auto', flexShrink: 0,
-              background: 'var(--cth-cream-200)', borderBottom: '1px solid var(--cth-ink-700)', minHeight: 30
+              background: 'var(--cth-cream-200)', borderBottom: '1px solid var(--cth-ink-100)', minHeight: 30
             }}>
               {tabs.map((tab) => {
                 const active = tab.key === activeKey;
@@ -590,7 +589,7 @@ export function IdePanel() {
                   >
                     {tab.mode !== 'edit' && (
                       <span style={{
-                        fontFamily: 'var(--cth-font-display)', fontSize: 7, padding: '1px 3px',
+                        fontFamily: 'var(--cth-font-display)', fontSize: 11, padding: '1px 3px',
                         background: tab.mode === 'revdiff' ? 'var(--cth-lilac-light)'
                           : tab.mode === 'image' ? 'var(--cth-peach-light)'
                           : 'var(--cth-sky-light)',
@@ -621,7 +620,7 @@ export function IdePanel() {
                 }}>
                   <Icon name="code" size={2} />
                   <div style={{
-                    fontFamily: 'var(--cth-font-display)', fontSize: 8, textTransform: 'uppercase',
+                    fontFamily: 'var(--cth-font-display)', fontSize: 11,
                     letterSpacing: 1, color: 'var(--cth-ink-700)'
                   }}>nothing open</div>
                   <div style={{ fontFamily: 'var(--cth-font-ui)', fontSize: 13 }}>
@@ -699,7 +698,7 @@ export function IdePanel() {
                   <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 8, padding: '3px 8px',
-                      background: 'var(--cth-cream-200)', borderBottom: '1px solid var(--cth-ink-700)',
+                      background: 'var(--cth-cream-200)', borderBottom: '1px solid var(--cth-ink-100)',
                       fontFamily: 'var(--cth-font-ui)', fontSize: 12, color: 'var(--cth-ink-700)'
                     }}>
                       <span style={{ fontFamily: 'var(--cth-font-mono)', color: 'var(--cth-ink-500)' }}>
@@ -726,7 +725,7 @@ export function IdePanel() {
                   <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 8, padding: '3px 8px',
-                      background: 'var(--cth-cream-200)', borderBottom: '1px solid var(--cth-ink-700)',
+                      background: 'var(--cth-cream-200)', borderBottom: '1px solid var(--cth-ink-100)',
                       fontFamily: 'var(--cth-font-ui)', fontSize: 12, color: 'var(--cth-ink-700)'
                     }}>
                       <span style={{ color: 'var(--cth-ink-500)' }}>HEAD</span>
@@ -758,7 +757,7 @@ function SectionHeader({ title, right }: { title: string; right?: React.ReactNod
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px 4px',
-      fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px', textTransform: 'uppercase',
+      fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
       color: 'var(--cth-ink-700)', background: 'var(--cth-cream-50)', borderBottom: '1px solid var(--cth-ink-100)'
     }}>
       <span style={{ flex: 1 }}>{title}</span>

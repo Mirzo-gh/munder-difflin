@@ -177,7 +177,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
       onDrop={onDrop}
       style={{
         flexShrink: 0,
-        borderTop: '1px solid var(--cth-ink-700)',
+        borderTop: '1px solid var(--cth-ink-100)',
         background: 'var(--cth-cream-100)',
         display: 'flex',
         flexDirection: 'column',
@@ -187,7 +187,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
       }}>
       {dragOver && (
         <span style={{
-          fontFamily: 'var(--cth-font-display)', fontSize: 9, lineHeight: '12px',
+          fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
           color: 'var(--cth-ink-700)', textAlign: 'center'
         }}>{t('queueComposer.dropToAttach')}</span>
       )}
@@ -195,7 +195,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{
           fontFamily: 'var(--cth-font-display)',
-          fontSize: 9, lineHeight: '12px',
+          fontSize: 11, lineHeight: '16px',
           color: 'var(--cth-ink-700)'
         }}>{t('queueComposer.queue')}</span>
         {queue.length > 0 && (

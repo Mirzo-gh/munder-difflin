@@ -428,7 +428,7 @@ export function App() {
               pointerEvents: 'none'
             }}>
               <div style={{ pointerEvents: 'auto', width: 360 }}>
-                <PixelPanel variant="dialog" title="EMPTY FLOOR" noPadding>
+                <PixelPanel variant="dialog" title="Empty floor" noPadding>
                   <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <p style={{ margin: 0, fontSize: 13, lineHeight: '20px' }}>
                       No agents on the floor yet. Spawn one to see real claude output stream in here.
@@ -449,9 +449,9 @@ export function App() {
               justifyContent: 'center', alignItems: 'center', gap: 12
             }}>
               <div style={{
-                fontFamily: 'var(--cth-font-display)', fontSize: 10, lineHeight: '14px',
+                fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '14px',
                 color: 'var(--cth-ink-500)'
-              }}>NO AGENT SELECTED</div>
+              }}>No agent selected</div>
               <p style={{ margin: 0, fontSize: 13, textAlign: 'center', color: 'var(--cth-ink-700)' }}>
                 Pick an agent in the column on the left.<br />
                 Its terminal and command bar will land here.

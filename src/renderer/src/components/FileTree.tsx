@@ -149,7 +149,7 @@ export function FileTree({ root, activeRel, onOpenFile, onCopyPath }: FileTreePr
             title={t('fileTree.copyPathTitle')}
             style={{
               padding: '0 4px',
-              fontSize: 10,
+              fontSize: 11,
               fontFamily: 'var(--cth-font-ui)',
               color: 'var(--cth-ink-500)',
               background: 'transparent', border: 'none', cursor: 'pointer'

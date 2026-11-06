@@ -436,7 +436,7 @@ function Legend() {
       display: 'flex', flexWrap: 'wrap', gap: '2px 10px', maxWidth: 280, pointerEvents: 'none'
     }}>
       {items.map((it) => (
-        <span key={it.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--cth-ink-700)' }}>
+        <span key={it.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--cth-ink-700)' }}>
           <span style={{ width: 9, height: 3, background: it.c, display: 'inline-block' }} /> {it.label}
         </span>
       ))}
@@ -453,7 +453,7 @@ function Tooltip({ x, y, wrap, children }: { x: number; y: number; wrap: { w: nu
       position: 'absolute', left: Math.max(6, left), top: flipUp ? undefined : y + 14,
       bottom: flipUp ? wrap.h - y + 14 : undefined,
       width: W, padding: 8, pointerEvents: 'none', zIndex: 5,
-      background: 'var(--cth-cream-50)', boxShadow: '2px 2px 0 var(--cth-ink-900), inset 0 0 0 1px var(--cth-ink-300)'
+      background: 'var(--cth-cream-50)', border: '1px solid var(--cth-ink-300)', borderRadius: 'var(--cth-radius-md)', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.28)'
     }}>{children}</div>
   );
 }

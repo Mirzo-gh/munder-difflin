@@ -112,10 +112,10 @@ export function GitTab({ cwd }: GitTabProps) {
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '6px 10px',
         background: 'var(--cth-cream-200)',
-        borderBottom: '1px solid var(--cth-ink-700)'
+        borderBottom: '1px solid var(--cth-ink-100)'
       }}>
         <span style={{
-          fontFamily: 'var(--cth-font-display)', fontSize: 10, lineHeight: '14px',
+          fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '14px',
           padding: '2px 6px',
           background: 'var(--cth-sky-light)',
           boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
@@ -206,8 +206,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <div style={{ marginBottom: 4 }}>
       <div style={{
-        fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
-        textTransform: 'uppercase',
+        fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
         color: 'var(--cth-ink-700)',
         padding: '8px 10px 4px',
         background: 'var(--cth-cream-50)',
@@ -227,8 +226,7 @@ function StatusGroup({ label, entries }: {
   return (
     <div style={{ padding: '4px 0' }}>
       <div style={{
-        padding: '0 12px', fontSize: 11, color: 'var(--cth-ink-500)',
-        textTransform: 'uppercase', letterSpacing: 0
+        padding: '0 12px', fontSize: 11, color: 'var(--cth-ink-500)', letterSpacing: 0
       }}>{label}</div>
       {entries.map(e => (
         <div key={`${label}-${e.path}-${e.code}`} style={{

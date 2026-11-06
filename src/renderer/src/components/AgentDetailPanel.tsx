@@ -140,7 +140,7 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '6px 8px',
         background: 'var(--cth-cream-100)',
-        borderBottom: '1px solid var(--cth-ink-700)',
+        borderBottom: '1px solid var(--cth-ink-100)',
         flexShrink: 0
       }}>
         <AgentMonogram name={agent.name} accent={agent.accent} size={36} />
@@ -149,8 +149,7 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
             <AgentNameEditor
               name={agent.name}
               onCommit={(name) => renameAgent(agent.id, name)}
-              uppercase
-              fontSize={10}
+              fontSize={13}
             />
           </div>
           <div style={{
@@ -294,9 +293,9 @@ function EmptyTab({ title, children }: { title: string; children: React.ReactNod
       background: 'var(--cth-paper-200)'
     }}>
       <div style={{
-        fontFamily: 'var(--cth-font-display)', fontSize: 10, lineHeight: '14px',
+        fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '14px',
         color: 'var(--cth-ink-500)'
-      }}>{title.toUpperCase()}</div>
+      }}>{title}</div>
       <p style={{
         margin: 0, fontSize: 13, textAlign: 'center', color: 'var(--cth-ink-700)',
         maxWidth: 280

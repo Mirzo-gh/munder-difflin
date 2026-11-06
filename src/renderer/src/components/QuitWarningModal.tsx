@@ -39,7 +39,7 @@ export function QuitWarningModal({ ptyCount, closing, onCancel, onConfirm, onClo
       onClick={inClosingTime ? undefined : onCancel}
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(26, 19, 32, 0.7)',
+        background: 'rgba(0, 0, 0, 0.6)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         // Above EVERY modal, not just most of them. Modals in this app sit at
         // 500 (add agent, edit agent, the release drop) and overlays below that.
@@ -54,7 +54,7 @@ export function QuitWarningModal({ ptyCount, closing, onCancel, onConfirm, onClo
         onClick={(e) => e.stopPropagation()}
         style={{ width: 480, maxWidth: '92vw' }}
       >
-        <PixelPanel variant="dialog" title={inClosingTime ? 'CLOSING TIME' : 'QUITTING NOW?'} noPadding>
+        <PixelPanel variant="dialog" title={inClosingTime ? 'Closing time' : 'QUITTING NOW?'} noPadding>
           <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
             {inClosingTime ? (
               <>
@@ -63,7 +63,7 @@ export function QuitWarningModal({ ptyCount, closing, onCancel, onConfirm, onClo
                   <div style={{
                     width: 32, height: 32,
                     background: closing!.phase === 'complete' ? 'var(--cth-mint-light, #cdeccd)' : 'var(--cth-lemon-light, #f6ecc4)',
-                    boxShadow: 'inset 0 0 0 1.5px var(--cth-ink-500)',
+                    boxShadow: 'inset 0 0 0 1px var(--cth-ink-500)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0
                   }}>
@@ -77,10 +77,10 @@ export function QuitWarningModal({ ptyCount, closing, onCancel, onConfirm, onClo
                       marginBottom: 4
                     }}>
                       {closing!.phase === 'complete'
-                        ? 'FLOOR SAVED — SEE YOU TOMORROW'
+                        ? 'Floor saved — see you tomorrow'
                         : closing!.phase === 'timeout'
                           ? 'STILL WRAPPING UP…'
-                          : 'WRAPPING UP THE FLOOR'}
+                          : 'Wrapping up the floor'}
                     </div>
                     <div style={{ fontSize: 15, lineHeight: '22px', color: 'var(--cth-ink-700)' }}>
                       {closing!.phase === 'complete' ? (
@@ -106,7 +106,7 @@ export function QuitWarningModal({ ptyCount, closing, onCancel, onConfirm, onClo
                 }}>
                   {closing!.total > 0
                     ? `${closing!.acked} / ${closing!.total} WORKERS CONFIRMED${closing!.acked >= closing!.total ? ' — WAITING FOR THE ORCHESTRATOR' : ''}`
-                    : 'NO WORKERS ON THE FLOOR — WAITING FOR THE ORCHESTRATOR'}
+                    : 'No workers on the floor — waiting for the orchestrator'}
                   {closing!.phase === 'timeout' && (
                     <div style={{ marginTop: 6, fontFamily: 'var(--cth-font-body, inherit)' }}>
                       This is taking a while (an agent may be mid-compaction or deep in a
@@ -135,7 +135,7 @@ export function QuitWarningModal({ ptyCount, closing, onCancel, onConfirm, onClo
                   <div style={{
                     width: 32, height: 32,
                     background: 'var(--cth-coral-light)',
-                    boxShadow: 'inset 0 0 0 1.5px var(--cth-ink-500)',
+                    boxShadow: 'inset 0 0 0 1px var(--cth-ink-500)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0
                   }}>

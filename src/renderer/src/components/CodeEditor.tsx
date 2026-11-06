@@ -13,43 +13,44 @@ import { yaml } from '@codemirror/lang-yaml';
 import { Icon } from './Icon';
 import { PixelButton } from './PixelButton';
 
-// ─── Theme matching CTH palette ─────────────────────────────────────────────
+// ─── Theme from the app tokens (fork perso: Orca palette, both themes) ──────
+// CodeMirror styles are real CSS, so the --cth-* variables follow the app theme.
 const cthEditorTheme = EditorView.theme({
   '&': {
-    background: '#FCFAF0',
-    color: '#1A1320',
+    background: 'var(--cth-cream-50)',
+    color: 'var(--cth-ink-900)',
     height: '100%',
     fontFamily: 'var(--cth-font-mono)',
-    fontSize: '16px'
+    fontSize: '14px'
   },
-  '.cm-content': { caretColor: '#FF6B6B', padding: '8px 0' },
-  '.cm-cursor, .cm-dropCursor': { borderLeftColor: '#FF6B6B', borderLeftWidth: '2px' },
+  '.cm-content': { caretColor: 'var(--cth-ink-900)', padding: '8px 0' },
+  '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--cth-ink-900)', borderLeftWidth: '2px' },
   '.cm-scroller': { fontFamily: 'inherit', overflow: 'auto' },
   '.cm-gutters': {
-    background: '#F0EAD2',
-    color: '#6B5878',
-    borderRight: '1px solid #D9CFE0'
+    background: 'var(--cth-cream-50)',
+    color: 'var(--cth-ink-500)',
+    borderRight: '1px solid var(--cth-ink-100)'
   },
-  '.cm-activeLineGutter': { background: '#FFEC99' },
-  '.cm-activeLine': { background: 'rgba(255, 217, 61, 0.10)' },
-  '.cm-selectionBackground, ::selection': { background: '#FFEC99 !important' },
-  '.cm-searchMatch': { background: '#A8E6E0', outline: '1px solid #1A1320' },
-  '.cm-searchMatch.cm-searchMatch-selected': { background: '#FFD93D' }
-}, { dark: false });
+  '.cm-activeLineGutter': { background: 'var(--cth-paper-100)', color: 'var(--cth-ink-700)' },
+  '.cm-activeLine': { background: 'var(--cth-paper-100)' },
+  '.cm-selectionBackground, ::selection': { background: 'var(--cth-ink-300) !important' },
+  '.cm-searchMatch': { background: 'var(--cth-lemon-light)', outline: '1px solid var(--cth-ink-300)' },
+  '.cm-searchMatch.cm-searchMatch-selected': { background: 'var(--cth-lemon)', color: 'var(--cth-on-accent)' }
+});
 
 const cthSyntax = HighlightStyle.define([
-  { tag: tags.keyword,        color: '#B197FC' },
-  { tag: tags.operator,       color: '#6B5878' },
-  { tag: [tags.string, tags.regexp], color: '#6BCF7F' },
-  { tag: [tags.number, tags.bool, tags.null], color: '#FF6B6B' },
-  { tag: tags.comment,        color: '#6B5878', fontStyle: 'italic' },
-  { tag: tags.variableName,   color: '#1A1320' },
-  { tag: tags.function(tags.variableName), color: '#FFA07A' },
-  { tag: [tags.typeName, tags.className], color: '#4ECDC4' },
-  { tag: tags.propertyName,   color: '#3D2E4A' },
-  { tag: tags.heading,        color: '#1A1320', fontWeight: 'bold' as any },
-  { tag: tags.link,           color: '#4ECDC4', textDecoration: 'underline' as any },
-  { tag: tags.meta,           color: '#6B5878' }
+  { tag: tags.keyword,        color: 'var(--cth-lilac)' },
+  { tag: tags.operator,       color: 'var(--cth-ink-700)' },
+  { tag: [tags.string, tags.regexp], color: 'var(--cth-mint)' },
+  { tag: [tags.number, tags.bool, tags.null], color: 'var(--cth-coral)' },
+  { tag: tags.comment,        color: 'var(--cth-ink-500)', fontStyle: 'italic' },
+  { tag: tags.variableName,   color: 'var(--cth-ink-900)' },
+  { tag: tags.function(tags.variableName), color: 'var(--cth-peach)' },
+  { tag: [tags.typeName, tags.className], color: 'var(--cth-sky)' },
+  { tag: tags.propertyName,   color: 'var(--cth-ink-700)' },
+  { tag: tags.heading,        color: 'var(--cth-ink-900)', fontWeight: 'bold' as any },
+  { tag: tags.link,           color: 'var(--cth-sky)', textDecoration: 'underline' as any },
+  { tag: tags.meta,           color: 'var(--cth-ink-500)' }
 ]);
 
 function extensionsFor(filename: string) {
@@ -158,8 +159,7 @@ export function CodeEditor({
           <Icon name="code" size={2} />
         </div>
         <div style={{
-          fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '14px',
-          textTransform: 'uppercase', letterSpacing: 1,
+          fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '14px', letterSpacing: 1,
           color: 'var(--cth-ink-700)'
         }}>
           No file open
@@ -185,7 +185,7 @@ export function CodeEditor({
         display: 'flex', alignItems: 'center', gap: 6,
         padding: '4px 8px',
         background: 'var(--cth-cream-200)',
-        borderBottom: '1px solid var(--cth-ink-700)',
+        borderBottom: '1px solid var(--cth-ink-100)',
         fontFamily: 'var(--cth-font-ui)', fontSize: 12,
         color: 'var(--cth-ink-700)'
       }}>

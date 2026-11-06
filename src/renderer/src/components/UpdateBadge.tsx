@@ -152,8 +152,8 @@ export function UpdateBadge() {
           Download the latest version and replace the app you have. Prefer the app to update itself? Settings &rarr; Updates.
         </div>
         <div style={{
-          marginTop: 8, fontFamily: 'var(--cth-font-mono, monospace)', fontSize: 9,
-          letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--cth-ink-500)'
+          marginTop: 8, fontFamily: 'var(--cth-font-mono, monospace)', fontSize: 11,
+          letterSpacing: '.18em', color: 'var(--cth-ink-500)'
         }}>On {steps.os}</div>
         <ol style={{ margin: '4px 0 0', paddingLeft: 18, color: 'var(--cth-ink-700)' }}>
           {steps.steps.map((t) => <li key={t}>{t}</li>)}

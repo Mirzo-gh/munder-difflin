@@ -222,7 +222,8 @@ export function UpdateToast() {
       position: 'fixed', right: 16, bottom: 16, zIndex: 400,
       maxWidth: 340,
       background: 'var(--cth-cream-50)',
-      boxShadow: '0 0 0 2px var(--cth-ink-900), 4px 5px 0 0 rgba(26,19,32,0.25)',
+      border: '1px solid var(--cth-ink-300)', borderRadius: 'var(--cth-radius-lg)',
+      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.28)',
       padding: '10px 12px',
       display: 'flex', flexDirection: 'column', gap: 8,
       fontFamily: 'var(--cth-font-ui)'
@@ -244,8 +245,8 @@ export function UpdateToast() {
       {notes.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{
-            fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
-            color: 'var(--cth-ink-500)', textTransform: 'uppercase'
+            fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
+            color: 'var(--cth-ink-500)'
           }}>
             What’s new
           </div>

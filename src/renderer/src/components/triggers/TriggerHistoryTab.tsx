@@ -131,7 +131,7 @@ function clampBody(body: string): { text: string; clipped: boolean } {
 /* ───────────────────────────────── styles ────────────────────────────────── */
 
 const tinyCaps: CSSProperties = {
-  fontFamily: 'var(--cth-font-display)', fontSize: 9, lineHeight: '12px',
+  fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
   color: 'var(--cth-ink-500)'
 };
 const uiText: CSSProperties = {
@@ -149,7 +149,7 @@ const cardStyle: CSSProperties = {
 const pendingCardStyle: CSSProperties = {
   ...cardStyle,
   background: 'var(--cth-cream-100)',
-  boxShadow: 'inset 0 0 0 2px var(--cth-lemon)'
+  boxShadow: 'inset 0 0 0 1px var(--cth-lemon)'
 };
 const bodyBox: CSSProperties = {
   background: 'var(--cth-cream-200)',
@@ -167,7 +167,7 @@ const linkButton: CSSProperties = {
 
 function badgeStyle(fill: string, line: string): CSSProperties {
   return {
-    fontFamily: 'var(--cth-font-display)', fontSize: 9, lineHeight: '12px',
+    fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
     padding: '3px 5px 2px', background: fill, boxShadow: `inset 0 0 0 1px ${line}`,
     color: 'var(--cth-ink-900)', flexShrink: 0
   };
@@ -470,13 +470,13 @@ export function TriggerHistoryTab() {
                 flex: 1, height: 32, padding: '0 8px', border: 'none', cursor: 'pointer',
                 background: active ? 'var(--cth-paper-200)' : 'transparent',
                 boxShadow: active ? 'inset 0 -2px 0 var(--cth-ink-900)' : 'none',
-                fontFamily: 'var(--cth-font-display)', fontSize: 9, lineHeight: '12px',
+                fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
                 color: active ? 'var(--cth-ink-900)' : 'var(--cth-ink-500)',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                 minWidth: 0
               }}
             >
-              <span style={ellipsis}>{t(s.labelKey).toUpperCase()}</span>
+              <span style={ellipsis}>{t(s.labelKey)}</span>
               {p > 0 && (
                 <span style={{
                   ...badgeStyle('var(--cth-lemon-light)', 'var(--cth-lemon)'),

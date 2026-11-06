@@ -92,7 +92,9 @@ export function AgentStrip({ config }: AgentStripProps) {
       flexDirection: 'column',
       height: '100%',
       minHeight: 0,
-      background: 'var(--cth-cream-200)'
+      // Side column surface (Orca: #171717 dark / #fafafa light). The selected
+      // row uses cream-200, which must stay visible against this.
+      background: 'var(--cth-paper-100)'
     }}>
       {/* Header: "Agents · N" + a quick add. */}
       <div style={{
@@ -126,9 +128,8 @@ export function AgentStrip({ config }: AgentStripProps) {
       <div style={{
         flex: 1, minHeight: 0,
         overflowY: 'auto', overflowX: 'hidden',
-        display: 'flex', flexDirection: 'column', gap: 8,
-        // Room for the 2px selection ring, the hover lift and the task note's overhang.
-        padding: '4px 12px 12px'
+        display: 'flex', flexDirection: 'column', gap: 2,
+        padding: '4px 8px 12px'
       }}>
       {agents.map(a => (
         // Draggable wrapper: reorder the roster by dragging one card onto another.
@@ -213,15 +214,16 @@ export function AgentStrip({ config }: AgentStripProps) {
                     position: 'fixed', left, top, width, zIndex: 350,
                     padding: 10, boxSizing: 'border-box',
                     background: 'var(--cth-paper-100)',
-                    boxShadow: 'inset 0 0 0 1px var(--cth-ink-300), 3px 3px 0 rgba(26,19,32,0.14)',
+                    border: '1px solid var(--cth-ink-300)', borderRadius: 'var(--cth-radius-lg)',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.28)',
                     display: 'flex', flexDirection: 'column', gap: 6
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{
-                      fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
+                      fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
                       color: 'var(--cth-ink-500)'
-                    }}>{t('agentStrip.privateNote', { name: a.name.toUpperCase() })}</span>
+                    }}>{t('agentStrip.privateNote', { name: a.name })}</span>
                     <button
                       onClick={() => setNoteEditId(null)}
                       title={t('agentStrip.done')}
@@ -256,7 +258,7 @@ export function AgentStrip({ config }: AgentStripProps) {
                       lineHeight: '18px', color: 'var(--cth-ink-900)'
                     }}
                   />
-                  <span style={{ fontSize: 10, color: 'var(--cth-ink-500)' }}>
+                  <span style={{ fontSize: 11, color: 'var(--cth-ink-500)' }}>
                     {t('agentStrip.oneLineOneBullet')}
                   </span>
                 </div>
@@ -272,7 +274,7 @@ export function AgentStrip({ config }: AgentStripProps) {
         marginTop: 'auto', flexShrink: 0,
         display: 'flex', flexDirection: 'column', gap: 8,
         padding: '10px 12px 12px',
-        borderTop: '1px solid var(--cth-ink-300)'
+        borderTop: '1px solid var(--cth-ink-100)'
       }}>
       <PixelButton
         variant="secondary"
@@ -326,13 +328,14 @@ export function AgentStrip({ config }: AgentStripProps) {
             position: 'fixed', left: restoreMenuPos.left, bottom: restoreMenuPos.bottom,
             zIndex: 350, minWidth: RESTORE_MENU_MIN_W, maxHeight: '50vh', overflowY: 'auto',
             background: 'var(--cth-cream-50)',
-            boxShadow: '0 0 0 2px var(--cth-ink-900), 3px 4px 0 0 rgba(26,19,32,0.22)',
+            border: '1px solid var(--cth-ink-300)', borderRadius: 'var(--cth-radius-lg)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.28)',
             padding: 8, display: 'flex', flexDirection: 'column', gap: 6,
             fontFamily: 'var(--cth-font-ui)'
           }}>
             <span style={{
-              fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
-              color: 'var(--cth-ink-500)', textTransform: 'uppercase'
+              fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px',
+              color: 'var(--cth-ink-500)'
             }}>
               {t('agentStrip.previousSession')}
             </span>

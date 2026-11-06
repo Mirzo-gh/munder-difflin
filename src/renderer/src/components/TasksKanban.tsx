@@ -170,7 +170,7 @@ export function TasksKanban() {
         display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', flexShrink: 0,
         borderBottom: '1px solid var(--cth-ink-300)'
       }}>
-        <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 9, color: 'var(--cth-ink-500)' }}>
+        <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 11, color: 'var(--cth-ink-500)' }}>
           {t('kanban.count', { count: tasks.length })}
         </span>
         <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--cth-ink-300)' }}>
@@ -192,7 +192,7 @@ export function TasksKanban() {
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px 4px',
                 background: col.accent, boxShadow: 'inset 0 -1px 0 var(--cth-ink-900)',
-                fontFamily: 'var(--cth-font-display)', fontSize: 9, color: 'var(--cth-ink-900)'
+                fontFamily: 'var(--cth-font-display)', fontSize: 11, color: 'var(--cth-ink-900)'
               }}>
                 {t(col.labelKey)}
                 <span style={{ marginLeft: 'auto', fontSize: 11, fontFamily: 'var(--cth-font-ui)' }}>{cards.length}</span>
@@ -256,7 +256,7 @@ function TaskCard({ task, accent, assigneeName, onOpen, onDismiss }: {
               column, so the 18px right padding keeps it clear of the ✕ and
               the '?' badge. */}
           <span style={{
-            fontFamily: 'var(--cth-font-mono)', fontSize: 10,
+            fontFamily: 'var(--cth-font-mono)', fontSize: 11,
             color: 'var(--cth-ink-500)'
           }}>{task.id}</span>
           <span style={{
@@ -265,15 +265,15 @@ function TaskCard({ task, accent, assigneeName, onOpen, onDismiss }: {
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
           }}>{task.title}</span>
           {assigneeName && (
-            <span style={{ fontSize: 10, color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-display)' }}>
-              {assigneeName.toUpperCase()}
+            <span style={{ fontSize: 11, color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-display)' }}>
+              {assigneeName}
             </span>
           )}
         </span>
         {waitsOnHuman(task) && (
           <span title={t('kanban.needsYouTitle')} style={{
             alignSelf: 'center', marginRight: 18, flexShrink: 0,
-            fontFamily: 'var(--cth-font-display)', fontSize: 10, padding: '2px 5px 1px',
+            fontFamily: 'var(--cth-font-display)', fontSize: 11, padding: '2px 5px 1px',
             background: 'var(--cth-lilac)', color: 'var(--cth-ink-900)',
             boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)'
           }}>?</span>
@@ -328,7 +328,7 @@ export function TaskDetail({ task, all, assigneeName, onMove, onAssign, onClose 
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 280,
-        background: 'rgba(26, 19, 32, 0.6)',
+        background: 'rgba(0, 0, 0, 0.6)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24
       }}
     >
@@ -348,17 +348,17 @@ export function TaskDetail({ task, all, assigneeName, onMove, onAssign, onClose 
                   it is the handle every dispatch and every message uses to name
                   this task, so it should be the first thing here too. */}
               <span style={{
-                fontFamily: 'var(--cth-font-mono)', fontSize: 10, color: 'var(--cth-ink-500)'
+                fontFamily: 'var(--cth-font-mono)', fontSize: 11, color: 'var(--cth-ink-500)'
               }}>{task.id}</span>
               <span style={{
-                fontFamily: 'var(--cth-font-display)', fontSize: 8, padding: '2px 6px 1px',
+                fontFamily: 'var(--cth-font-display)', fontSize: 11, padding: '2px 6px 1px',
                 background: col.accent, color: 'var(--cth-ink-900)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)'
               }}>{t(col.labelKey)}</span>
               {assigneeName
                 ? <PixelBadge status="working" label={assigneeName} />
                 : <span style={{ fontSize: 11, color: 'var(--cth-ink-300)' }}>{t('kanban.unassigned')}</span>}
               <PriorityDots level={Math.max(1, Math.min(5, task.priority))} />
-              <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-display)' }}>
+              <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-display)' }}>
                 {isNaN(created.getTime()) ? '' : created.toLocaleString()}
               </span>
             </div>
@@ -378,7 +378,7 @@ export function TaskDetail({ task, all, assigneeName, onMove, onAssign, onClose 
                 "view earlier answers" link arrives from. */}
             {(task.humanQA?.length ?? 0) > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 8, color: 'var(--cth-ink-500)' }}>
+                <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 11, color: 'var(--cth-ink-500)' }}>
                   {t('kanban.humanQA')}
                 </div>
                 {task.humanQA!.map((e, i) => (
@@ -389,7 +389,7 @@ export function TaskDetail({ task, all, assigneeName, onMove, onAssign, onClose 
                       boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
                       fontSize: 12, lineHeight: '17px', color: 'var(--cth-ink-900)'
                     }}>
-                      <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 8, flexShrink: 0, marginTop: 2 }}>Q</span>
+                      <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 11, flexShrink: 0, marginTop: 2 }}>Q</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <MarkdownPreview source={e.q} variant="card" />
                       </div>
@@ -401,7 +401,7 @@ export function TaskDetail({ task, all, assigneeName, onMove, onAssign, onClose 
                         boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
                         fontSize: 12, lineHeight: '17px', color: 'var(--cth-ink-900)'
                       }}>
-                        <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 8, flexShrink: 0, marginTop: 2 }}>A</span>
+                        <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 11, flexShrink: 0, marginTop: 2 }}>A</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <MarkdownPreview source={e.a} variant="card" />
                         </div>
@@ -419,7 +419,7 @@ export function TaskDetail({ task, all, assigneeName, onMove, onAssign, onClose 
             {/* Dependencies, resolved to titles */}
             {deps.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 8, color: 'var(--cth-ink-500)' }}>
+                <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 11, color: 'var(--cth-ink-500)' }}>
                   {t('kanban.dependsOn')}
                 </div>
                 {deps.map((d) => {
@@ -485,7 +485,8 @@ function PriorityDots({ level }: { level: number }) {
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '6px 8px', background: 'var(--cth-paper-100)', border: 'none',
   boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)', fontFamily: 'var(--cth-font-ui)',
-  fontSize: 12, lineHeight: '17px', color: 'var(--cth-ink-900)', outline: 'none', boxSizing: 'border-box'
+  fontSize: 12, lineHeight: '17px', color: 'var(--cth-ink-900)', outline: 'none', boxSizing: 'border-box',
+  borderRadius: 'var(--cth-radius-sm)'
 };
 
 const selectStyle: React.CSSProperties = {
@@ -495,5 +496,5 @@ const selectStyle: React.CSSProperties = {
 };
 
 const labelStyle: React.CSSProperties = {
-  fontFamily: 'var(--cth-font-display)', fontSize: 8, color: 'var(--cth-ink-500)'
+  fontFamily: 'var(--cth-font-display)', fontSize: 11, color: 'var(--cth-ink-500)'
 };
