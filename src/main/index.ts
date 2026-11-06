@@ -66,6 +66,7 @@ import { buildWorkerLaunch } from './workerLaunch';
 import { ControlRegistry } from './control';
 import { WorkerWakeWatchdog, WORKER_WAKE_REPORT_MS, activityEvidenceAt, type WorkerWakeFacts } from './workerWake';
 import { inboxNudgeText } from '../shared/hiveNudge';
+import { resolveTerminalTheme } from '../shared/terminalTheme';
 import { resolveGodName } from '../shared/godIdentity';
 import { fetchHireManifest, readHireManifestFiles } from './hire';
 import { parseHireDeepLink, type HireManifest } from '../shared/hire';
@@ -2319,7 +2320,8 @@ function createWindow(opts: { floor?: boolean } = {}): BrowserWindow {
     minWidth: MIN_WIN.width,
     minHeight: MIN_WIN.height,
     title: isFloor ? 'Munder Difflin — Floor' : 'Munder Difflin',
-    backgroundColor: '#FFF8E7',
+    // Dark by default (fork perso), matching the splash — no cream flash at boot.
+    backgroundColor: '#0a0a0a',
     titleBarStyle: 'hiddenInset',
     show: false,
     webPreferences: {
@@ -2787,7 +2789,7 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
           // expands to nothing, so every knowledge-graph instruction was dead on a
           // Windows floor. Empty when the KG is off (the line isn't emitted then).
           kgCliPath: knowledge.env().KG_CLI,
-          theme: readConfig().terminalTheme ?? 'light',
+          theme: resolveTerminalTheme(readConfig().terminalTheme),
           // W3 — default-MCP consent state + the bundled skills source dir.
           mcpDefaults: readConfig().mcpDefaults,
           skillsDir: skillsResourceDir(),

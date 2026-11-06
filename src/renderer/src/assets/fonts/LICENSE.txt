@@ -6,15 +6,17 @@ src/renderer/src/assets/fonts/. They are NOT ours. All three are licensed under
 the SIL Open Font License, Version 1.1, whose full text follows the attributions
 below. The OFL requires this notice to travel with every copy of the software.
 
-  press-start-2p-latin-400.woff2
-    Press Start 2P (latin subset, weight 400)
-    Copyright (c) 2012, Cody "CodeMan38" Boisclair (cody@zone38.net)
-    https://fonts.google.com/specimen/Press+Start+2P
+  geist-latin-var.woff2
+    Geist (latin subset, variable, weights 400 to 700)
+    Copyright 2024 The Geist Project Authors (https://github.com/vercel/geist-font)
+    Taken from @fontsource-variable/geist 5.3.0 (files/geist-latin-wght-normal.woff2)
 
   inter-latin-var.woff2
     Inter (latin subset, variable, weights 400 to 700)
     Copyright (c) 2016 The Inter Project Authors
     https://github.com/rsms/inter
+    No longer used by the app chrome; still the source of the release-drop
+    iframe's embedded sans face (src/shared/dropFonts.ts, scripts/gen-drop-fonts.mjs).
 
   jetbrains-mono-latin-var.woff2
     JetBrains Mono (latin subset, variable, weights 400 to 700)

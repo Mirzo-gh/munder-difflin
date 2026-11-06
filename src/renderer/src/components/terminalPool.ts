@@ -131,9 +131,10 @@ export function acquireTerminal(ptyId: string, theme?: ThemeMap, fontSize = 14):
 
   const term = new Terminal({
     theme,
-    // v0.3.4: JetBrains Mono replaces VT323 — the narrow CRT face strained at
-    // data density. lineHeight stays 1.0 so TUI box-drawing rows stay joined.
-    fontFamily: '"JetBrains Mono", "SF Mono", Menlo, monospace',
+    // Fork perso: the system SF Mono first (Orca look), bundled JetBrains Mono
+    // as the fallback off macOS — same order as --cth-font-mono. lineHeight
+    // stays 1.0 so TUI box-drawing rows stay joined.
+    fontFamily: '"SF Mono", ui-monospace, SFMono-Regular, Menlo, "JetBrains Mono", Consolas, monospace',
     fontSize,
     lineHeight: 1.0,
     cursorBlink: true,

@@ -1,42 +1,58 @@
-/* Design tokens — mirrors tokens.ts. Update both together. */
+/* Design tokens — mirrors tokens.ts. Update both together.
+ *
+ * Fork perso: sober Orca-style palette (neutral, shadcn-like). The token NAMES
+ * are upstream's, only the VALUES changed, so components keep working:
+ *   cream-50/100  → app ground          paper-100 → side column, cards, popovers
+ *   cream-200     → muted surface        paper-200 → muted / selection
+ *   cream-300     → input fill
+ *   ink-900 text · ink-700 secondary · ink-500 tertiary · ink-300 border · ink-100 divider
+ * Dark is the default theme (design/theme.ts); this :root block is LIGHT. */
 :root {
-  /* Base */
-  --cth-cream-50:  #FFFDF5;
-  --cth-cream-100: #FFF8E7;
-  --cth-cream-200: #F4E9C7;
-  --cth-cream-300: #E8D9A0;
-  --cth-paper-100: #FCFAF0;
-  --cth-paper-200: #F0EAD2;
+  /* Base surfaces */
+  --cth-cream-50:  #ffffff;
+  --cth-cream-100: #ffffff;
+  --cth-cream-200: #f5f5f5;
+  --cth-cream-300: #e5e5e5;
+  --cth-paper-100: #fafafa;
+  --cth-paper-200: #f5f5f5;
 
   /* Ink */
-  --cth-ink-900: #1A1320;
-  --cth-ink-700: #3D2E4A;
-  --cth-ink-500: #6B5878;
-  --cth-ink-300: #A899B5;
-  --cth-ink-100: #D9CFE0;
+  --cth-ink-900: #0a0a0a;
+  --cth-ink-700: #525252;
+  --cth-ink-500: #737373;
+  --cth-ink-300: #d4d4d4;
+  --cth-ink-100: #e5e5e5;
 
-  /* Accents — v0.3.4 recalibration: same hues, professional saturation.
-     The originals (#FFD93D, #FF6B6B, …) were full-saturation arcade tones that
-     read as noise at UI density; these sit in the calmer band that products
-     like Linear/Radix use — recognizable color, no glare. */
-  --cth-coral: #D96A62;       --cth-coral-light: #F3D3CD;
-  --cth-mint:  #5CA97A;       --cth-mint-light:  #D2E7DA;
-  --cth-sky:   #4F9FAF;       --cth-sky-light:   #CFE5E9;
-  --cth-lemon: #DCAB3C;       --cth-lemon-light: #F3E4BC;
-  --cth-lilac: #9482D3;       --cth-lilac-light: #E0DAF2;
-  --cth-peach: #D99168;       --cth-peach-light: #F3DACA;
+  /* Accents — Orca hues. They now only colour monogram letters (on a dark tile
+     in BOTH themes) and rare highlights, never a card background, so the same
+     vivid set serves both themes. "-light" = a faint tint for chips/selection. */
+  --cth-coral: #ff667f;       --cth-coral-light: #ffedf0;
+  --cth-mint:  #00d294;       --cth-mint-light:  #e0faf2;
+  --cth-sky:   #00bcfe;       --cth-sky-light:   #e0f7ff;
+  --cth-lemon: #fcbb00;       --cth-lemon-light: #fff7e0;
+  --cth-lilac: #a685ff;       --cth-lilac-light: #f4f0ff;
+  --cth-peach: #ff8b1a;       --cth-peach-light: #fff1e3;
 
-  /* Status — same recalibration; hue meanings unchanged */
-  --cth-status-idle:     #A199AB;
-  --cth-status-thinking: #4F9FAF;
-  --cth-status-working:  #DCAB3C;
-  --cth-status-waiting:  #6D87D6;
-  --cth-status-blocked:  #D96A62;
-  --cth-status-success:  #5CA97A;
-  --cth-status-ghost:    #D9D3DE;
-  --cth-status-compacting: #8F7CC7; /* #5C — mid-/compact, "boxing up context" */
-  --cth-status-looping:    #D6903F; /* #5C — circuit-breaker armed (runaway) */
-  --cth-status-typing:     #C89838; /* unsent text on the prompt — queue is held */
+  /* Status — working yellow, waiting-for-human orange, idle grey, error red,
+     success green; thinking/compacting/looping keep Orca blue/violet/amber. */
+  --cth-status-idle:       #a1a1a1;
+  --cth-status-thinking:   #00a6e0;
+  --cth-status-working:    #edb200;
+  --cth-status-waiting:    #f05100;
+  --cth-status-blocked:    #fb2c36;
+  --cth-status-success:    #00c758;
+  --cth-status-ghost:      #a1a1a1;
+  --cth-status-compacting: #8e6bff; /* mid-/compact, "boxing up context" */
+  --cth-status-looping:    #ff8b1a; /* circuit-breaker armed (runaway) */
+  --cth-status-typing:     #edb200; /* unsent text on the prompt — queue is held */
+
+  /* Focus ring */
+  --cth-focus-ring: #a1a1a1;
+
+  /* Radii — 10px panels, 6-8px buttons/cards */
+  --cth-radius-sm: 6px;
+  --cth-radius-md: 8px;
+  --cth-radius-lg: 10px;
 
   /* Spacing */
   --cth-space-0: 0px;
@@ -49,47 +65,45 @@
   --cth-space-7: 48px;
   --cth-space-8: 64px;
 
-  /* Type — v0.3.4: Press Start 2P stays as the BRAND face for small caps
-     labels; everything the user actually reads is Inter (UI) and JetBrains
-     Mono (code/terminal). Pixelify/VT323 were the main readability drag. */
-  /* Press Start 2P is latin-only by design. CJK and Arabic text in a display
-     slot falls through to a system face rather than to generic monospace. */
-  --cth-font-display: "Press Start 2P", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Geeza Pro", "Noto Naskh Arabic", "Segoe UI Historic", monospace;
-  --cth-font-ui:      "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Geeza Pro", "Noto Naskh Arabic", "Segoe UI Historic", sans-serif;
-  --cth-font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, "PingFang SC", "Microsoft YaHei", "Noto Sans Mono CJK SC", "Noto Sans CJK SC", "Geeza Pro", "Noto Naskh Arabic", "Segoe UI Historic", monospace;
+  /* Type — Geist for the UI, SF Mono for code/terminals/monogram. The pixel
+     faces are gone: "display" is now the UI stack, kept as a name so the
+     components that ask for it need no change. Bundled JetBrains Mono is the
+     mono fallback off macOS. CJK and Arabic fall through to system faces. */
+  --cth-font-display: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Geeza Pro", "Noto Naskh Arabic", "Segoe UI Historic", sans-serif;
+  --cth-font-ui:      "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Geeza Pro", "Noto Naskh Arabic", "Segoe UI Historic", sans-serif;
+  --cth-font-mono:    "SF Mono", ui-monospace, SFMono-Regular, Menlo, "JetBrains Mono", Consolas, "PingFang SC", "Microsoft YaHei", "Noto Sans Mono CJK SC", "Noto Sans CJK SC", "Geeza Pro", "Noto Naskh Arabic", "Segoe UI Historic", monospace;
 
-  /* Type scale — v0.3.4: one step tighter (Inter reads larger than Pixelify
-     at equal px, and the controls were oversized) */
-  --cth-text-display-lg: 16px;
-  --cth-text-display-md: 12px;
-  --cth-text-display-sm: 8px;
+  /* Type scale — the display sizes were calibrated for a pixel face (8-16px);
+     re-set for Geist. */
+  --cth-text-display-lg: 15px;
+  --cth-text-display-md: 13px;
+  --cth-text-display-sm: 11px;
   --cth-text-body-lg:    16px;
   --cth-text-body-md:    14px;
   --cth-text-body-sm:    13px;
   --cth-text-mono-md:    14px;
   --cth-text-mono-sm:    13px;
 
-  /* Line heights — integer multiples */
-  --cth-lh-display-lg: 24px;
-  --cth-lh-display-md: 20px;
-  --cth-lh-display-sm: 12px;
+  /* Line heights */
+  --cth-lh-display-lg: 20px;
+  --cth-lh-display-md: 18px;
+  --cth-lh-display-sm: 14px;
   --cth-lh-body-lg:    24px;
   --cth-lh-body-md:    20px;
   --cth-lh-body-sm:    18px;
   --cth-lh-mono:       20px;
 
-  /* Hard drop shadow — no blur, softer than before */
-  --cth-shadow-hard: 3px 3px 0 rgba(26, 19, 32, 0.14);
+  /* No stepped drop shadows any more. */
+  --cth-shadow-hard: none;
 
   /* Panel borders — v0.3.4: single hairlines. The old three-layer package
      boxed every surface in thick chrome; structure now comes from surface
      contrast, not outlines. Dialogs keep one slightly stronger line. */
   --cth-panel-border:          inset 0 0 0 1px var(--cth-ink-300);
   /* Text that sits ON an accent fill (a selected tab, a filled chip). The
-     accents are LIGHT surfaces in BOTH themes, so this is dark in both — using
-     ink-900 here inverts with the theme and paints near-white on a pale accent,
-     which is the one place the theme switch actively hurts legibility. */
-  --cth-on-accent: #1A1320;
+     accents are vivid mid-to-light hues in BOTH themes, so this is dark in both
+     — ink-900 would invert with the theme and paint near-white on them. */
+  --cth-on-accent: #0a0a0a;
 
   --cth-panel-border-inset:    inset 0 0 0 1px var(--cth-ink-100);
   --cth-panel-border-terminal: inset 0 0 0 1px var(--cth-ink-300);
@@ -99,80 +113,42 @@
   --cth-monogram-bg: #171717;
 }
 
-/* ── Dark theme ──────────────────────────────────────────────────────────────
-   One token swap darkens the WHOLE app. Shades of black with a near-white text
-   ramp, tuned for READABILITY first and measured rather than eyeballed. Stamped
-   by design/theme.ts as data-cth-theme on <html>; the terminal palette and
-   per-agent Claude session themes follow the same switch.
-
-   THE BUG THIS FIXES. Text was never the problem — ink-900 measured 11-14:1 and
-   ink-700 8-9.6:1 against every surface. `ink-300` was, at 1.73-2.09:1. That
-   token is not decoration: it is this app's entire structural language, used
-   187 times and 93 of those as `inset 0 0 0 1px` — the border on every button,
-   input, panel, card and chip. Below ~3:1 a 1px line is not perceivable, so in
-   dark mode the edges defining every control simply were not there, and the UI
-   read as flat washes of grey. ink-300 is now 3.12-3.59:1 and ink-100 stays
-   deliberately quieter (1.47-1.69:1) for dividers that should recede.
-
-   NOT BLACK, AND NOT WHITE. A first pass took the ground to #0E0E11 and text to
-   #EDECEA, which measured beautifully and read as harsh: near-black behind
-   near-white is maximum contrast, and maximum contrast is not the same as
-   comfortable. The ground now sits at luminance 0.009-0.020 (visibly lifted off
-   black, still unambiguously a dark theme) and text at 0.71 rather than 0.84 —
-   a warm off-white. Everything still clears its floor with room to spare.
-
-   Every value below is verified against WCAG contrast for the five surfaces it
-   can appear on: body text >= 4.5, structural borders >= 3.0. Accents are held
-   to a narrow luminance band (0.36-0.44) so no single hue fluoresces against
-   the black and colour never becomes the thing carrying the layout. */
+/* ── Dark theme (DEFAULT) ────────────────────────────────────────────────────
+   Orca's dark palette. Stamped by design/theme.ts as data-cth-theme on <html>;
+   the xterm palette and per-agent Claude session themes follow the same
+   switch. Borders stay solid (not Orca's translucent #ffffff12) because ink-300
+   is also this app's 1px control outline and must stay perceivable. */
 :root[data-cth-theme='dark'] {
-  /* Base surfaces — a graded elevation ramp, darkest where light mode was
-     lightest. Neutral with a whisper of the brand's violet warmth. */
-  --cth-cream-50:  #17171B;   /* app ground — dark, deliberately NOT black */
-  --cth-cream-100: #1D1D22;
-  --cth-cream-200: #26262C;
-  --cth-cream-300: #313139;
-  --cth-paper-100: #1A1A1F;   /* cards, inputs, terminals */
-  --cth-paper-200: #222229;
+  /* Base surfaces */
+  --cth-cream-50:  #0a0a0a;   /* app ground / terminal */
+  --cth-cream-100: #0a0a0a;
+  --cth-cream-200: #262626;   /* muted surface, selection */
+  --cth-cream-300: #2e2e2e;   /* input fill (≈ #ffffff26 over the ground) */
+  --cth-paper-100: #171717;   /* side column, cards, popovers */
+  --cth-paper-200: #262626;
 
-  /* Ink → off-white text ramp (never #FFF — glare) */
-  --cth-ink-900: #DEDBD6;   /* 10.9-13.0:1 — primary text, warm off-white */
-  --cth-ink-700: #B3B0AC;   /*  7.0-8.3:1  — secondary text */
-  --cth-ink-500: #96919F;   /*  4.9-5.8:1  — tertiary / hints */
-  --cth-ink-300: #787684;   /*  3.4-4.0:1  — BORDERS. must stay >= 3.0 */
-  --cth-ink-100: #3E3D46;   /*  1.4-1.7:1  — dividers, meant to recede */
+  /* Ink */
+  --cth-ink-900: #fafafa;
+  --cth-ink-700: #a1a1a1;
+  --cth-ink-500: #8a8a8a;
+  --cth-ink-300: #404040;   /* borders */
+  --cth-ink-100: #262626;   /* dividers, meant to recede */
 
-  /* Accents — one step lighter/softer than the light set so they read on dark
-     without fluorescing */
-  --cth-coral: #E08C82;       --cth-mint:  #74C096;
-  --cth-sky:   #6FB3C4;       --cth-lemon: #CFAA57;
-  --cth-lilac: #A896E3;       --cth-peach: #DFA57F;
+  /* Accent "-light" = the accent at ~15% over #171717 */
+  --cth-coral-light: #3a2327;
+  --cth-mint-light:  #14332a;
+  --cth-sky-light:   #14303a;
+  --cth-lemon-light: #393014;
+  --cth-lilac-light: #2c283a;
+  --cth-peach-light: #3a2817;
 
-  /* Accent "-light" fills double as chip/selection backgrounds — deep muted
-     versions so light text (ink-900) stays readable on top. */
-  --cth-coral-light: #3B2724;
-  --cth-mint-light:  #1E3227;
-  --cth-sky-light:   #1F3238;
-  --cth-lemon-light: #332C1D;
-  --cth-lilac-light: #2B2740;
-  --cth-peach-light: #352822;
+  /* Status */
+  --cth-status-idle:       #525252;
+  --cth-status-thinking:   #00bcfe;
+  --cth-status-ghost:      #525252;
+  --cth-status-compacting: #a685ff;
 
-  /* Status — dark-tuned counterparts (same hue language) */
-  --cth-status-idle:     #6F6C77;
-  --cth-status-thinking: #64ACBB;
-  --cth-status-working:  #D8B052;
-  --cth-status-waiting:  #8095DC;
-  --cth-status-blocked:  #DF8078;
-  --cth-status-success:  #6FB88B;
-  /* The quietest status, but still a MARK the user must be able to find — at
-     the old #3D3C44 it measured 1.54:1 on the new ground and simply vanished. */
-  --cth-status-ghost:    #6C6A76;
-  --cth-status-compacting: #9D8BD2;
-  --cth-status-looping:    #D69A55;
-  --cth-status-typing:     #CBA24A;
-
-  /* Hard shadow reads as depth, not void */
-  --cth-shadow-hard: 4px 4px 0 rgba(0, 0, 0, 0.45);
+  --cth-focus-ring: #737373;
 
   --cth-monogram-bg: #262626;
 }

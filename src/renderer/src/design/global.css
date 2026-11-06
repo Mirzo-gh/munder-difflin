@@ -3,10 +3,11 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-/* The app is a fixed cream/light design. Without declaring it, Chromium on a
-   dark-mode OS styles form controls with the DARK UA scheme — most visibly a
-   white (invisible) text caret on our cream textareas. */
+/* Declare the scheme the THEME uses, not the OS one: otherwise Chromium styles
+   form controls with the wrong UA scheme (e.g. a white caret on a light input).
+   Dark is the default theme (design/theme.ts). */
 :root { color-scheme: light; }
+:root[data-cth-theme='dark'] { color-scheme: dark; }
 
 html, body, #root {
   margin: 0;
@@ -17,16 +18,6 @@ html, body, #root {
   font-size: var(--cth-text-body-md);
   line-height: var(--cth-lh-body-md);
   overflow: hidden;
-}
-
-body {
-  /* tiny diagonal cream noise — pure CSS, no images */
-  background-image:
-    repeating-linear-gradient(
-      45deg,
-      rgba(232, 217, 160, 0.20) 0 1px,
-      transparent 1px 6px
-    );
 }
 
 button, input, textarea, select {
@@ -60,12 +51,9 @@ input, textarea, [contenteditable='true'] {
 .cth-scroll-hidden { scrollbar-width: none; -ms-overflow-style: none; }
 .cth-scroll-hidden::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
-/* Pixel-snapping for any rasterised content */
-canvas, img, svg { image-rendering: pixelated; image-rendering: crisp-edges; }
-
-/* Focus ring — 2px outer offset, ink */
+/* Focus ring — 2px outer offset */
 :focus-visible {
-  outline: 1px solid var(--cth-ink-300);
+  outline: 1px solid var(--cth-focus-ring);
   outline-offset: 2px;
 }
 
@@ -80,23 +68,23 @@ canvas, img, svg { image-rendering: pixelated; image-rendering: crisp-edges; }
    click into the box. Both :focus and :focus-visible: a textarea you clicked
    into is exactly as focused as one you tabbed into, and here we WANT the mouse
    case — it is the one the founder is looking at while typing. */
-.cth-input { box-shadow: inset 0 0 0 1px var(--cth-ink-100); }
+.cth-input { box-shadow: inset 0 0 0 1px var(--cth-ink-100); border-radius: var(--cth-radius-sm); }
 .cth-input:focus,
 .cth-input:focus-visible { box-shadow: inset 0 0 0 2px var(--cth-ink-700); }
 
-/* Custom scrollbar — chunky, pixel-feel */
-::-webkit-scrollbar { width: 12px; height: 12px; }
-::-webkit-scrollbar-track {
-  background: var(--cth-cream-200);
-  box-shadow: inset 0 0 0 1px var(--cth-ink-100);
-}
+/* Scrollbar — thin, rounded, on a transparent track */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: var(--cth-ink-700);
-  box-shadow: inset 0 0 0 1px var(--cth-ink-300);
+  background: var(--cth-ink-300);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--cth-ink-900); }
+::-webkit-scrollbar-thumb:hover { background: var(--cth-ink-500); background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: transparent; }
 
-/* commit-graph (open-source git visualiser) — harmonise with the pixel theme */
+/* commit-graph (open-source git visualiser) */
 /* Commit history. The `* { font-family: … !important }` blanket that used to live
    here existed to reach inside the third-party commit-graph widget; the rows are
    ours now, so fonts are set per element and the override would only fight the
@@ -133,7 +121,7 @@ canvas, img, svg { image-rendering: pixelated; image-rendering: crisp-edges; }
   line-height: 16px;
   color: var(--cth-cream-100);
   background: var(--cth-ink-900);
-  box-shadow: inset 0 0 0 1px var(--cth-ink-700);
+  border-radius: var(--cth-radius-sm);
   opacity: 0;
   pointer-events: none;
   /* Delay matches the native tooltip feel, so it does not flash while the
@@ -158,27 +146,21 @@ canvas, img, svg { image-rendering: pixelated; image-rendering: crisp-edges; }
   line-height: 15px;
 }
 
-/* Settings (gear) button in the title bar — a clear bordered chip with a
-   neo-brutalist hover (lemon fill + offset shadow) so it reads as a button. */
-.cth-settings-btn { transition: background 80ms steps(2), box-shadow 80ms steps(2), transform 80ms steps(2); }
+/* Settings (gear) button in the title bar — quiet muted hover. */
+.cth-settings-btn { transition: background 120ms ease-out, box-shadow 120ms ease-out; }
 .cth-settings-btn:hover {
-  background: var(--cth-lemon) !important;
-  box-shadow: inset 0 0 0 1px var(--cth-ink-300), 2px 2px 0 0 var(--cth-ink-900) !important;
-  transform: translate(-1px, -1px);
-}
-.cth-settings-btn:active {
-  transform: translate(0, 0);
+  background: var(--cth-cream-200) !important;
   box-shadow: inset 0 0 0 1px var(--cth-ink-300) !important;
 }
 
-/* Keyframes — pixel-style: step-based, no easing */
+/* Keyframes — soft fades, no stepped motion */
 @keyframes cth-blink {
-  0%, 49% { opacity: 1; }
-  50%, 100% { opacity: 0; }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
 }
 @keyframes cth-pulse {
-  0%, 49% { transform: scale(1); }
-  50%, 100% { transform: scale(0.7); }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
 }
 
 /* Reduce motion */
@@ -286,12 +268,12 @@ canvas, img, svg { image-rendering: pixelated; image-rendering: crisp-edges; }
 .cth-md-preview a { color: var(--cth-sky); }
 .cth-md-preview code {
   font-family: var(--cth-font-mono); font-size: 12.5px;
-  background: var(--cth-cream-200); padding: 1px 5px; border-radius: 2px;
+  background: var(--cth-cream-200); padding: 1px 5px; border-radius: 4px;
 }
 .cth-md-preview pre {
   background: var(--cth-cream-200);
   box-shadow: inset 0 0 0 1px var(--cth-ink-100);
-  padding: 10px 12px; overflow-x: auto; border-radius: 2px;
+  padding: 10px 12px; overflow-x: auto; border-radius: var(--cth-radius-md);
 }
 .cth-md-preview pre code { background: transparent; padding: 0; }
 /* Code is LTR no matter what language the prose around it is in: an inline
@@ -325,12 +307,12 @@ canvas, img, svg { image-rendering: pixelated; image-rendering: crisp-edges; }
 .cth-md-preview .cth-md-image {
   display: block; max-width: 100%; height: auto; margin: 0.6em 0;
   box-shadow: inset 0 0 0 1px var(--cth-ink-100);
-  border-radius: 2px;
+  border-radius: var(--cth-radius-sm);
 }
 .cth-md-preview .cth-md-img {
   display: inline-block; padding: 2px 8px; font-size: 12px;
   background: var(--cth-cream-200); box-shadow: inset 0 0 0 1px var(--cth-ink-100);
-  color: var(--cth-ink-500); border-radius: 2px;
+  color: var(--cth-ink-500); border-radius: var(--cth-radius-sm);
 }
 
 /* ─── Markdown inside a card (v0.4.6) ────────────────────────────────────────

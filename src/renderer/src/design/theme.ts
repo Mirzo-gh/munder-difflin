@@ -19,12 +19,15 @@ const LS_KEY = 'cth.theme';
 /** Pre-0.3.4 the terminal had its own theme key — honor it once as the seed. */
 const LEGACY_LS_KEY = 'cth.ptyTheme';
 
-function load(): AppTheme {
+/** Read the persisted theme. Fork perso: DARK unless the user explicitly chose
+ *  light (an existing `cth.theme = 'light'` keeps its light UI). Exported for
+ *  test/app-theme-default.test.cjs. */
+export function load(): AppTheme {
   try {
     const v = window.localStorage.getItem(LS_KEY) ?? window.localStorage.getItem(LEGACY_LS_KEY);
     if (v === 'dark' || v === 'light') return v;
   } catch { /* noop */ }
-  return 'light';
+  return 'dark';
 }
 
 let theme: AppTheme = load();

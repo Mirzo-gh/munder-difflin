@@ -15,13 +15,9 @@ const root = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 
 const FONT_DIR = 'src/renderer/src/assets/fonts';
-const FILES = [
-  'press-start-2p-latin-400.woff2',
-  'inter-latin-var.woff2',
-  'jetbrains-mono-latin-var.woff2'
-];
+const FILES = ['geist-latin-var.woff2', 'jetbrains-mono-latin-var.woff2'];
 
-test('the three faces are real woff2 files inside the repo', () => {
+test('the bundled faces are real woff2 files inside the repo', () => {
   for (const f of FILES) {
     const buf = fs.readFileSync(path.join(root, FONT_DIR, f));
     // 'wOF2' — a truncated or HTML-error-page download would not carry it.
@@ -40,14 +36,14 @@ test('bundling stays small: no CJK face was quietly added', () => {
 test('the OFL license and attribution ship with the fonts', () => {
   const lic = read(`${FONT_DIR}/LICENSE.txt`);
   assert.match(lic, /SIL OPEN FONT LICENSE Version 1\.1/);
-  for (const name of ['Press Start 2P', 'Inter', 'JetBrains Mono']) {
+  for (const name of ['Geist', 'JetBrains Mono']) {
     assert.ok(lic.includes(name), `${name} has no attribution`);
   }
 });
 
 test('@font-face points at the bundled files, not a URL', () => {
   const css = read('src/renderer/src/design/fonts.css');
-  assert.equal((css.match(/@font-face/g) || []).length, 3);
+  assert.equal((css.match(/@font-face/g) || []).length, FILES.length);
   for (const f of FILES) assert.ok(css.includes(f), `fonts.css does not reference ${f}`);
   assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ''), /https?:/);
 });
@@ -117,4 +113,35 @@ test('the release-drop iframe also falls through to a system CJK face', () => {
     assert.match(stack, /PingFang SC|Microsoft YaHei|Noto Sans( Mono)? CJK SC/);
     assert.match(stack, /Geeza Pro|Noto Naskh Arabic/);
   }
+});
+
+// --- fork perso : habillage sobre façon Orca (chantier 4) ---------------------
+
+test('UI face is Geist, display is the same non-pixel stack, mono is SF Mono first', () => {
+  const s = stacks();
+  for (const ui of [s.cssUi, s.tsUi]) assert.match(ui, /^"Geist",/);
+  assert.equal(s.cssDisplay, s.cssUi, 'display must not be a pixel face any more');
+  for (const mono of [s.cssMono, s.tsMono]) {
+    assert.match(mono, /^"SF Mono", ui-monospace/);
+    assert.ok(mono.includes('"JetBrains Mono"'), 'bundled JetBrains Mono is the fallback off macOS');
+  }
+});
+
+test('no pixel face is referenced anywhere in the renderer code', () => {
+  const stripComments = (txt) => txt
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/(^|[^:'"])\/\/.*$/gm, '$1');
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) return walk(p);
+    return /\.(tsx?|css|html)$/.test(e.name) ? [p] : [];
+  });
+  const offenders = [];
+  for (const file of walk(path.join(root, 'src/renderer'))) {
+    const code = stripComments(fs.readFileSync(file, 'utf8'));
+    if (/Press Start 2P|Pixelify|VT323/.test(code)) offenders.push(path.relative(root, file));
+  }
+  assert.deepEqual(offenders, []);
+  assert.ok(!fs.existsSync(path.join(root, FONT_DIR, 'press-start-2p-latin-400.woff2')));
 });

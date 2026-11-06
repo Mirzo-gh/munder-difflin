@@ -2,45 +2,45 @@
 // Any change here must also update tokens.css.
 
 export const colors = {
+  // Fork perso: Orca light palette (mirrors tokens.css :root; dark lives in CSS only)
   cream: {
-    50: 0xfffdf5,
-    100: 0xfff8e7,
-    200: 0xf4e9c7,
-    300: 0xe8d9a0
+    50: 0xffffff,
+    100: 0xffffff,
+    200: 0xf5f5f5,
+    300: 0xe5e5e5
   },
   paper: {
-    100: 0xfcfaf0,
-    200: 0xf0ead2
+    100: 0xfafafa,
+    200: 0xf5f5f5
   },
   ink: {
-    900: 0x1a1320,
-    700: 0x3d2e4a,
-    500: 0x6b5878,
-    300: 0xa899b5,
-    100: 0xd9cfe0
+    900: 0x0a0a0a,
+    700: 0x525252,
+    500: 0x737373,
+    300: 0xd4d4d4,
+    100: 0xe5e5e5
   },
-  // v0.3.4 recalibration: same hues, professional saturation (mirrors tokens.css)
   accent: {
-    coral: 0xd96a62,
-    coralLight: 0xf3d3cd,
-    mint: 0x5ca97a,
-    mintLight: 0xd2e7da,
-    sky: 0x4f9faf,
-    skyLight: 0xcfe5e9,
-    lemon: 0xdcab3c,
-    lemonLight: 0xf3e4bc,
-    lilac: 0x9482d3,
-    lilacLight: 0xe0daf2,
-    peach: 0xd99168,
-    peachLight: 0xf3daca
+    coral: 0xff667f,
+    coralLight: 0xffedf0,
+    mint: 0x00d294,
+    mintLight: 0xe0faf2,
+    sky: 0x00bcfe,
+    skyLight: 0xe0f7ff,
+    lemon: 0xfcbb00,
+    lemonLight: 0xfff7e0,
+    lilac: 0xa685ff,
+    lilacLight: 0xf4f0ff,
+    peach: 0xff8b1a,
+    peachLight: 0xfff1e3
   },
   status: {
-    idle: 0xa199ab,
-    thinking: 0x4f9faf,
-    working: 0xdcab3c,
-    blocked: 0xd96a62,
-    success: 0x5ca97a,
-    ghost: 0xd9d3de
+    idle: 0xa1a1a1,
+    thinking: 0x00a6e0,
+    working: 0xedb200,
+    blocked: 0xfb2c36,
+    success: 0x00c758,
+    ghost: 0xa1a1a1
   },
   world: {
     grassLight: 0xd4eab0,
@@ -57,9 +57,9 @@ export const space = {
 } as const;
 
 export const type = {
-  display: '"Press Start 2P", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Geeza Pro", "Noto Naskh Arabic", "Segoe UI Historic", monospace',
-  ui: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Geeza Pro", "Noto Naskh Arabic", "Segoe UI Historic", sans-serif',
-  mono: '"JetBrains Mono", ui-monospace, "SF Mono", Menlo, "PingFang SC", "Microsoft YaHei", "Noto Sans Mono CJK SC", "Noto Sans CJK SC", "Geeza Pro", "Noto Naskh Arabic", "Segoe UI Historic", monospace'
+  display: '"Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Geeza Pro", "Noto Naskh Arabic", "Segoe UI Historic", sans-serif',
+  ui: '"Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Geeza Pro", "Noto Naskh Arabic", "Segoe UI Historic", sans-serif',
+  mono: '"SF Mono", ui-monospace, SFMono-Regular, Menlo, "JetBrains Mono", Consolas, "PingFang SC", "Microsoft YaHei", "Noto Sans Mono CJK SC", "Noto Sans CJK SC", "Geeza Pro", "Noto Naskh Arabic", "Segoe UI Historic", monospace'
 } as const;
 
 export const tileSize = 32; // px — the world is built from 32×32 tiles

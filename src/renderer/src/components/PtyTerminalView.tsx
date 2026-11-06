@@ -36,76 +36,69 @@ const zoomBtnStyle: CSSProperties = {
   color: 'var(--cth-ink-700)',
   background: 'var(--cth-paper-100)',
   border: '1px solid var(--cth-ink-300)',
+  borderRadius: 'var(--cth-radius-sm)',
   cursor: 'pointer',
   padding: 0
 };
 
-// Light theme — cream paper. The ANSI "white" / "yellow" / bright slots are
-// remapped to readable dark inks: programs that print white or pale-yellow text
-// (expecting a dark terminal) were previously invisible on the cream background.
-// A single ANSI slot has to serve both roles — coloured *foreground* on cream and
-// a coloured *background* under the dark default ink — which no fixed luminance
-// can satisfy at once. The terminal's `minimumContrastRatio` (see terminalPool.ts)
-// dynamically adjusts the per-cell foreground to keep both roles legible; these
-// values are tuned so the colours stay recognisable and read well natively. The
-// green/yellow are kept deep enough to read as text on cream (the brighter
-// variants are the lighter shades, per terminal convention).
+// Fork perso — Orca-style terminals. xterm takes literal colours and cannot read
+// CSS custom properties, so these RE-STATE the tokens (tokens.css): ground =
+// --cth-cream-50, text = --cth-ink-900. The ANSI slots stay recognisable hues;
+// `minimumContrastRatio` (terminalPool.ts) still rescues any program that paints
+// low-contrast cells.
+//
+// Light — white ground. "white"/"yellow" slots are remapped to readable inks:
+// programs that print white or pale-yellow text (expecting a dark terminal)
+// would otherwise vanish on white.
 const lightTheme = {
-  background: '#FCFAF0',
-  foreground: '#1A1320',
-  cursor: '#D96A62',
-  cursorAccent: '#FCFAF0',
-  selectionBackground: '#FFEC99',
-  selectionForeground: '#1A1320',
-  black:        '#1A1320',
-  red:          '#D1453B',
-  green:        '#20904B',    // deep green → readable as text on cream
-  yellow:       '#9C6B00',    // deep amber → readable as text on cream
-  blue:         '#2B6CB0',
-  magenta:      '#8A5CF0',
-  cyan:         '#1F9C94',
-  white:        '#3A2F44',   // default "white" text → dark, so it's visible
-  brightBlack:  '#6B5878',
-  brightRed:    '#E0584E',
-  brightGreen:  '#2E9E54',
-  brightYellow: '#B8860B',
-  brightBlue:   '#3B7DC4',
-  brightMagenta:'#9B72F2',
-  brightCyan:   '#2BA89F',
-  brightWhite:  '#1A1320'
+  background: '#ffffff',        // = --cth-cream-50 (light)
+  foreground: '#0a0a0a',        // = --cth-ink-900 (light)
+  cursor: '#0a0a0a',
+  cursorAccent: '#ffffff',
+  selectionBackground: '#e5e5e5',
+  selectionForeground: '#0a0a0a',
+  black:        '#0a0a0a',
+  red:          '#d92d36',
+  green:        '#008a3e',
+  yellow:       '#a16a00',
+  blue:         '#0070c0',
+  magenta:      '#7c4ddb',
+  cyan:         '#00828f',
+  white:        '#404040',
+  brightBlack:  '#737373',
+  brightRed:    '#fb2c36',
+  brightGreen:  '#00a64a',
+  brightYellow: '#b88600',
+  brightBlue:   '#0090d0',
+  brightMagenta:'#8e6bff',
+  brightCyan:   '#0098a6',
+  brightWhite:  '#0a0a0a'
 };
 
-// Dark theme — mirrors the app's dark surface ramp (tokens.css
-// data-cth-theme='dark'). xterm takes literal colours and cannot read CSS
-// custom properties, so these values are RE-STATED rather than referenced, and
-// drift the moment the tokens move: this set was still on the pre-readability
-// ramp (background #1D1C21, the old paper-100) after tokens.css dropped to
-// a softer ground, which would have left every terminal sitting a visible step
-// apart from the panel holding it. Muted-professional ANSI: recognizable hues, no
-// fluorescing on the dark ground; brights are one legible step up, not pastels.
+// Dark — Orca ground (#0a0a0a), near-white text.
 const darkTheme = {
-  background: '#1A1A1F',        // = --cth-paper-100
-  foreground: '#DEDBD6',        // = --cth-ink-900
-  cursor: '#E08C82',
-  cursorAccent: '#1A1A1F',
-  selectionBackground: '#37363F',
-  selectionForeground: '#DEDBD6',
-  black:        '#222229',
-  red:          '#E08C82',
-  green:        '#74C096',
-  yellow:       '#CFAA57',
-  blue:         '#6FB3C4',
-  magenta:      '#A896E3',
-  cyan:         '#6FB3C4',
-  white:        '#DEDBD6',
-  brightBlack:  '#96919F',
-  brightRed:    '#EBA39C',
-  brightGreen:  '#96CDA9',
-  brightYellow: '#E5C87E',
-  brightBlue:   '#8FC5D1',
-  brightMagenta:'#C0B3EB',
-  brightCyan:   '#8FC5D1',
-  brightWhite:  '#EFEDE9'
+  background: '#0a0a0a',        // = --cth-cream-50 (dark)
+  foreground: '#fafafa',        // = --cth-ink-900 (dark)
+  cursor: '#fafafa',
+  cursorAccent: '#0a0a0a',
+  selectionBackground: '#404040',
+  selectionForeground: '#fafafa',
+  black:        '#262626',
+  red:          '#ff6369',
+  green:        '#3dd68c',
+  yellow:       '#f5c542',
+  blue:         '#4fb4ff',
+  magenta:      '#b694ff',
+  cyan:         '#3cc8d8',
+  white:        '#d4d4d4',
+  brightBlack:  '#737373',
+  brightRed:    '#ff8a8f',
+  brightGreen:  '#6ee7a8',
+  brightYellow: '#fcd66b',
+  brightBlue:   '#7cc8ff',
+  brightMagenta:'#cbb2ff',
+  brightCyan:   '#6fdbe6',
+  brightWhite:  '#fafafa'
 };
 
 const THEMES: Record<PtyTheme, typeof lightTheme> = { light: lightTheme, dark: darkTheme };
@@ -213,7 +206,7 @@ export function PtyTerminalView({ ptyId, onStreamData, onUserPrompt, onToggleFul
     if (typeof document !== 'undefined' && document.fonts?.ready) {
       document.fonts.ready
         .then(() => {
-          // xterm measures the character cell ONCE at open(); if VT323 hadn't
+          // xterm measures the character cell ONCE at open(); if the web font hadn't
           // loaded yet, that cached cell is the fallback font's size, so every
           // fit() proposes the wrong column count and the WebGL glyph atlas is
           // rastered at the wrong metrics — the banner renders oversized until a
@@ -351,7 +344,7 @@ export function PtyTerminalView({ ptyId, onStreamData, onUserPrompt, onToggleFul
 
   return (
     <div style={{
-      background: 'var(--cth-paper-100)',
+      background: 'var(--cth-cream-50)',
       boxShadow: embedded ? 'none' : 'var(--cth-panel-border-terminal)',
       padding: embedded ? 0 : 8,
       height: '100%',
@@ -365,7 +358,7 @@ export function PtyTerminalView({ ptyId, onStreamData, onUserPrompt, onToggleFul
         fontFamily: 'var(--cth-font-ui)',
         fontSize: 12,
         color: 'var(--cth-ink-500)',
-        borderBottom: '1px dashed var(--cth-ink-300)',
+        borderBottom: '1px solid var(--cth-ink-100)',
         paddingBottom: 4,
         marginBottom: 4,
         paddingLeft: embedded ? 8 : 0,
@@ -373,9 +366,9 @@ export function PtyTerminalView({ ptyId, onStreamData, onUserPrompt, onToggleFul
         paddingTop: embedded ? 6 : 0
       }}>
         <span style={{
-          width: 8, height: 8, background: 'var(--cth-mint)',
-          boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
-          animation: 'cth-pulse 1200ms steps(2, end) infinite'
+          width: 7, height: 7, background: 'var(--cth-status-success)',
+          borderRadius: 999,
+          animation: 'cth-pulse 1600ms ease-in-out infinite'
         }} />
         live · pty {ptyId}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 2 }}>
