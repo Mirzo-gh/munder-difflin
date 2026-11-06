@@ -4,8 +4,6 @@ import { PixelPanel } from './PixelPanel';
 import { PixelBadge, StatusKind } from './PixelBadge';
 import { useHasTerminalDraft } from './terminalPool';
 import { AgentMonogram } from './AgentMonogram';
-import { RealtimeMichaelToggle } from './RealtimeMichaelToggle';
-import { CostHud } from '@/realtime/CostHud';
 import { AccentColorName } from '@/design/tokens';
 import { AgentNameEditor } from './AgentNameEditor';
 
@@ -95,11 +93,6 @@ export function AgentCard({
   // added outside its 5px accent frame, the boss card grew a visibly thicker
   // edge than any other. Distinction now comes from the card's SURFACE, not from
   // making its box bigger or its border heavier.
-  // 196 was too tight once god's row carried NAME + BOSS + status: the name
-  // truncated to "MIC…" — the one word on the card that must never be the thing
-  // that gets cut. Widened for every card so the dock stays uniform, with enough
-  // slack that Talk's info mark (which only appears when the OpenAI key is
-  // missing) has somewhere to sit rather than pushing the row apart.
   // Cards fill the agent column's width (the column is resizable); height stays fixed.
   const height = 78;
   const lift = (isGod ? -2 : 0) - (hover ? 1 : 0) - (selected ? 1 : 0);
@@ -227,60 +220,41 @@ export function AgentCard({
               }}
             >{infoLine}</div>
 
-            {/* God: voice on its own compact row. Workers: the private note row.
-                Both sit ABOVE the gauge, so it is never covered. */}
-            {isGod ? (
-              // Talk grows an info mark when the OpenAI key is missing, so this
-              // row can hold three things instead of two. `overflow: hidden` is
-              // the guard: the toggle's label shrinks first (it has minWidth:0),
-              // and if it still does not fit, the row clips INSIDE the card
-              // instead of spilling over its border.
-              <div
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  minWidth: 0, overflow: 'hidden'
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <RealtimeMichaelToggle />
-                <CostHud compact />
-              </div>
-            ) : (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, minHeight: 14 }}
-              >
-                {noteFirstLine ? (
-                  <span
-                    title={note}
-                    style={{
-                      flex: 1, minWidth: 0, fontSize: 10.5, lineHeight: '14px',
-                      color: 'var(--cth-ink-500)', fontStyle: 'italic',
-                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                    }}
-                  >{noteFirstLine}</span>
-                ) : <span style={{ flex: 1 }} />}
-                {onEditNote && (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => { e.stopPropagation(); onEditNote(); }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); onEditNote(); }
-                    }}
-                    title={note ? t('agentCard.editNote') : t('agentCard.addNote')}
-                    aria-label={t('agentCard.editNoteAria', { name })}
-                    style={{
-                      flexShrink: 0, width: 15, height: 14,
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 10, lineHeight: 1, cursor: 'pointer',
-                      // Quiet until the card is hovered — discoverable, not noisy.
-                      color: hover ? 'var(--cth-ink-500)' : 'var(--cth-ink-300)'
-                    }}
-                  >✎</span>
-                )}
-              </div>
-            )}
+            {/* The private note row — god included. Sits ABOVE the gauge, so it is never covered. */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, minHeight: 14 }}
+            >
+              {noteFirstLine ? (
+                <span
+                  title={note}
+                  style={{
+                    flex: 1, minWidth: 0, fontSize: 10.5, lineHeight: '14px',
+                    color: 'var(--cth-ink-500)', fontStyle: 'italic',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                  }}
+                >{noteFirstLine}</span>
+              ) : <span style={{ flex: 1 }} />}
+              {onEditNote && (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); onEditNote(); }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); onEditNote(); }
+                  }}
+                  title={note ? t('agentCard.editNote') : t('agentCard.addNote')}
+                  aria-label={t('agentCard.editNoteAria', { name })}
+                  style={{
+                    flexShrink: 0, width: 15, height: 14,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 10, lineHeight: 1, cursor: 'pointer',
+                    // Quiet until the card is hovered — discoverable, not noisy.
+                    color: hover ? 'var(--cth-ink-500)' : 'var(--cth-ink-300)'
+                  }}
+                >✎</span>
+              )}
+            </div>
 
             {/* Context gauge — slim fill bar pinned to the card's bottom edge. */}
             <div style={{ marginTop: 'auto' }} title={gaugeTitle}>

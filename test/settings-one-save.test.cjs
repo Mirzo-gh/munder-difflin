@@ -60,20 +60,13 @@ test('the footer offers Save, and it is the only Save left in the modal', () => 
   assert.doesNotMatch(MODAL, /onBlur=\{\(\) => void saveMaxTurns\(\)\}/, 'maxTurns saves on blur again');
 });
 
-// --- the two deliberate exceptions ------------------------------------------
+// --- the deliberate exception (Free Flow + its voice key were removed) -------
 
 test('API keys still save immediately: there is no staged value to hold', () => {
   // The broker is write-only — nothing can read a key back to diff it — so a
   // key cannot participate in a staged form.
   const engines = read('src/renderer/src/components/AiEnginesSettings.tsx');
   assert.match(engines, /saveKey\(/, 'the per-provider key save was removed');
-  assert.match(MODAL, /saveOpenAiVoiceKey/, 'the voice key save was folded into saveAll');
-});
-
-test('Free Flow still saves immediately: it arms a global hotkey', () => {
-  // Staging it would leave main's hotkey and the checkbox disagreeing until
-  // someone pressed Save.
-  assert.match(MODAL, /window\.cth\.freeflowSetConfig\(/, 'freeflow no longer persists on its own');
 });
 
 // --- A2: Connections tidying -------------------------------------------------

@@ -73,25 +73,6 @@ export interface HiveMessage {
   created_at: string;
 }
 
-/** A hive message reshaped for the voice read-layer (`hive:messages`). `subject`
- *  and `body` are REDACTED in the main process before crossing this boundary —
- *  the renderer never receives a raw body or a secret. Mirror of `VoiceMessage`
- *  in src/main/hive.ts. */
-export interface VoiceMessage {
-  id: string;
-  conversation: string;
-  from: string;
-  to: string;
-  act: HiveMessage['act'];
-  subject: string;
-  body: string;
-  requires_reply: boolean;
-  direction: 'inbox' | 'outbox';
-  owner: string;
-  archived: boolean;
-  created_at: string;
-}
-
 export interface HiveRegistry {
   godId: string | null;
   /** `archived` agents have had their terminal closed — retained + flagged, not
@@ -102,43 +83,6 @@ export interface HiveRegistry {
     archived?: boolean;
     sessionId?: string;
   }>;
-}
-
-/** One row of the consolidated voice read-layer directory (`hive:agentDirectory`):
- *  everything the office-floor sidebar + telemetry know for an agent, joined into
- *  one PII-free record. Includes archived agents. */
-export interface AgentDirectoryEntry {
-  id: string;
-  name: string;
-  role: string;
-  provider: string;
-  /** Live model id (normalized), if any usage has been recorded — else null. */
-  model: string | null;
-  status: string;
-  cwd: string | null;
-  /** Whether `cwd` is an absolute, existing directory (spawn-usable). */
-  cwdValid: boolean | null;
-  archived: boolean;
-  isGod: boolean;
-  isAssistant: boolean;
-  sessionId: string | null;
-  /** Whether the agent has recorded non-trivial memory beyond the seed header. */
-  hasMemory: boolean;
-  inboxBacklog: number;
-  breaker: string;
-  tokens: number;
-  /** Aggregate spend; carried for completeness — the voice layer speaks tokens. */
-  usd: number;
-  lastTool: string | null;
-  lastActiveSecAgo: number | null;
-  contextTokens: number | null;
-  contextLimit: number | null;
-  contextPct: number | null;
-}
-
-export interface AgentDirectory {
-  godId: string | null;
-  agents: AgentDirectoryEntry[];
 }
 
 /** One question→answer exchange with the human, recorded ON the task card. */
@@ -299,17 +243,12 @@ export interface HarnessConfig {
   webhookEnabled?: boolean;
   webhookSecret?: string;
   webhookPort?: number;
-  /** Free Flow voice dictation — master flag (default off), user Groq key, model.
-   *  Entry point B (hold-Option-to-talk) is handled in the renderer, no hotkey. */
+  /** Legacy voice fields (Free Flow dictation + Realtime voice were removed in
+   *  this fork). Kept optional so configs written by older builds still load. */
   freeflowEnabled?: boolean;
   groqApiKey?: string;
   freeflowModel?: string;
-  /** Realtime Michael voice loop — true ONLY while a session holds the mic
-   *  (renderer session sets it at start()/stop()); the main mic permission gate
-   *  reads it. Default off. */
   realtimeVoiceEnabled?: boolean;
-  /** Realtime voice idle auto-disconnect (ms); default 180000 (3 min), 0 = never.
-   *  Tuned in Settings → Realtime Michael; the cost cap stays the runaway guard. */
   realtimeIdleDisconnectMs?: number;
   costCapUsd?: number;
   costCapTokens?: number;
@@ -764,15 +703,6 @@ const api = {
   hiveLog: (n?: number): Promise<unknown[]> => ipcRenderer.invoke('hive:log', n ?? 200),
   hiveMemory: (id: string): Promise<string> => ipcRenderer.invoke('hive:memory', id),
   hiveInbox: (id: string): Promise<HiveMessage[]> => ipcRenderer.invoke('hive:inbox', id),
-  /** Voice read-layer: recent message CONTENT (inbox/outbox bodies), REDACTED in
-   *  main. Pass { id } for one message, { agentId } to scope to one mailbox, or
-   *  {} for the whole floor. Backs Realtime Michael's get_messages. The renderer
-   *  never sees a raw body or a secret — stripping happens main-side. */
-  hiveMessages: (opts?: { agentId?: string; id?: string; limit?: number; includeArchived?: boolean }): Promise<VoiceMessage[]> =>
-    ipcRenderer.invoke('hive:messages', opts ?? {}),
-  /** Consolidated per-agent directory (registry + telemetry + context), incl.
-   *  archived agents. Backs Realtime Michael's get_agent_detail / list_agents. */
-  hiveAgentDirectory: (): Promise<AgentDirectory> => ipcRenderer.invoke('hive:agentDirectory'),
 
   // ─── Ephemeral workers (P4 — Slack-triggered isolated workers) ───────────
   /** Live ephemeral workers + worktrees preserved awaiting integration/GC. */
@@ -1258,20 +1188,6 @@ const api = {
     return () => ipcRenderer.removeListener('triggerHistory:updated', listener);
   },
 
-  // ─── Free Flow (voice dictation → message queue) ─────────────────────────────
-  /** Persist Free Flow settings (flag / Groq key / model). The Groq key is stored
-   *  in main config; entry point B (hold-Option) is renderer-side, no hotkey here. */
-  freeflowSetConfig: (patch: {
-    enabled?: boolean; apiKey?: string; model?: string;
-  }): Promise<{ ok: boolean }> =>
-    ipcRenderer.invoke('freeflow:setConfig', patch),
-  /** Transcribe one captured audio clip via Groq (the key stays in main; only the
-   *  audio bytes go in and the transcript comes back). Gated on the flag + a key. */
-  freeflowTranscribe: (arg: {
-    audio: ArrayBuffer | Uint8Array; mimeType?: string; filename?: string; language?: string;
-  }): Promise<{ ok: boolean; text?: string; error?: string }> =>
-    ipcRenderer.invoke('freeflow:transcribe', arg),
-
   // ─── Integrations registry (Phase 2 — labeled REST endpoints via the secret broker) ──
   // Bridges the §6 IPC surface for the Settings UI. WRITE-ONLY secret contract end to
   // end: `integrationsList` returns records with secretRef redacted to `hasSecret`;
@@ -1299,66 +1215,6 @@ const api = {
     ipcRenderer.invoke('providerKey:has', backend),
   providerKeyClear: (backend: string): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke('providerKey:clear', backend),
-  // Realtime Michael (voice orchestrator) — MAIN mints a short-lived EPHEMERAL token
-  // from the BYOK OpenAI key; the real key NEVER crosses IPC. `realtimeHasOpenAiKey`
-  // is a presence boolean only (gates the voice toggle, like providerKeyHas).
-  realtimeHasOpenAiKey: (): Promise<boolean> =>
-    ipcRenderer.invoke('realtime:hasKey'),
-  realtimeMintToken: (
-    req?: { model?: string }
-  ): Promise<
-    | { ok: true; token: string; expiresAt: number | null; sessionConfig: { model: string } }
-    | { ok: false; error: string; code?: string }
-  > => ipcRenderer.invoke('realtime:mintToken', req ?? {}),
-  // rt-5 voice ACTIONS — the renderer holds NO policy; main (realtimeActions.ts) owns
-  // the tiering, two-step verbal confirm, hard allowlist, and michael-voice
-  // attribution. These just forward {verb,...args} and speak back `spoken`.
-  realtimeAction: (
-    payload: { verb: string } & Record<string, unknown>
-  ): Promise<{ ok: boolean; spoken: string; needsConfirm?: boolean }> =>
-    ipcRenderer.invoke('realtime:action', payload),
-  realtimeActionConfirm: (
-    req: { phrase: string }
-  ): Promise<{ ok: boolean; spoken: string; needsConfirm?: boolean }> =>
-    ipcRenderer.invoke('realtime:action:confirm', req),
-  realtimeActionCancel: (): Promise<{ ok: boolean; spoken: string; needsConfirm?: boolean }> =>
-    ipcRenderer.invoke('realtime:action:cancel'),
-  // rt-12 completion seam — a voice-dispatched task finished. `summary` is the
-  // human-speakable line Michael relays; the rest is context for a toast/log.
-  onRealtimeCompletion: (
-    cb: (evt: { correlationId: string; kind: string; targetAgentId: string; taskId?: string; summary: string; completedAt: number; objective?: string }) => void
-  ): (() => void) => {
-    const listener = (_e: IpcRendererEvent, payload: Parameters<typeof cb>[0]) => cb(payload);
-    ipcRenderer.on('realtime:completion', listener);
-    return () => ipcRenderer.removeListener('realtime:completion', listener);
-  },
-  /** Tell main whether a live voice session is open (drives queue-vs-push for completions). */
-  realtimeSetSessionLive: (live: boolean): Promise<{ ok: boolean }> =>
-    ipcRenderer.invoke('realtime:setSessionLive', live),
-  /** Drain completions that arrived while no session was open (warm-start catch-up). */
-  realtimeDrainCompletions: (): Promise<
-    { correlationId: string; kind: string; targetAgentId: string; taskId?: string; summary: string; completedAt: number; objective?: string }[]
-  > => ipcRenderer.invoke('realtime:drainCompletions'),
-  /** Block until a tracked task completes (or times out) — backs the wait_for tool. */
-  realtimeWaitFor: (
-    taskId: string,
-    timeoutMs?: number
-  ): Promise<{ summary: string; targetAgentId: string; taskId?: string } | { timedOut: true; taskId: string }> =>
-    ipcRenderer.invoke('realtime:waitFor', taskId, timeoutMs),
-  /** v0.3.4: coalesced floor deltas pushed while a voice session is live — the
-   *  renderer injects them into the conversation as silent items. */
-  onRealtimeFloorDelta: (cb: (evt: { text: string }) => void): (() => void) => {
-    const listener = (_e: IpcRendererEvent, payload: { text: string }) => cb(payload);
-    ipcRenderer.on('realtime:floorDelta', listener);
-    return () => ipcRenderer.removeListener('realtime:floorDelta', listener);
-  },
-  /** v0.3.4: main-staged queue insertions (voice clear_context) — the renderer
-   *  enqueues so delivery rides every existing safety gate. */
-  onRealtimeEnqueue: (cb: (evt: { agentId: string; text: string }) => void): (() => void) => {
-    const listener = (_e: IpcRendererEvent, payload: { agentId: string; text: string }) => cb(payload);
-    ipcRenderer.on('realtime:enqueue', listener);
-    return () => ipcRenderer.removeListener('realtime:enqueue', listener);
-  },
   /** v0.3.4: app self-knowledge — version + newest changelog sections. */
   appInfo: (): Promise<{ version: string; changelog: string }> =>
     ipcRenderer.invoke('app:info'),

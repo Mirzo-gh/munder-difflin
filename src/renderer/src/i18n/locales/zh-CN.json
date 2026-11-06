@@ -33,18 +33,6 @@
     "needsYou": "需要你"
   },
   "costHud": {
-    "spendCap": "支出上限",
-    "none": "无",
-    "usd": "USD",
-    "off": "（关）",
-    "thisSession": "本次会话 {{usd}}",
-    "thisSessionWithCap": "本次会话 {{usd}} / {{cap}}",
-    "audioTokens": "输入 {{input}} · 输出 {{output}} 语音令牌",
-    "overCap": "已超出支出上限——该收尾了。",
-    "nearCap": "即将达到支出上限。",
-    "lastSession": "上次会话：{{usd}}",
-    "noSession": "没有进行中的语音会话。",
-    "compactTitle": "本次会话 {{count}} 个语音音频令牌",
     "tok": "tok"
   },
   "badge": {
@@ -191,7 +179,6 @@
       "agentsModels": "智能体与模型",
       "autonomyBudgets": "自主权与预算",
       "connections": "连接",
-      "voice": "语音",
       "memoryKnowledge": "记忆与知识"
     },
     "changeHome": {
@@ -320,38 +307,6 @@
       "apiKey": "API 密钥",
       "orgKeyPlaceholder": "粘贴你的组织密钥",
       "orgConfigOnly": "目前仅限配置。组织消息服务尚不存在，所以这里的密钥不会启动任何传输——它会被保存、显示在触发器标签页中，然后等待。"
-    },
-    "voice": {
-      "freeFlow": "自由输入",
-      "freeFlowTitle": "自由输入（语音听写）",
-      "freeFlowDesc": "按住说话听写：开口说话，Groq Whisper 就会把文字放进队列编辑器。",
-      "groqKey": "Groq API 密钥",
-      "groqPlaceholder": "gsk_...（在 console.groq.com 免费获取密钥）",
-      "model": "模型",
-      "fast": "whisper-large-v3-turbo（快速）",
-      "accurate": "whisper-large-v3（准确）",
-      "freeFlowHint": "两种听写方式：点击队列编辑器发送键上方的麦克风按钮（点击开始录音，再点一次转写）；或在查看任意智能体终端时按住 Option（⌥）说话、松手转写。两种方式都会把文字放进编辑器草稿，供你发送前检查。首次录音时 macOS 会请求麦克风权限。",
-      "realtime": "实时 {{godName}}",
-      "voiceChat": "与 {{godName}} 语音对话",
-      "voiceChatDesc": "实时与调度者对话。从 {{godName}} 的标签页开启；在这里选择语音回路使用的麦克风和扬声器。",
-      "openaiKey": "OpenAI API 密钥 · 语音",
-      "openaiKeyDesc1": "与 {{godName}} 对话基于 OpenAI 的 Realtime API——语音进、语音出，通过到 {{model}} 的实时连接。这与你的智能体所用的 Claude 订阅是不同服务，所以需要单独的 OpenAI API 密钥。",
-      "openaiKeyDesc2": "在下面粘贴一次即可。密钥在这台机器上加密存储，之后不再显示——每次语音会话都会从它生成一个短时令牌，密钥本身永远不会离开你的电脑。它与「智能体与模型」下列出的 OpenAI 密钥相同；在任一处设置即可。",
-      "keyPlaceholderSaved": "密钥已保存——粘贴新密钥可替换",
-      "save": "保存",
-      "keySaved": "密钥已保存——Talk 已就绪。从 {{godName}} 的卡片启动。",
-      "noKey": "尚无密钥——保存密钥前 Talk 保持禁用。",
-      "keySavedNote": "密钥已保存——Talk 已就绪。",
-      "couldNotSave": "无法保存密钥。",
-      "idleDisconnect": "空闲自动断开",
-      "30s": "30 秒",
-      "1m": "1 分钟",
-      "2m": "2 分钟",
-      "3m": "3 分钟",
-      "5m": "5 分钟",
-      "10m": "10 分钟",
-      "never": "关闭（永不）",
-      "idleDisconnectDesc": "语音会话在无人说话时保持多久后自动关闭。即使此项关闭，支出上限仍能阻止失控的会话。"
     },
     "saved": "已保存",
     "saving": "保存中…",
@@ -829,28 +784,6 @@
       "secretNote": "这些服务器需要 API 密钥或凭据。默认关闭——添加凭据并在同意后启用。"
     }
   },
-  "devicePicker": {
-    "microphone": "麦克风",
-    "speaker": "扬声器",
-    "systemDefault": "系统默认",
-    "namesHint": "设备名称会在你首次启动语音会话并授予麦克风权限后显示。麦克风选择在 {{godName}} 下次连接时生效；扬声器实时切换。"
-  },
-  "realtimeToggle": {
-    "talk": "说话",
-    "connecting": "…",
-    "listening": "聆听中",
-    "speaking": "说话中",
-    "working": "工作中",
-    "helpOff": "与 {{godName}} 对话——启动语音会话",
-    "helpConnecting": "正在连接 {{godName}}…",
-    "helpListening": "聆听中——{{godName}} 正在听你说话（点击停止）",
-    "helpSpeaking": "{{godName}} 正在说话（点击停止）",
-    "helpWorking": "{{godName}} 正在运行工具——麦克风已静音（点击停止）",
-    "noKeyTitle": "Talk 需要你的 OpenAI API 密钥（用于 Realtime 语音 API）。可在设置 → 语音中添加。",
-    "whyDisabled": "为什么 Talk 被禁用？",
-    "popoverBody": "使用此功能需要一个 OpenAI API 密钥。",
-    "setItUpNow": "现在就去设置"
-  },
   "updatesSection": {
     "title": "更新",
     "onVersion": "你当前是 v{{v}}",
@@ -1277,9 +1210,6 @@
     "priority": "优先级 {{level}}/5"
   },
   "queueComposer": {
-    "recording": "● 录音中——点击停止转写",
-    "transcribing": "转写中…",
-    "voice": "语音",
     "busyQueued": "{{name}} 正在忙——{{count}} 条排队中",
     "heldFloor": "暂挂——投递已全楼层暂停",
     "heldDraft": "暂挂——{{name}} 的终端提示行有未发送文本",
@@ -1304,18 +1234,7 @@
     "sendNowTitle": "即使自动投递已暂停也投递此消息。它会移到队列最前，终端一空闲就输入。",
     "sendNow": "立即发送",
     "sendingWhenFree": "空闲后发送…",
-    "removeFromQueue": "从队列移除",
-    "ffNoKeyTitle": "听写需要一个免费的 Groq API 密钥。点击信息标记查看步骤。",
-    "ffStopTranscribe": "停止并转写",
-    "ffTitle": "自由输入——向队列听写。点击，或按住 Option（⌥）。",
-    "stop": "停止",
-    "ffHowEnable": "如何启用听写？",
-    "ffSetupTitle": "设置听写",
-    "ffSetupIntro": "说话代替打字。Groq 负责转写，其免费额度足以覆盖——无需绑卡，零成本。",
-    "ffCreateKey": "在以下地址免费创建密钥",
-    "ffPasteKey": "粘贴到设置 → 语音 → Groq API 密钥",
-    "ffClickOrHold": "点击「语音」，或按住右侧 Option 键说话",
-    "ffHoldHint": "单独按住一会儿即可开始；松开后转写到编辑器，发送前可修改。两个 Option 键都可以，Option+按键组合仍会原样到达终端。"
+    "removeFromQueue": "从队列移除"
   },
   "idePanel": {
     "workspace": "{{name}} 的工作区",

@@ -33,18 +33,6 @@
     "needsYou": "needs you"
   },
   "costHud": {
-    "spendCap": "Spend cap",
-    "none": "none",
-    "usd": "USD",
-    "off": "(off)",
-    "thisSession": "{{usd}} this session",
-    "thisSessionWithCap": "{{usd}} this session / {{cap}}",
-    "audioTokens": "{{input}} in · {{output}} out audio tokens",
-    "overCap": "Over the spend cap — time to wrap up.",
-    "nearCap": "Approaching the spend cap.",
-    "lastSession": "Last session: {{usd}}",
-    "noSession": "No active voice session.",
-    "compactTitle": "{{count}} voice audio tokens this session",
     "tok": "tok"
   },
   "badge": {
@@ -191,7 +179,6 @@
       "agentsModels": "Agents & Models",
       "autonomyBudgets": "Autonomy & Budgets",
       "connections": "Connections",
-      "voice": "Voice",
       "memoryKnowledge": "Memory & Knowledge"
     },
     "changeHome": {
@@ -320,38 +307,6 @@
       "apiKey": "API key",
       "orgKeyPlaceholder": "paste your organisation key",
       "orgConfigOnly": "Configuration only for now. The organisation messaging service does not exist yet, so a key here starts no transport — it is saved, shown in the Triggers tab, and waits."
-    },
-    "voice": {
-      "freeFlow": "Free Flow",
-      "freeFlowTitle": "Free Flow (voice dictation)",
-      "freeFlowDesc": "Push-to-talk dictation: speak, and Groq Whisper drops the text into the queue composer.",
-      "groqKey": "Groq API key",
-      "groqPlaceholder": "gsk_... (get a free key at console.groq.com)",
-      "model": "Model",
-      "fast": "whisper-large-v3-turbo (fast)",
-      "accurate": "whisper-large-v3 (accurate)",
-      "freeFlowHint": "Two ways to dictate: click the mic button above Send in the queue composer (click to record, click again to transcribe), or — while viewing any agent's terminal — hold Option (⌥) to talk and release to transcribe. Either way the text lands in the composer draft for you to review before sending. macOS will ask for microphone permission the first time you record.",
-      "realtime": "Realtime {{godName}}",
-      "voiceChat": "Voice chat with {{godName}}",
-      "voiceChatDesc": "Talk to the orchestrator in real time. Toggle it on from {{godName}}'s tab; choose which microphone and speaker the voice loop uses here.",
-      "openaiKey": "OpenAI API key · voice",
-      "openaiKeyDesc1": "Talking to {{godName}} runs on OpenAI's Realtime API — speech in, speech out, over a live connection to {{model}}. That is a different service from the Claude subscription your agents run on, so it needs its own OpenAI API key.",
-      "openaiKeyDesc2": "Paste it once below. It is encrypted on this machine and never shown again — each voice session mints its own short-lived token from it, and the key itself never leaves your computer. It is the same OpenAI key listed under Agents & Models; setting it in either place is enough.",
-      "keyPlaceholderSaved": "key saved — paste a new one to replace it",
-      "save": "Save",
-      "keySaved": "Key saved — Talk is ready. Start it from {{godName}}'s card.",
-      "noKey": "No key yet — Talk stays disabled until one is saved.",
-      "keySavedNote": "Key saved — Talk is ready.",
-      "couldNotSave": "Could not save the key.",
-      "idleDisconnect": "Idle auto-disconnect",
-      "30s": "30 seconds",
-      "1m": "1 minute",
-      "2m": "2 minutes",
-      "3m": "3 minutes",
-      "5m": "5 minutes",
-      "10m": "10 minutes",
-      "never": "Off (never)",
-      "idleDisconnectDesc": "How long the voice session stays open with no talking before it auto-closes. The spend cap still stops a runaway session even when this is off."
     },
     "saved": "Saved",
     "saving": "Saving…",
@@ -829,28 +784,6 @@
       "secretNote": "These servers require an API key or credentials. Off by default — add your credentials and enable after consent."
     }
   },
-  "devicePicker": {
-    "microphone": "Microphone",
-    "speaker": "Speaker",
-    "systemDefault": "System default",
-    "namesHint": "Device names appear after you first start a voice session and grant mic access. The microphone choice applies the next time {{godName}} connects; the speaker switches live."
-  },
-  "realtimeToggle": {
-    "talk": "talk",
-    "connecting": "…",
-    "listening": "listening",
-    "speaking": "speaking",
-    "working": "working",
-    "helpOff": "Talk to {{godName}} — start the voice session",
-    "helpConnecting": "Connecting to {{godName}}…",
-    "helpListening": "Listening — {{godName}} is hearing you (click to stop)",
-    "helpSpeaking": "{{godName}} is speaking (click to stop)",
-    "helpWorking": "{{godName}} is running a tool — mic muted (click to stop)",
-    "noKeyTitle": "Talk needs your OpenAI API key (used for the Realtime voice API). Add it in Settings → Voice.",
-    "whyDisabled": "Why is Talk disabled?",
-    "popoverBody": "An OpenAI API key is needed to use this feature.",
-    "setItUpNow": "set it up now"
-  },
   "updatesSection": {
     "title": "Updates",
     "onVersion": "You're on v{{v}}",
@@ -1277,9 +1210,6 @@
     "priority": "Priority {{level}}/5"
   },
   "queueComposer": {
-    "recording": "● recording — click stop to transcribe",
-    "transcribing": "transcribing…",
-    "voice": "voice",
     "busyQueued": "{{name}} is busy — {{count}} queued",
     "heldFloor": "held — delivery paused floor-wide",
     "heldDraft": "held — {{name}}'s terminal has unsent text on its prompt",
@@ -1304,18 +1234,7 @@
     "sendNowTitle": "Deliver this message even though auto-delivery is paused. It moves to the front of the queue and types in as soon as the terminal is free.",
     "sendNow": "send now",
     "sendingWhenFree": "sending when free…",
-    "removeFromQueue": "Remove from queue",
-    "ffNoKeyTitle": "Dictation needs a free Groq API key. Click the info mark for the steps.",
-    "ffStopTranscribe": "Stop & transcribe",
-    "ffTitle": "Free Flow — dictate into the queue. Click, or hold Option (⌥).",
-    "stop": "stop",
-    "ffHowEnable": "How do I enable dictation?",
-    "ffSetupTitle": "Set up dictation",
-    "ffSetupIntro": "Speak instead of typing. Groq transcribes it, and their free tier covers this — no card, no cost.",
-    "ffCreateKey": "Create a free key at",
-    "ffPasteKey": "Paste it into Settings → Voice → Groq API key",
-    "ffClickOrHold": "Click voice, or hold the right Option key to talk",
-    "ffHoldHint": "Hold it ALONE for a moment to start; release to transcribe into the composer, where you can edit before sending. Either Option key works, and Option+key combos still reach the terminal untouched."
+    "removeFromQueue": "Remove from queue"
   },
   "idePanel": {
     "workspace": "{{name}}'s workspace",

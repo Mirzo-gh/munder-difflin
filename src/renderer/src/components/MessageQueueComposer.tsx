@@ -1,12 +1,10 @@
-import { ClipboardEvent, DragEvent, KeyboardEvent, type MouseEvent as ReactMouseEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { ClipboardEvent, DragEvent, KeyboardEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PixelButton } from './PixelButton';
 import { Icon } from './Icon';
 import { useStore, type Agent, type QueuedMessage } from '@/store/store';
 import { clearTerminalDraft, dismissTerminalPicker, terminalAutomationBlockFor } from './terminalPool';
 import type { TerminalAutomationBlock } from './terminalAutomation';
-import { freeflowRecorder, useFreeflow } from '@/freeflow/recorder';
 import { useTerminalFontSize } from './terminalFontSize';
 import { isComposingKey } from '@shared/imeGuard';
 import { useRtl } from '@/i18n/useDirection';
@@ -44,25 +42,6 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
   const text = useStore((s) => s.drafts[agent.id] ?? '');
   const setDraft = useStore((s) => s.setDraft);
   const setText = (t: string) => setDraft(agent.id, t);
-
-  // Free Flow voice dictation (entry point A). The mic button shows only when the
-  // feature is enabled in Settings; a transcript is appended to this draft for
-  // review before sending (never auto-sent). When enabled but no Groq key is set,
-  // the button stays VISIBLE but DISABLED with a tooltip pointing to Settings
-  // (hasGroqKey is boolean presence only — the key value never reaches the store).
-  const freeflowEnabled = useStore((s) => s.freeflowEnabled);
-  const hasGroqKey = useStore((s) => s.hasGroqKey);
-  const ff = useFreeflow();
-  const ffMine = ff.targetAgentId === agent.id;
-  const ffHint = !freeflowEnabled
-    ? null
-    : ffMine && ff.status === 'recording'
-    ? t('queueComposer.recording')
-    : ffMine && ff.status === 'transcribing'
-    ? t('queueComposer.transcribing')
-    : ff.error && (ffMine || ff.targetAgentId === null)
-    ? `${t('queueComposer.voice')}: ${ff.error}`
-    : null;
 
   // The draft box is the terminal's twin — it should read at the same size the
   // agent's output does, at every zoom level.
@@ -296,15 +275,6 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
         </div>
       )}
 
-      {/* Free Flow recording / transcription status (entry point A) */}
-      {ffHint && (
-        <span style={{
-          fontSize: 12, lineHeight: '16px',
-          color: ff.error && !(ffMine && ff.status !== 'idle') ? 'var(--cth-coral)' : 'var(--cth-ink-500)',
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-        }}>{ffHint}</span>
-      )}
-
       {/* Attached files/images — chips with a remove 'x', above the textarea. */}
       {attachments.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -376,7 +346,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
             boxSizing: 'border-box'
           }}
         />
-        {/* Control bar: Attach + voice + Send aligned right. flexWrap so a
+        {/* Control bar: Attach + Send aligned right. flexWrap so a
             narrow sidebar wraps the buttons onto a second row instead of
             pushing Send off-screen. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, rowGap: 6, flexWrap: 'wrap', minWidth: 0 }}>
@@ -386,7 +356,6 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
               <Icon name="plus" /> {t('queueComposer.files')}
             </span>
           </PixelButton>
-          {freeflowEnabled && <FreeFlowButton agentId={agent.id} hasGroqKey={hasGroqKey} />}
           <PixelButton variant="primary" size="sm" onClick={queueIt} disabled={!canSend}>
             <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
               {t('commandBar.send')} <Icon name="arrow-right" />
@@ -546,188 +515,5 @@ function QueuedMessageRow(
         <Icon name="x" />
       </button>
     </div>
-  );
-}
-
-
-/**
- * Push-to-talk button for the queue composer. Click to start recording, click
- * again to stop → transcribe → the text is appended to this agent's draft. While
- * another agent is mid-dictation it's disabled (one shared recorder). The actual
- * capture + Groq call live in the freeflow recorder singleton.
- *
- * When no Groq key is configured the button stays visible but disabled, with a
- * tooltip pointing to Settings — it never starts a recording, so getUserMedia and
- * the Groq STT call are never reached (preserving the zero-call-when-unavailable
- * guarantee). `hasGroqKey` is boolean presence only; the key value never gets here.
- */
-function FreeFlowButton({ agentId, hasGroqKey }: { agentId: string; hasGroqKey: boolean }) {
-  const { t } = useTranslation();
-  const ff = useFreeflow();
-  const mine = ff.targetAgentId === agentId;
-  const recording = ff.status === 'recording' && mine;
-  const transcribing = ff.status === 'transcribing' && mine;
-  // Block while another agent's clip is recording/uploading (single recorder).
-  const busyElsewhere = ff.status !== 'idle' && !mine;
-  const noKey = !hasGroqKey;
-
-  const hintRef = useRef<HTMLSpanElement | null>(null);
-  const iconRef = useRef<HTMLButtonElement | null>(null);
-  const panelRef = useRef<HTMLDivElement | null>(null);
-  const [hint, setHint] = useState<{ left: number; top: number } | null>(null);
-  const hintOpen = hint !== null;
-
-  const HINT_W = 244;
-  const HINT_GAP = 8;
-  const EST_H = 188;
-
-  const title = noKey
-    ? t('queueComposer.ffNoKeyTitle')
-    : recording ? t('queueComposer.ffStopTranscribe')
-    : transcribing ? t('queueComposer.transcribing')
-    : t('queueComposer.ffTitle');
-
-  /** Same placement rule as RealtimeMichaelToggle's hint: prefer above (the
-   *  composer sits low in the panel), flip below only when there is no room, and
-   *  clamp both axes so it can never hang off an edge. */
-  const toggleHint = (e: ReactMouseEvent): void => {
-    e.stopPropagation();
-    if (hint) { setHint(null); return; }
-    const r = iconRef.current?.getBoundingClientRect();
-    if (!r) return;
-    const above = r.top - HINT_GAP - EST_H;
-    const top = above >= 8 ? above : Math.min(r.bottom + HINT_GAP, window.innerHeight - EST_H - 8);
-    const left = Math.max(8, Math.min(r.left, window.innerWidth - HINT_W - 8));
-    setHint({ left, top: Math.max(8, top) });
-  };
-
-  useEffect(() => {
-    if (!hintOpen) return;
-    const onDown = (ev: globalThis.MouseEvent): void => {
-      const t = ev.target as Node;
-      // Portalled, so an inside-click has to be tested against BOTH nodes.
-      if (hintRef.current?.contains(t) || panelRef.current?.contains(t)) return;
-      setHint(null);
-    };
-    const onKey = (ev: globalThis.KeyboardEvent): void => { if (ev.key === 'Escape') setHint(null); };
-    const onReflow = (): void => setHint(null);
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    window.addEventListener('resize', onReflow);
-    window.addEventListener('scroll', onReflow, true);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-      window.removeEventListener('resize', onReflow);
-      window.removeEventListener('scroll', onReflow, true);
-    };
-  }, [hintOpen]);
-
-  const openKeySettings = (e: ReactMouseEvent): void => {
-    e.stopPropagation();
-    setHint(null);
-    window.dispatchEvent(new CustomEvent('cth:open-settings', { detail: { section: 'Voice' } }));
-  };
-
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: noKey ? 4 : 0, minWidth: 0 }}>
-      {/* Wrap in a (non-disabled) span so the native tooltip still shows on hover
-          even when the inner button is disabled — Chromium suppresses tooltips on
-          a disabled <button> itself. */}
-      <span title={title} style={{ display: 'inline-flex' }}>
-        <PixelButton
-          variant={recording ? 'destructive' : 'secondary'}
-          size="sm"
-          onClick={() => { if (noKey) return; freeflowRecorder.toggle(agentId); }}
-          disabled={noKey || transcribing || busyElsewhere}
-        >
-          <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-            <Icon name="mic" />
-            {transcribing ? '…' : recording ? t('queueComposer.stop') : t('queueComposer.voice')}
-          </span>
-        </PixelButton>
-      </span>
-
-      {/* A missing key is a SETUP STATE, not a failure — the same treatment Talk
-          already gets. Without this the button is simply dead on click, and the
-          two facts that would make someone act (it is FREE, and there is a
-          hold-to-talk shortcut) were written down nowhere in the UI. */}
-      {noKey && (
-        <span ref={hintRef} style={{ display: 'inline-flex', flexShrink: 0 }}>
-          <button
-            ref={iconRef}
-            type="button"
-            aria-label={t('queueComposer.ffHowEnable')}
-            aria-expanded={hintOpen}
-            onClick={toggleHint}
-            style={{
-              border: 'none', background: 'none', padding: 0, cursor: 'pointer',
-              display: 'inline-flex', alignItems: 'center',
-              color: 'var(--cth-ink-500)',
-              opacity: hintOpen ? 1 : 0.75
-            }}
-          >
-            <Icon name="info" />
-          </button>
-
-          {hint && createPortal(
-            <div
-              ref={panelRef}
-              role="dialog"
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                position: 'fixed', left: hint.left, top: hint.top, zIndex: 460,
-                width: HINT_W, padding: '10px 12px', boxSizing: 'border-box',
-                display: 'flex', flexDirection: 'column', gap: 7,
-                background: 'var(--cth-paper-100)',
-                boxShadow: 'inset 0 0 0 1.5px var(--cth-ink-500), 4px 4px 0 rgba(26,19,32,0.25)',
-                fontFamily: 'var(--cth-font-ui)', fontSize: 11, lineHeight: '15px',
-                color: 'var(--cth-ink-900)', textAlign: 'left', whiteSpace: 'normal'
-              }}
-            >
-              <span style={{
-                fontFamily: 'var(--cth-font-display)', fontSize: 9, letterSpacing: 0.5,
-                textTransform: 'uppercase', color: 'var(--cth-ink-500)'
-              }}>{t('queueComposer.ffSetupTitle')}</span>
-
-              {/* Lead with the cost, because "add an API key" reads as "this will
-                  bill me" and that assumption is what stops people here. */}
-              <span>
-                {t('queueComposer.ffSetupIntro')}
-              </span>
-
-              <ol style={{ margin: 0, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <li>
-                  {t('queueComposer.ffCreateKey')}{' '}
-                  <a
-                    href="https://console.groq.com/keys"
-                    onClick={(e) => { e.preventDefault(); void window.cth.openExternal('https://console.groq.com/keys'); }}
-                    style={{ color: 'var(--cth-ink-900)' }}
-                  >console.groq.com/keys</a>
-                </li>
-                <li>{t('queueComposer.ffPasteKey')}</li>
-                <li>{t('queueComposer.ffClickOrHold')}</li>
-              </ol>
-
-              <span style={{ color: 'var(--cth-ink-500)' }}>
-                {t('queueComposer.ffHoldHint')}
-              </span>
-
-              <button
-                type="button"
-                onClick={openKeySettings}
-                style={{
-                  border: 'none', background: 'none', padding: 0, cursor: 'pointer',
-                  alignSelf: 'flex-start',
-                  fontFamily: 'var(--cth-font-ui)', fontSize: 11, lineHeight: '15px',
-                  color: 'var(--cth-ink-900)', textDecoration: 'underline'
-                }}
-              >				{t('realtimeToggle.setItUpNow')}</button>
-            </div>,
-            document.body
-          )}
-        </span>
-      )}
-    </span>
   );
 }

@@ -187,7 +187,7 @@ export function AgentStrip({ config }: AgentStripProps) {
               if (first) openTaskDetail(first);
             }}
             note={a.note}
-            onEditNote={a.isGod ? undefined : () => setNoteEditId(a.id)}
+            onEditNote={() => setNoteEditId(a.id)}
           />
           {/* The note itself lives INSIDE the card (its own row above the gauge).
               This is the transient EDITOR: a fixed popover to the RIGHT of the

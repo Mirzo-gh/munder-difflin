@@ -259,22 +259,6 @@ interface State {
    *  composer) doesn't eat what the user was typing. */
   drafts: Record<string, string>;
   setDraft: (agentId: string, text: string) => void;
-  /** Mirror of config.freeflowEnabled so the composer can show/hide the Free Flow
-   *  mic button reactively (set by App on config load and by Settings on save). */
-  freeflowEnabled: boolean;
-  setFreeflowEnabled: (on: boolean) => void;
-  /** Mirror of `!!config.groqApiKey` — boolean presence ONLY; the key value never
-   *  enters the store. Lets the composer show the voice button disabled (with a
-   *  "add a Groq key" tooltip) instead of hiding it. Set by App on config load and
-   *  by Settings on save. */
-  hasGroqKey: boolean;
-  setHasGroqKey: (has: boolean) => void;
-  /** Mirror of BYOK OpenAI key presence (boolean only — the key lives in the main
-   *  secret broker, never the store). Gates the Realtime Michael voice toggle the
-   *  way hasGroqKey gates the Free Flow mic. Set by App on load via
-   *  window.cth.realtimeHasOpenAiKey(). */
-  hasOpenAiKey: boolean;
-  setHasOpenAiKey: (has: boolean) => void;
   /** Mirror of config.webhookTriggers — the inbound HTTP endpoints. Webhooks are
    *  editable from BOTH Settings → Connections and the Triggers tab, so neither
    *  surface keeps its own copy: both render off this list and both call the
@@ -869,12 +853,6 @@ export const useStore = create<State>((set, get) => ({
   drafts: {},
   setDraft: (agentId, text) =>
     set((s) => ({ drafts: { ...s.drafts, [agentId]: text } })),
-  freeflowEnabled: false,
-  setFreeflowEnabled: (on) => set({ freeflowEnabled: on }),
-  hasGroqKey: false,
-  setHasGroqKey: (has) => set({ hasGroqKey: has }),
-  hasOpenAiKey: false,
-  setHasOpenAiKey: (has) => set({ hasOpenAiKey: has }),
   webhookTriggers: [],
   setWebhookTriggers: (list) => set({ webhookTriggers: list }),
   // A copy, not the shared DEFAULT_ORG_TRIGGER instance — main takes the same

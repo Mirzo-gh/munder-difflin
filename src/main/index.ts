@@ -12,7 +12,6 @@ import { request as httpsRequest } from 'node:https';
 import { PtyManager, type SpawnOptions } from './pty';
 import { resolveCommand as resolveCliCommand, isSafeCommandName } from './shellEnv';
 import { initAutoUpdater, abortPendingRestart } from './updater';
-import { RealtimeFloorWatcher } from './realtimeFloorWatcher';
 import {
   readConfig, writeConfig, setAgentTokenCap, resetConfig, onConfigWritten, ensureHarnessHome, ensureClaudePermissionsAccepted,
   modelForRole, OPS_STANDUP_MISSION, HEARTBEAT_MISSION, COMPACT_MAINTENANCE_MISSION, type HarnessConfig, type ScheduledMission
@@ -49,11 +48,6 @@ import {
 import {
   appendTriggerHistory, clearTriggerHistory, listTriggerHistory, updateTriggerHistory
 } from './triggerHistory';
-import { transcribeWithGroq, DEFAULT_GROQ_MODEL } from './freeflow';
-import { registerRealtimeIpc } from './realtime';
-import { registerRealtimeActionIpc } from './realtimeActions';
-import { initCompletionWatcher } from './realtimeCompletionWatcher';
-import type { TaskCard, InboxMessage } from './realtimeCompletionWatcher';
 import { TelemetryCollector } from './telemetry';
 import { CostLedgerTotals } from './costLifetime';
 import { analytics, isRendererMessageSurface } from './analytics';
@@ -2353,34 +2347,16 @@ function createWindow(opts: { floor?: boolean } = {}): BrowserWindow {
   win.on('focus', () => { mainWindow = win; });
   if (!isFloor) mainWindow = win;
 
-  // Permission gate for the renderer (our own trusted, local content). The only
-  // permission we constrain is microphone capture: it's allowed ONLY while a mic
-  // feature is actually live — Free Flow dictation (`freeflowEnabled`) OR a
-  // Realtime Michael voice session (`realtimeVoiceEnabled`, flipped on by the
-  // session at start() before getUserMedia, off at stop()). With both flags off,
-  // there's zero mic access even at the Electron layer. We deliberately do NOT
-  // gate on OpenAI-key presence: that key (`apikey:openai`) is shared with the CLI
-  // engines, so a CLI-only user must not have the mic gate opened. Every other
-  // permission keeps the app's prior permissive behavior (e.g. clipboard for
-  // xterm/editor copy must keep working).
-  const micFeatureLive = (): boolean => {
-    const cfg = readConfig();
-    return cfg.freeflowEnabled === true || cfg.realtimeVoiceEnabled === true;
-  };
+  // Permission gate for the renderer (our own trusted, local content). The voice
+  // features (Free Flow dictation, Realtime voice) were removed, so nothing needs
+  // the microphone: media capture is always denied. Every other permission keeps
+  // the app's prior permissive behavior (e.g. clipboard for xterm/editor copy).
   const ses = win.webContents.session;
-  ses.setPermissionRequestHandler((_wc, permission, callback, details) => {
-    if (permission === 'media') {
-      const mediaTypes = details && 'mediaTypes' in details ? details.mediaTypes : undefined;
-      const wantsAudio = !mediaTypes || mediaTypes.includes('audio');
-      callback(micFeatureLive() && wantsAudio);
-      return;
-    }
-    callback(true);
+  ses.setPermissionRequestHandler((_wc, permission, callback) => {
+    callback(permission !== 'media');
   });
-  ses.setPermissionCheckHandler((_wc, permission) => {
-    if (permission === 'media') return micFeatureLive();
-    return true;
-  });
+  ses.setPermissionCheckHandler((_wc, permission) => permission !== 'media');
+
 
   // Only the primary persists geometry (kv `window.bounds`); floors cascade
   // fresh each launch. Skip while maximized/minimized so a restore doesn't save
@@ -3496,12 +3472,6 @@ ipcMain.handle('hive:tasks', () => hive.tasks());
 ipcMain.handle('hive:log', (_evt, n: unknown) => hive.logTail(typeof n === 'number' ? n : 200));
 ipcMain.handle('hive:memory', (_evt, id: unknown) => (typeof id === 'string' ? hive.memory(id) : ''));
 ipcMain.handle('hive:inbox', (_evt, id: unknown) => (typeof id === 'string' ? hive.inbox(id) : []));
-// Voice read-layer: recent message CONTENT (inbox/outbox bodies), REDACTED
-// main-side by hive.voiceMessages(). The renderer/voice layer never sees a raw
-// body — secrets are stripped here, before the result crosses IPC.
-ipcMain.handle('hive:messages', (_evt, opts: unknown) =>
-  hive.voiceMessages(opts && typeof opts === 'object' ? (opts as Parameters<typeof hive.voiceMessages>[0]) : {})
-);
 ipcMain.handle('hive:send', (_evt, partial: Partial<HiveMessage>, from: unknown) => {
   if (!hive.enabled()) return { ok: false, error: 'hive disabled (no harnessHome)' };
   const sender = typeof from === 'string' ? from : 'system';
@@ -3890,54 +3860,6 @@ ipcMain.handle('hive:agentContext', (_evt, agentId: unknown) => {
   const tp = hookServer.transcriptPath(agentId);
   if (!tp) return null;
   return readContextTokens(tp) ?? 0;
-});
-
-// A consolidated, NON-SENSITIVE per-agent directory for the voice read-layer
-// (Realtime Michael's get_agent_detail / list_agents). One read that joins
-// everything the office-floor sidebar + telemetry know per agent: the registry
-// record (name/role/provider/cwd/status/archived/isGod/isAssistant/sessionId/
-// cwdValid), live token + breaker + last-tool telemetry, and the current context
-// window fill. Includes ARCHIVED agents (unlike the heartbeat's fleet.json, which
-// is live-only) so Michael can speak to inactive agents — their cwd and memory
-// stay reachable. PII-free: no secrets, env, or API keys ever leave main; cost is
-// carried as tokens (+ a usd field the voice layer deliberately never speaks).
-ipcMain.handle('hive:agentDirectory', () => {
-  if (!hive.enabled()) return { godId: null, agents: [] };
-  const reg = hive.registry();
-  const snap = telemetry.snapshot();
-  const usageById = new Map(snap.usage.map((u) => [u.agentId, u]));
-  const now = Date.now();
-  const agents = Object.entries(reg.agents).map(([id, a]) => {
-    const u = usageById.get(id);
-    const spans = snap.spans[id] ?? [];
-    const tokens = u ? u.input + u.output + u.cacheRead + u.cacheCreation : 0;
-    const ctx = hookServer.contextFor(id);
-    return {
-      id,
-      name: a.name,
-      role: a.role ?? (a.isGod ? 'orchestrator' : 'agent'),
-      provider: a.provider ?? 'claude',
-      model: u?.model ?? null,
-      status: a.status ?? 'idle',
-      cwd: a.cwd ?? null,
-      cwdValid: a.cwdValid ?? null,
-      archived: !!a.archived,
-      isGod: !!a.isGod,
-      isAssistant: !!a.isAssistant,
-      sessionId: a.sessionId ?? null,
-      hasMemory: hive.hasMemory(id),
-      inboxBacklog: hive.inboxBacklog(id),
-      breaker: breaker.levelFor(id),
-      tokens,
-      usd: u ? Number(u.usd.toFixed(4)) : 0,
-      lastTool: spans.length ? spans[spans.length - 1].tool : null,
-      lastActiveSecAgo: u ? Math.round((now - u.ts) / 1000) : null,
-      contextTokens: ctx?.tokens ?? null,
-      contextLimit: ctx?.limit ?? null,
-      contextPct: ctx && ctx.limit > 0 ? Math.round((ctx.tokens / ctx.limit) * 100) : null
-    };
-  });
-  return { godId: reg.godId, agents };
 });
 
 // ─── IPC: live telemetry (the OTel collector — the locked usage-provider seam) ─
@@ -4389,179 +4311,8 @@ function upsertLegacyWebhookTrigger(patch: { secret?: string; enabled?: boolean 
   });
 }
 
-// ─── IPC: Free Flow (voice dictation → message queue) ────────────────────────
-// Entry point B is hold-Option-to-talk, handled entirely in the renderer
-// (capture-phase key listeners) — no globalShortcut here. macOS doesn't deliver
-// the Fn key to Electron (electron#16714) and a faithful native Fn helper
-// (CGEventTap) is deferred; hold-Option is the human-chosen v1 activation.
-
-ipcMain.handle('freeflow:setConfig', (_evt, patch: unknown) => {
-  const p = (patch ?? {}) as { enabled?: unknown; apiKey?: unknown; model?: unknown };
-  const next: Partial<HarnessConfig> = {};
-  if (typeof p.enabled === 'boolean') next.freeflowEnabled = p.enabled;
-  // Trim string fields; an emptied key clears back to undefined.
-  if (typeof p.apiKey === 'string') next.groqApiKey = p.apiKey.trim() || undefined;
-  if (typeof p.model === 'string') next.freeflowModel = p.model.trim() || DEFAULT_GROQ_MODEL;
-  writeConfig(next);
-  return { ok: true };
-});
-
-/** Transcribe one captured audio clip via Groq. Gated on the flag + a key being
- *  present, so a disabled feature can NEVER reach the network. The Groq key stays
- *  in main — only the audio bytes cross IPC inbound and the transcript outbound. */
-ipcMain.handle('freeflow:transcribe', async (_evt, arg: unknown) => {
-  const cfg = readConfig();
-  if (!cfg.freeflowEnabled) return { ok: false, error: 'Free Flow is disabled' };
-  if (!cfg.groqApiKey) return { ok: false, error: 'no Groq API key set' };
-  const a = (arg ?? {}) as { audio?: unknown; mimeType?: unknown; filename?: unknown; language?: unknown };
-  if (!(a.audio instanceof ArrayBuffer) && !(a.audio instanceof Uint8Array)) {
-    return { ok: false, error: 'no audio' };
-  }
-  const out = await transcribeWithGroq({
-    apiKey: cfg.groqApiKey,
-    audio: a.audio,
-    mimeType: typeof a.mimeType === 'string' ? a.mimeType : undefined,
-    filename: typeof a.filename === 'string' ? a.filename : undefined,
-    model: cfg.freeflowModel || DEFAULT_GROQ_MODEL,
-    language: typeof a.language === 'string' && a.language ? a.language : undefined
-  });
-  if (out.ok) analytics.trackFeature('voice_dictation');
-  return out;
-});
-
-// ─── IPC: Realtime Michael (voice orchestrator — ephemeral token mint, rt-1) ──
-// MAIN owns the BYOK OpenAI key (encrypted broker, apikey:openai) and mints a
-// short-lived EPHEMERAL client secret; the real key never crosses IPC. All wiring
-// lives in ./realtime so this stays a single registration line.
-registerRealtimeIpc();
-
-// ─── IPC: Realtime Michael voice ACTIONS (rt-5, Phase 2) ─────────────────────
-// Thin adapters over the SAME main fns the god PTY already uses. ALL of the safety
-// spine — soft-vs-destructive tiering, the two-step verbal echo-back confirm, the
-// distinct-token rule, the hard allowlist (kill-god / mass-ops forbidden), and the
-// michael-voice attribution — lives in ./realtimeActions. This site only injects
-// the existing functions; it adds NO new orchestration logic.
-// ─── IPC: Realtime Michael completion watcher (rt-12, Phase 2) ───────────────
-// Jim's net-new engine (realtimeCompletionWatcher.ts) detects a voice-dispatched
-// task finishing (card→done OR a done-reply in michael-voice's inbox) and EMITS it;
-// I own the seam — inject the hive read deps, push completions to the live session
-// (so Michael speaks them unprompted), and bridge waitFor / queue-drain over IPC.
-const completionWatcher = initCompletionWatcher({
-  readTasks: () => { const t = hive.tasks() as { tasks?: TaskCard[] }; return Array.isArray(t?.tasks) ? t.tasks : []; },
-  // Voice dispatches go out as from:michael-voice, so assignee done-replies land here.
-  readInbox: () => {
-    // Voice dispatches go out from:michael-voice, so done-replies normally land in its
-    // inbox — but an assignee may address god out of habit. Merge both inboxes (de-dupe
-    // by id) so a god-addressed completion isn't missed; the detector filters by sender.
-    try {
-      const mv = hive.inbox('michael-voice') as unknown as InboxMessage[];
-      const godId = hive.registry().godId;
-      const god = godId ? (hive.inbox(godId) as unknown as InboxMessage[]) : [];
-      const seen = new Set<string>();
-      return [...mv, ...god].filter((m) => !!m?.id && !seen.has(m.id) && seen.add(m.id) !== undefined);
-    } catch {
-      return [];
-    }
-  },
-  onNotify: (evt) => {
-    try {
-      if (!Notification.isSupported()) return;
-      const reg = hive.registry();
-      const title = resolveGodName(reg.agents[reg.godId ?? 'god']?.name);
-      new Notification({ title, body: evt.summary }).show();
-    } catch { /* best-effort */ }
-  }
-});
-
-registerRealtimeActionIpc({
-  hiveEnabled: () => hive.enabled(),
-  hiveSend: (partial, from) => hive.send(partial, from),
-  hiveTasks: () => hive.tasks(),
-  hiveAddTask: (task) => hive.addTask(task as HiveTask),
-  hivePatchTask: (id, patch) => hive.patchTask(id, patch as Partial<Omit<HiveTask, 'id'>>),
-  hiveDeleteTask: (id) => hive.deleteTask(id),
-  hiveRegistry: () => hive.registry(),
-  hiveLog: (event) => hive.appendLog(event),
-  controlPause: (id, on) => control.pause(id, on),
-  controlSteer: (id, text) => control.steer(id, text),
-  controlHalt: (id) => control.halt(id),
-  controlSnapshot: (id) => control.snapshot(id),
-  killAgent: (id) => {
-    const r = ptyManager.kill(id);
-    teardownPty(id);
-    // A voice (MAIN-initiated) kill: the renderer never removed the card itself
-    // (unlike a UI kill), so tell the floor to archive it. Mirrors hive:agentSpawned.
-    try { liveWebContents()?.send('hive:agentArchived', { id }); } catch { /* window torn down */ }
-    return r;
-  },
-  spawnAgent: async (opts) => {
-    const o = opts as AgentSpawnOptions;
-    const res = await spawnAgentCore(o, null);
-    // The renderer roster is only mutated by renderer-initiated hires (AddAgentModal),
-    // so a MAIN-initiated spawn is invisible on the floor until we broadcast it. The
-    // renderer (useHive) builds the Agent card from this descriptor; addAgent is
-    // idempotent so a renderer-initiated hire is never double-carded.
-    if (res.ok) {
-      try {
-        liveWebContents()?.send('hive:agentSpawned', {
-          id: o.id,
-          name: o.hive?.name ?? o.id,
-          provider: o.provider ?? o.hive?.provider ?? 'claude',
-          cwd: res.worktreePath ?? o.cwd,
-          command: o.command,
-          role: o.hive?.role,
-          worktreePath: res.worktreePath
-        });
-      } catch { /* window torn down */ }
-    }
-    return res;
-  },
-  listMissions: () => readConfig().missions ?? [],
-  // The spec carries lastFiredAt through from listMissions(), so a wholesale write
-  // preserves the scheduler's stamps; edit_schedule is deliberate + rare.
-  saveMissions: (missions) => { writeConfig({ missions }); },
-  // rt-12: register each voice dispatch so the watcher can detect its completion.
-  trackDispatch: (d) => { try { completionWatcher.track({ ...d, kind: 'dispatch' }); } catch { /* watcher unavailable */ } },
-  // ── v0.3.4 full-control extensions ──
-  controlResume: (id) => control.resume(id),
-  controlAutoDelivery: (id, paused) => control.pauseAutoDelivery(id, paused),
-  controlGateTool: (id, toolName, on) => control.gateTool(id, toolName, on),
-  setArchived: (id, archived) => {
-    if (!hive.enabled()) return { ok: false, error: 'hive disabled' };
-    hive.setArchived(id, archived);
-    try { liveWebContents()?.send(archived ? 'hive:agentArchived' : 'hive:agentSpawned', { id }); } catch { /* window gone */ }
-    return { ok: true };
-  },
-  // clear_context: hand the text to the renderer's queue so delivery rides every
-  // existing gate (idle-only, boot grace, draft/picker safety).
-  enqueueToAgent: (id, text) => {
-    try { liveWebContents()?.send('realtime:enqueue', { agentId: id, text }); } catch { /* window gone */ }
-  },
-  getConfigValue: (key) => (readConfig() as unknown as Record<string, unknown>)[key],
-  patchConfig: (patch) => { writeConfig(patch as Partial<HarnessConfig>); }
-});
-
-// rt-12 seam: push detected completions to the live floor; bridge live-flag, queue
-// drain (closed-session warm-start), and wait_for over IPC. Then start polling.
-completionWatcher.onCompletion((evt) => { try { liveWebContents()?.send('realtime:completion', evt); } catch { /* window gone */ } });
-// v0.3.4: the floor delta watcher shares the session-live flag — while a voice
-// session is open it pushes coalesced floor updates the renderer injects as
-// silent conversation items (snapshot-at-connect + append-only deltas).
-const floorWatcher = new RealtimeFloorWatcher({
-  enabled: () => hive.enabled(),
-  registry: () => hive.registry(),
-  tasks: () => hive.tasks(),
-  ptys: () => ptyManager.list().map((p) => ({ id: p.id, lastOutputAt: p.lastOutputAt })),
-  push: (text) => { try { liveWebContents()?.send('realtime:floorDelta', { text }); } catch { /* window gone */ } }
-});
-floorWatcher.start();
-ipcMain.handle('realtime:setSessionLive', (_e, live: unknown) => {
-  completionWatcher.setSessionLive(live === true);
-  floorWatcher.setSessionLive(live === true);
-  return { ok: true };
-});
-// v0.3.4: app self-knowledge for the voice get_app_info tool — version + the
-// newest CHANGELOG sections. Read-only; ships CHANGELOG.md with the app.
+// App self-knowledge (Settings hero card) — version + the newest CHANGELOG
+// sections. Read-only; ships CHANGELOG.md with the app.
 ipcMain.handle('app:info', () => {
   let changelog = '';
   for (const p of [join(app.getAppPath(), 'CHANGELOG.md'), join(process.cwd(), 'CHANGELOG.md')]) {
@@ -4572,12 +4323,6 @@ ipcMain.handle('app:info', () => {
     : '';
   return { version: app.getVersion(), changelog: top };
 });
-ipcMain.handle('realtime:drainCompletions', () => completionWatcher.drainQueuedCompletions());
-ipcMain.handle('realtime:waitFor', (_e, taskId: unknown, timeoutMs: unknown) =>
-  typeof taskId === 'string'
-    ? completionWatcher.waitFor(taskId, typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : 120_000)
-    : Promise.resolve({ timedOut: true as const, taskId: '' }));
-completionWatcher.start();
 
 // ─── god-triggered ephemeral Slack workers ──────────────────────────────────
 // god drops a spawn-request JSON into HIVE_ROOT/spawn-requests/; MAIN polls that
@@ -5375,14 +5120,6 @@ function onSystemResume(reason: string): void {
 }
 
 app.whenReady().then(() => {
-  // Realtime Michael mic-gate hygiene (rt-8 / Pam rt-10 nit): the voice session
-  // opens the mic permission gate by persisting realtimeVoiceEnabled=true and
-  // closes it on disconnect — but a hard crash/reload mid-session skips that
-  // teardown, leaving the flag stuck true so the gate would boot PRE-OPEN with no
-  // live session. Force it closed at startup (a real session re-opens it via
-  // setMicGate(true)); macOS TCC stays a second gate regardless.
-  if (readConfig().realtimeVoiceEnabled) writeConfig({ realtimeVoiceEnabled: false });
-
   // Anonymous product analytics (PostHog) — the full contract lives in
   // TELEMETRY.md. No-op unless a build-time key was injected (official releases
   // only), and gated on DO_NOT_TRACK + the telemetryEnabled config (opt-out).

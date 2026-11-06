@@ -342,30 +342,14 @@ export interface HarnessConfig {
    *  thread) or an agent's own direct in-thread reply — those always stay on. */
   slackProactivePosting?: boolean;
 
-  // ─── Free Flow (voice dictation → message queue) ───────────────────────────
-  /** Master toggle for Free Flow push-to-talk dictation. Default OFF: with it off
-   *  the composer shows no mic button, no getUserMedia runs, and no Groq call is
-   *  ever made (zero behavior change). */
+  // ─── Legacy voice fields ───────────────────────────────────────────────────
+  /** Free Flow dictation + Realtime voice were removed in this fork. These stay
+   *  optional (no defaults, nothing reads them) so configs written by older
+   *  builds still load and round-trip unchanged. */
   freeflowEnabled?: boolean;
-  /** User-pasted Groq API key (the user supplies their own free key). Used ONLY in
-   *  the main process for the Groq STT call; NEVER logged, and never crosses IPC
-   *  for the request. Treated like `slackBotToken`. */
   groqApiKey?: string;
-  /** Groq Whisper model id. Default 'whisper-large-v3-turbo' (fast, multilingual). */
   freeflowModel?: string;
-
-  // ─── Realtime Michael (premium speech-to-speech voice orchestrator) ─────────
-  /** True ONLY while a Realtime Michael voice session is live: the renderer
-   *  session flips this on at start() (before getUserMedia) and off at stop().
-   *  The main-process mic permission gate reads it so the Electron media
-   *  permission is open EXACTLY while the voice loop holds the mic — never just
-   *  because an OpenAI key exists (that key is shared with the CLI engines).
-   *  Default off; absence ⇒ mic denied, mirroring `freeflowEnabled`. */
   realtimeVoiceEnabled?: boolean;
-  /** How long (ms) a realtime voice session may sit with no voice activity before
-   *  it auto-disconnects (the rt-9 idle guard). Default 180000 (3 min). 0 = never
-   *  auto-disconnect on idle — the spend cap remains the runaway guard. The user
-   *  tunes this in Settings → Realtime Michael. */
   realtimeIdleDisconnectMs?: number;
 
   // ─── Generic inbound webhook + status API (LEGACY, single-endpoint) ─────────
@@ -456,11 +440,6 @@ const DEFAULTS: HarnessConfig = {
   slackChannelId: undefined,
   slackPort: undefined,
   slackProactivePosting: false,
-  freeflowEnabled: true,
-  groqApiKey: undefined,
-  freeflowModel: 'whisper-large-v3-turbo',
-  realtimeVoiceEnabled: false,
-  realtimeIdleDisconnectMs: 180_000,
   webhookEnabled: false,
   webhookSecret: undefined,
   webhookPort: undefined,
