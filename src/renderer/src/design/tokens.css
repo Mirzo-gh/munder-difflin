@@ -111,6 +111,25 @@
 
   /* Agent monogram tile (dark square, accent-tinted letters) */
   --cth-monogram-bg: #171717;
+
+  /* Legacy aliases — names some components use that the token set never
+     defined, so they fell back to inline cream-theme defaults (white text on a
+     cream chip in dark). Pointed at real tokens so they follow the theme;
+     test/css-vars-defined.test.cjs keeps every literal var(--cth-*) defined. */
+  --cth-amber-light:   var(--cth-lemon-light);
+  --cth-paprika-light: var(--cth-coral-light);
+  --cth-paprika-700:   var(--cth-coral);
+  --cth-sky-700:       var(--cth-sky);
+  /* A chip BACKGROUND under ink-900 text: the tint reads in both themes, the
+     vivid status green would put near-white text on bright green in dark. */
+  --cth-green:         var(--cth-mint-light);
+  --cth-ink-400:       var(--cth-ink-500);
+  --cth-font-body:     var(--cth-font-ui);
+  /* TEXT colours (12px status lines): the vivid status hues are too pale on a
+     white ground, so light uses deeper shades (>= 4.5:1); dark aliases the
+     status tokens below. */
+  --cth-mint-700: #007a37;
+  --cth-danger:   #d92d36;
 }
 
 /* ── Dark theme (DEFAULT) ────────────────────────────────────────────────────
@@ -151,4 +170,7 @@
   --cth-focus-ring: #737373;
 
   --cth-monogram-bg: #262626;
+
+  --cth-mint-700: var(--cth-status-success);
+  --cth-danger:   var(--cth-status-blocked);
 }

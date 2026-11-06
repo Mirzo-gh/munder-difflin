@@ -163,9 +163,9 @@ export function AskMeTab() {
   };
 
   return (
-    // Body text is set in the mono face (VT323) — the same readable font the
-    // memory viewer uses. Pixelify Sans (font-ui) is too chunky for prose like
-    // questions and answers. Display/badge bits keep their explicit faces.
+    // Body text is set in the mono face — the same font the memory viewer uses,
+    // so agent-written questions and answers keep their alignment.
+    // Display/badge bits keep their explicit faces.
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', background: 'var(--cth-paper-200)', padding: 10, display: 'flex', flexDirection: 'column', gap: 10, fontFamily: 'var(--cth-font-mono)' }}>
       {waiting.length === 0 && (
         <div style={{ textAlign: 'center', padding: '24px 12px', color: 'var(--cth-ink-500)', fontSize: 12 }}>

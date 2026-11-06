@@ -571,10 +571,10 @@ export function dismissTerminalPicker(ptyId: string): void {
 
 /** Give this terminal a WebGL renderer for as long as it is on screen.
  *
- *  The DOM renderer assumes a perfectly monospace font, but VT323 is missing
- *  glyphs (↔, arrows, some box-drawing) and has no real bold — the browser
- *  substitutes fallback glyphs with different advance widths, so box-drawing
- *  tables shear apart and the cursor drifts. WebGL draws every glyph into its
+ *  The DOM renderer assumes every glyph comes from one perfectly monospace
+ *  face, but a glyph missing from it (↔, arrows, some box-drawing) or a synthetic
+ *  bold makes the browser substitute fallback glyphs with different advance
+ *  widths, so box-drawing tables shear apart and the cursor drifts. WebGL draws every glyph into its
  *  own fixed cell, keeping the grid aligned. NOT the deprecated canvas addon
  *  (its dirty-region tracking garbles scrollback).
  *

@@ -50,16 +50,15 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
    * cannot change the number being compared, so the row cannot oscillate.
    *
    * WHERE 440 COMES FROM. Everything that is not the name costs ~318px: the
-   * four buttons measure ~246 at Inter 13px, the portrait 32, and the five
-   * 8px gaps another 40. The name is set in Press Start 2P, which is a
-   * fixed-advance pixel font — at fontSize 10 that is a flat 10px per
-   * character, plus 17 for the rename pencil beside it. Ten readable
-   * characters therefore need 117, and 318 + 117 rounds to 440.
+   * four buttons with labels (~246), the monogram tile and the 8px gaps. The
+   * threshold was first derived for a fixed-advance pixel font on the name
+   * (10px per character, ten characters + the rename pencil = ~117px, and
+   * 318 + 117 rounds to 440). The name is now set in the proportional UI face
+   * (Geist), which is narrower per character, so 440 errs on the side of
+   * keeping the name readable rather than the labels.
    *
-   * That threshold deliberately puts the DEFAULT 420px sidebar in compact
-   * mode. It has to: at 420 the labelled row leaves the name about 67px,
-   * which is six pixel-font characters — the "DWIGHT S." truncation this was
-   * reported as. Icons at the default width is the fix, not a side effect.
+   * It still puts the DEFAULT 420px sidebar in compact mode: icons at the
+   * default width leave the name its room.
    *
    * Recompute the number if a fifth button lands in this row or a label grows.
    */

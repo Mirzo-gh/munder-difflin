@@ -97,10 +97,11 @@ mac:
     NSDownloadsFolderUsageDescription: "Munder Difflin's agents may work on projects located in your Downloads."
     NSRemovableVolumesUsageDescription: "Munder Difflin's agents may work on projects located on external volumes."
     NSNetworkVolumesUsageDescription: "Munder Difflin's agents may work on projects located on network volumes."
-    # The microphone is used by two opt-in, off-by-default voice features: Free
-    # Flow dictation (Groq transcription) and Realtime Michael (live voice chat
-    # with the orchestrator via OpenAI). Mic access only happens while one is on.
-    NSMicrophoneUsageDescription: "Munder Difflin uses your microphone only for its opt-in voice features: Free Flow dictation (transcribed by Groq into the message queue) and talking to Michael in real time (streamed to OpenAI). The mic is off unless you turn one of these on."
+    # Kept although the app itself has no voice feature any more: the spawned
+    # `claude` agents inherit this app's TCC responsibility (see the hardened
+    # runtime note below and the audio-input entitlement), so an agent that uses
+    # voice input needs this string and that entitlement on the parent app.
+    NSMicrophoneUsageDescription: "Agents running in Munder Difflin may use voice input. The app itself does not record audio."
   # Hardened runtime + entitlements so the spawned `claude` agents inherit this
   # app's TCC responsibility (one grant covers them all) and node-pty can load.
   hardenedRuntime: true

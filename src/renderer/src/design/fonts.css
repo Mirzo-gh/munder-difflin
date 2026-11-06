@@ -7,8 +7,8 @@
  *
  * Fork perso (Orca-style chrome): Geist is the UI face and JetBrains Mono the
  * bundled mono FALLBACK — the mono stack (tokens.css) names the system SF Mono
- * first, so on macOS JetBrains Mono only covers a missing glyph. The pixel faces
- * (Press Start 2P, and earlier Pixelify Sans / VT323) are gone.
+ * first, so on macOS JetBrains Mono only covers a missing glyph. No pixel face
+ * ships any more.
  *
  * Latin subsets only, both VARIABLE, so one file per family covers weights 400
  * to 700. CJK and Arabic are deliberately NOT bundled: a full CJK face is
