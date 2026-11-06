@@ -1266,6 +1266,15 @@ export class HiveManager {
       // listens. The terminal reports the current theme the moment the CLI enables
       // 2031, so startup still matches without pinning anything.
       ...(theme ? { theme: 'auto' } : {}),
+      // Fork perso: in `tui: "fullscreen"` (the user's own choice, never forced
+      // here) Claude Code's ScrollPin.repin() yanks the conversation back to the
+      // bottom whenever text lands in an empty prompt or is submitted — i.e. on
+      // every inbox nudge / queued message the app types — so a human scrolled up
+      // to read god's history was thrown down. Non-forced repins are gated on
+      // this setting (claude 2.1.319: `if(!force && !autoScrollEnabled) return`);
+      // the TUI's own "Jump to bottom" pill remains. PER SESSION, like `theme`,
+      // so the user's own Claude sessions keep their auto-scroll.
+      autoScrollEnabled: false,
       // W3 — default skills/MCP bundle. Written into the PER-SESSION settings file
       // only (never ~/.claude), so the user's own MCP servers are never clobbered;
       // Claude merges this additively. Omitted entirely when empty so a settings
