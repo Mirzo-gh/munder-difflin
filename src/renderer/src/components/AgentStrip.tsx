@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { AgentCard } from './AgentCard';
 import { PixelButton } from './PixelButton';
 import { Icon } from './Icon';
+import { MemoryPanel } from './MemoryPanel';
 import { useStore, type Agent } from '@/store/store';
 import { type HarnessConfig } from '@/store/config';
 import { useRestoreTeam } from '@/hooks/useRestoreTeam';
@@ -13,6 +14,10 @@ export interface AgentStripProps {
    *  persisted `command` field. Optional so the strip renders without config. */
   config?: HarnessConfig | null;
 }
+
+/** Estimated height of the note editor popover, used to keep it on screen. */
+const NOTE_POPOVER_H = 150;
+const RESTORE_MENU_MIN_W = 240;
 
 export function AgentStrip({ config }: AgentStripProps) {
   const { t } = useTranslation();
@@ -28,12 +33,12 @@ export function AgentStrip({ config }: AgentStripProps) {
   const setAgentNote = useStore(s => s.setAgentNote);
   // Shared with the fullscreen roster so both show one restore in progress.
   const { restoring, autoRestoring, restoreTeam } = useRestoreTeam(config);
-  // ONE restore control (bottom-right): a button whose dropdown OPENS UPWARD and
-  // lists last session's agents with per-agent dismiss. The menu is position:
-  // fixed (anchored off the button's rect) because the strip scrolls with
-  // overflow hidden — an absolute child would be clipped.
+  // ONE restore control (bottom of the column): a button whose dropdown OPENS
+  // UPWARD and lists last session's agents with per-agent dismiss. The menu is
+  // position: fixed (anchored off the button's rect) because the column scrolls
+  // — an absolute child would be clipped.
   const [restoreMenuOpen, setRestoreMenuOpen] = useState(false);
-  const [restoreMenuPos, setRestoreMenuPos] = useState<{ right: number; bottom: number } | null>(null);
+  const [restoreMenuPos, setRestoreMenuPos] = useState<{ left: number; bottom: number } | null>(null);
   const restoreBtnRef = useRef<HTMLSpanElement>(null);
   const restoreBusy = restoring || autoRestoring;
   useEffect(() => {
@@ -44,7 +49,7 @@ export function AgentStrip({ config }: AgentStripProps) {
     const rect = anchor?.getBoundingClientRect();
     if (!rect) return;
     setRestoreMenuPos({
-      right: Math.max(8, window.innerWidth - rect.right),
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - RESTORE_MENU_MIN_W - 8)),
       bottom: Math.max(8, window.innerHeight - rect.top + 6)
     });
     setRestoreMenuOpen(true);
@@ -54,8 +59,8 @@ export function AgentStrip({ config }: AgentStripProps) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   // Note editing is EXPLICIT (✎ toggles the editor) — nothing appears on hover.
-  // The editor is a fixed popover ABOVE the card (anchored off its rect): the
-  // strip clips overflow and the compact cards have no room for an inline box.
+  // The editor is a fixed popover to the RIGHT of the card (anchored off its
+  // rect): the column clips overflow and the cards have no room for an inline box.
   const [noteEditId, setNoteEditId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   // Each worker's actively-DOING ledger tasks, polled from hive/tasks.json —
@@ -84,18 +89,47 @@ export function AgentStrip({ config }: AgentStripProps) {
   return (
     <div style={{
       display: 'flex',
-      gap: 12,
-      padding: '14px 16px',
-      overflowX: 'auto',
-      overflowY: 'hidden',
-      borderTop: '1px solid var(--cth-ink-300)',
-      background: 'var(--cth-cream-200)',
-      // Tall enough for the god card to stand proud of the row (it's taller and
-      // rides a drop shadow) plus the hover-lift on every card, without clipping.
-      height: 112,
-      minHeight: 112,
-      alignItems: 'center'
+      flexDirection: 'column',
+      height: '100%',
+      minHeight: 0,
+      background: 'var(--cth-cream-200)'
     }}>
+      {/* Header: "Agents · N" + a quick add. */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+        padding: '10px 12px 6px', flexShrink: 0
+      }}>
+        <span style={{
+          fontFamily: 'var(--cth-font-ui)', fontSize: 12, fontWeight: 600,
+          color: 'var(--cth-ink-700)', whiteSpace: 'nowrap'
+        }}>
+          {t('agentStrip.header', { count: agents.length })}
+        </span>
+        <button
+          type="button"
+          onClick={() => setAddAgentOpen(true)}
+          title={t('agentStrip.addAgent')}
+          aria-label={t('agentStrip.addAgent')}
+          className="cth-titlebar-nodrag"
+          style={{
+            width: 22, height: 22, padding: 0, flexShrink: 0,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            background: 'transparent', border: 'none', borderRadius: 4, cursor: 'pointer',
+            color: 'var(--cth-ink-700)'
+          }}
+        >
+          <Icon name="plus" />
+        </button>
+      </div>
+
+      {/* Scrollable card list — only this part scrolls; the bottom controls stay put. */}
+      <div style={{
+        flex: 1, minHeight: 0,
+        overflowY: 'auto', overflowX: 'hidden',
+        display: 'flex', flexDirection: 'column', gap: 8,
+        // Room for the 2px selection ring, the hover lift and the task note's overhang.
+        padding: '4px 12px 12px'
+      }}>
       {agents.map(a => (
         // Draggable wrapper: reorder the roster by dragging one card onto another.
         // Native HTML5 DnD (no dep). A plain click still selects — a drag only
@@ -122,11 +156,12 @@ export function AgentStrip({ config }: AgentStripProps) {
           style={{
             position: 'relative',
             flexShrink: 0,
+            width: '100%',
             cursor: 'grab',
             opacity: dragId === a.id ? 0.4 : 1,
-            // Insertion-line cue on the hovered drop target.
+            // Insertion-line cue on the hovered drop target (a line on its top edge).
             boxShadow: overId === a.id && dragId && dragId !== a.id
-              ? 'inset 3px 0 0 0 var(--cth-ink-900)'
+              ? 'inset 0 3px 0 0 var(--cth-ink-900)'
               : 'none',
             transition: 'opacity 120ms ease'
           }}
@@ -155,15 +190,15 @@ export function AgentStrip({ config }: AgentStripProps) {
             onEditNote={a.isGod ? undefined : () => setNoteEditId(a.id)}
           />
           {/* The note itself lives INSIDE the card (its own row above the gauge).
-              This is the transient EDITOR: a fixed popover ABOVE the card —
-              the compact card has no room for an inline box, and the strip
+              This is the transient EDITOR: a fixed popover to the RIGHT of the
+              card — the card has no room for an inline box, and the column
               clips overflow. ✎ opens it; Esc / ✕ / click-away closes. */}
           {noteEditId === a.id && !dragId && (() => {
             const rect = cardRefs.current[a.id]?.getBoundingClientRect();
             if (!rect) return null;
             const width = 280;
-            const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
-            const bottom = Math.max(8, window.innerHeight - rect.top + 8);
+            const left = Math.max(8, Math.min(rect.right + 8, window.innerWidth - width - 8));
+            const top = Math.max(8, Math.min(rect.top, window.innerHeight - NOTE_POPOVER_H - 8));
             return (
               <>
                 {/* click-away backdrop */}
@@ -175,7 +210,7 @@ export function AgentStrip({ config }: AgentStripProps) {
                   onClick={(e) => e.stopPropagation()}
                   onMouseDown={(e) => e.stopPropagation()}
                   style={{
-                    position: 'fixed', left, bottom, width, zIndex: 350,
+                    position: 'fixed', left, top, width, zIndex: 350,
                     padding: 10, boxSizing: 'border-box',
                     background: 'var(--cth-paper-100)',
                     boxShadow: 'inset 0 0 0 1px var(--cth-ink-300), 3px 3px 0 rgba(26,19,32,0.14)',
@@ -230,10 +265,19 @@ export function AgentStrip({ config }: AgentStripProps) {
           })()}
         </div>
       ))}
+      </div>
+
+      {/* Bottom controls, pinned below the scroll area: add agent + restore team + memory. */}
+      <div style={{
+        marginTop: 'auto', flexShrink: 0,
+        display: 'flex', flexDirection: 'column', gap: 8,
+        padding: '10px 12px 12px',
+        borderTop: '1px solid var(--cth-ink-300)'
+      }}>
       <PixelButton
         variant="secondary"
         size="lg"
-        style={{ alignSelf: 'center', flexShrink: 0 }}
+        style={{ width: '100%' }}
         onClick={() => setAddAgentOpen(true)}
       >
         <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', whiteSpace: 'nowrap' }}>
@@ -248,7 +292,7 @@ export function AgentStrip({ config }: AgentStripProps) {
       {(restorableAgents.length > 0 || restoreBusy) && (
         <span
           ref={restoreBtnRef}
-          style={{ alignSelf: 'center', flexShrink: 0, marginLeft: 'auto' }}
+          style={{ display: 'block', width: '100%' }}
           title={restoreBusy
             ? t('agentStrip.restoringTitle')
             : t('agentStrip.restoreTitle', { names: restorableAgents.map((a: Agent) => a.name).join(', ') })}
@@ -256,6 +300,7 @@ export function AgentStrip({ config }: AgentStripProps) {
           <PixelButton
             variant="primary"
             size="lg"
+            style={{ width: '100%' }}
             disabled={restoreBusy}
             onClick={() => toggleRestoreMenu(restoreBtnRef.current)}
           >
@@ -266,6 +311,10 @@ export function AgentStrip({ config }: AgentStripProps) {
           </PixelButton>
         </span>
       )}
+      {/* Memory pill — opens the memory panel over the right zone. Kept here so
+          it never covers the terminal's composer when closed. */}
+      <MemoryPanel />
+      </div>
       {restoreMenuOpen && restoreMenuPos && restorableAgents.length > 0 && (
         <>
           {/* click-away backdrop */}
@@ -274,8 +323,8 @@ export function AgentStrip({ config }: AgentStripProps) {
             style={{ position: 'fixed', inset: 0, zIndex: 349, background: 'transparent' }}
           />
           <div style={{
-            position: 'fixed', right: restoreMenuPos.right, bottom: restoreMenuPos.bottom,
-            zIndex: 350, minWidth: 240, maxHeight: '50vh', overflowY: 'auto',
+            position: 'fixed', left: restoreMenuPos.left, bottom: restoreMenuPos.bottom,
+            zIndex: 350, minWidth: RESTORE_MENU_MIN_W, maxHeight: '50vh', overflowY: 'auto',
             background: 'var(--cth-cream-50)',
             boxShadow: '0 0 0 2px var(--cth-ink-900), 3px 4px 0 0 rgba(26,19,32,0.22)',
             padding: 8, display: 'flex', flexDirection: 'column', gap: 6,

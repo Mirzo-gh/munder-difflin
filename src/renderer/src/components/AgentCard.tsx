@@ -100,7 +100,7 @@ export function AgentCard({
   // that gets cut. Widened for every card so the dock stays uniform, with enough
   // slack that Talk's info mark (which only appears when the OpenAI key is
   // missing) has somewhere to sit rather than pushing the row apart.
-  const width = 220;
+  // Cards fill the agent column's width (the column is resizable); height stays fixed.
   const height = 78;
   const lift = (isGod ? -2 : 0) - (hover ? 1 : 0) - (selected ? 1 : 0);
   /** God's distinction: a tinted surface plus a thin accent border all the way
@@ -146,7 +146,7 @@ export function AgentCard({
       aria-current={selected ? 'true' : undefined}
       className="cth-titlebar-nodrag"
       style={{
-        width, minWidth: width, height,
+        width: '100%', minWidth: 0, boxSizing: 'border-box', height,
         padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left',
         position: 'relative',
         transform: lift ? `translateY(${lift}px)` : 'none',

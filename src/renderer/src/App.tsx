@@ -1,14 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useStore, selectedAgent } from '@/store/store';
 import { startMockLoop, stopMockLoop } from '@/store/mockEvents';
 import type { HarnessConfig } from '@/store/config';
 import { DEFAULT_ORG_TRIGGER } from '@shared/triggers';
 import { useHive } from '@/hooks/useHive';
-import { useResolvedGodName } from '@/hooks/useResolvedGodName';
 import { useGodNameSync } from '@/i18n/useGodNameSync';
 import { useDirectionSync } from '@/i18n/useDirection';
 import { useArabicTerminalSync } from '@/terminal/useArabicTerminalSync';
-import { MemoryPanel } from '@/components/MemoryPanel';
+import { MEMORY_OVERLAY_HOST_ID } from '@/components/MemoryPanel';
 import { AgentDetailPanel } from '@/components/AgentDetailPanel';
 import { AgentStrip } from '@/components/AgentStrip';
 import { AddAgentModal } from '@/components/AddAgentModal';
@@ -35,6 +34,24 @@ import brandLogo from '@brand/logo.png?url';
 // Injected at build time from package.json (see electron.vite.config.ts).
 declare const __APP_VERSION__: string;
 
+const LS_AGENT_COLUMN_WIDTH = 'cth.agentColumnWidth';
+const AGENT_COLUMN_DEFAULT = 260;
+const AGENT_COLUMN_MIN = 200;
+const AGENT_COLUMN_MAX = 420;
+
+function clampAgentColumnWidth(px: number): number {
+  return Math.min(AGENT_COLUMN_MAX, Math.max(AGENT_COLUMN_MIN, Math.round(px)));
+}
+
+function readAgentColumnWidth(): number {
+  try {
+    const raw = Number(window.localStorage.getItem(LS_AGENT_COLUMN_WIDTH));
+    return raw > 0 ? clampAgentColumnWidth(raw) : AGENT_COLUMN_DEFAULT;
+  } catch {
+    return AGENT_COLUMN_DEFAULT;
+  }
+}
+
 export function App() {
   // Point every {{godName}} string at the orchestrator's real, renameable name.
   useGodNameSync();
@@ -45,15 +62,20 @@ export function App() {
   const agent = useStore(selectedAgent);
   const agents = useStore(s => s.agents);
   const agentCount = agents.length;
-  const bootingGodName = useResolvedGodName();
   const addAgentOpen = useStore(s => s.addAgentOpen);
   const setAddAgentOpen = useStore(s => s.setAddAgentOpen);
   const clearPendingHires = useStore(s => s.clearPendingHires);
   const godStatus = useStore(s => s.godStatus);
   const fullscreenAgentId = useStore(s => s.fullscreenAgentId);
   const appThemeNow = useAppTheme();
-  const sidebarWidth = useStore(s => s.sidebarWidth);
-  const setSidebarWidth = useStore(s => s.setSidebarWidth);
+  // Agent column width (left). New key on purpose: the old `cth.sidebarWidth`
+  // measured the terminal panel on the RIGHT and must not be reinterpreted.
+  const [agentColumnWidth, setAgentColumnWidthState] = useState<number>(readAgentColumnWidth);
+  const setAgentColumnWidth = useCallback((px: number) => {
+    const next = clampAgentColumnWidth(px);
+    setAgentColumnWidthState(next);
+    try { window.localStorage.setItem(LS_AGENT_COLUMN_WIDTH, String(next)); } catch { /* storage unavailable */ }
+  }, []);
   const ideOpen = useStore(s => s.ideOpen);
   const setIdeOpen = useStore(s => s.setIdeOpen);
 
@@ -391,15 +413,38 @@ export function App() {
       <div style={{
         flex: 1, minHeight: 0,
         display: 'flex',
-        padding: 16,
         gap: 0
       }}>
-        <div style={{ flex: 1, minHeight: 0, minWidth: 0, position: 'relative' }}>
-          {/* Placeholder until the agent column layout (Task 3). */}
-          <div style={{ flex: 1 }} />
-          <MemoryPanel />
-          {agentCount === 0 && godStatus === 'booting' && <MichaelBooting />}
-          {agentCount === 0 && godStatus !== 'booting' && (
+        {/* LEFT — the agent column (cards stacked, add/restore pinned at the bottom). */}
+        <div style={{
+          width: agentColumnWidth, flexShrink: 0,
+          minHeight: 0, display: 'flex', flexDirection: 'column'
+        }}>
+          <AgentStrip config={config} />
+        </div>
+
+        <SidebarSplitter
+          width={agentColumnWidth}
+          onChange={setAgentColumnWidth}
+          viewportWidth={vpWidth}
+          min={AGENT_COLUMN_MIN}
+          max={AGENT_COLUMN_MAX}
+          defaultWidth={AGENT_COLUMN_DEFAULT}
+        />
+
+        {/* RIGHT — the selected agent's terminal, full remaining width, or an empty state.
+            Also hosts the OPEN memory panel as an overlay (its pill sits in the column footer). */}
+        <div id={MEMORY_OVERLAY_HOST_ID} style={{
+          flex: 1, minWidth: 0, minHeight: 0,
+          padding: 16,
+          position: 'relative',
+          display: 'flex', flexDirection: 'column'
+        }}>
+          {agent ? (
+            <AgentDetailPanel agent={agent} />
+          ) : agentCount === 0 && godStatus === 'booting' ? (
+            <MichaelBooting />
+          ) : agentCount === 0 ? (
             <div style={{
               position: 'absolute', inset: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -420,36 +465,6 @@ export function App() {
                 </PixelPanel>
               </div>
             </div>
-          )}
-        </div>
-
-        <SidebarSplitter
-          width={sidebarWidth}
-          onChange={setSidebarWidth}
-          viewportWidth={vpWidth}
-        />
-
-        <div style={{
-          width: sidebarWidth, flexShrink: 0,
-          minHeight: 0, display: 'flex', flexDirection: 'column'
-        }}>
-          {agent ? (
-            <AgentDetailPanel agent={agent} />
-          ) : godStatus === 'booting' ? (
-            <PixelPanel variant="default" noPadding style={{
-              padding: 16, height: '100%',
-              display: 'flex', flexDirection: 'column',
-              justifyContent: 'center', alignItems: 'center', gap: 12
-            }}>
-              <div style={{
-                fontFamily: 'var(--cth-font-display)', fontSize: 10, lineHeight: '14px',
-                color: 'var(--cth-ink-500)'
-              }}>WAKING THE FLOOR</div>
-              <p style={{ margin: 0, fontSize: 13, textAlign: 'center', color: 'var(--cth-ink-700)' }}>
-                {bootingGodName} is clocking in.<br />
-                The terminal will land here once he's seated.
-              </p>
-            </PixelPanel>
           ) : (
             <PixelPanel variant="default" noPadding style={{
               padding: 16, height: '100%',
@@ -461,8 +476,8 @@ export function App() {
                 color: 'var(--cth-ink-500)'
               }}>NO AGENT SELECTED</div>
               <p style={{ margin: 0, fontSize: 13, textAlign: 'center', color: 'var(--cth-ink-700)' }}>
-                Spawn an agent from the strip below.<br />
-                The terminal and command bar will land here.
+                Pick an agent in the column on the left.<br />
+                Its terminal and command bar will land here.
               </p>
               <PixelButton variant="secondary" size="md" onClick={() => setAddAgentOpen(true)}>
                 <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
@@ -473,8 +488,6 @@ export function App() {
           )}
         </div>
       </div>
-
-      <AgentStrip config={config} />
 
       {addAgentOpen && (
         <AddAgentModal

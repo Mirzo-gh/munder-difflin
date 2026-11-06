@@ -109,6 +109,7 @@
     "more": "… 还有 {{count}} 个"
   },
   "agentStrip": {
+    "header": "智能体 · {{count}}",
     "privateNote": "私人笔记 · {{name}}",
     "done": "完成",
     "closeNoteEditor": "关闭笔记编辑器",

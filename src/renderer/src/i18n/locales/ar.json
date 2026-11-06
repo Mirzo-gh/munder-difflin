@@ -109,6 +109,7 @@
     "more": "… +{{count}} أخرى"
   },
   "agentStrip": {
+    "header": "الوكلاء · {{count}}",
     "privateNote": "ملاحظة خاصة · {{name}}",
     "done": "تم",
     "closeNoteEditor": "أغلق محرّر الملاحظات",

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { PixelPanel } from './PixelPanel';
 import { PixelButton } from './PixelButton';
@@ -23,6 +24,11 @@ const MODELS: { id: ModelId; titleKey: string; detailKey: string }[] = [
   { id: 'minilm',         titleKey: 'memoryPanel.modelFast',         detailKey: 'memoryPanel.modelFastDetail' },
   { id: 'embeddinggemma', titleKey: 'memoryPanel.modelMultilingual', detailKey: 'memoryPanel.modelMultilingualDetail' },
 ];
+
+/** DOM id of the right-hand zone (App) that hosts the OPEN panel as an overlay.
+ *  The closed pill lives in the agent column's footer, so it never covers the
+ *  terminal's composer; only the open panel floats over the right zone. */
+export const MEMORY_OVERLAY_HOST_ID = 'cth-memory-overlay-host';
 
 /**
  * Lets the human search the shared memory agents build up across sessions, turn
@@ -78,26 +84,11 @@ export function MemoryPanel() {
 
   const canSearch = !!status?.available && !!status?.enabled;
 
-  return (
-    <div style={{ position: 'absolute', bottom: 12, left: 12, width: open ? 380 : 'auto', zIndex: 40 }}>
-      {!open ? (
-        <button
-          onClick={() => { setOpen(true); refreshStatus(); }}
-          title={t('memoryPanel.openTitle')}
-          style={{
-            padding: '5px 10px 3px',
-            background: active ? 'var(--cth-lemon-light)' : 'var(--cth-cream-200)',
-            boxShadow: 'inset 0 0 0 1.5px var(--cth-ink-500)',
-            fontFamily: 'var(--cth-font-ui)',
-            fontSize: 12,
-            color: 'var(--cth-ink-900)',
-            cursor: 'pointer',
-            border: 'none'
-          }}
-        >
-          {pill}
-        </button>
-      ) : (
+  // Closed: just the pill (inline, in the column footer). Open: the panel is
+  // portaled into the right zone, anchored bottom-left as before.
+  const host = open ? document.getElementById(MEMORY_OVERLAY_HOST_ID) : null;
+  const panelNode = open ? (
+    <div style={{ position: host ? 'absolute' : 'fixed', bottom: 12, left: 12, width: 380, maxWidth: 'calc(100% - 24px)', zIndex: 40 }}>
         <PixelPanel variant="dialog" title={t('memoryPanel.title')} noPadding>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 14 }}>
 
@@ -234,7 +225,30 @@ export function MemoryPanel() {
             </div>
           </div>
         </PixelPanel>
-      )}
     </div>
+  ) : null;
+
+  return (
+    <>
+      <button
+        onClick={() => { if (open) { setOpen(false); return; } setOpen(true); refreshStatus(); }}
+        aria-expanded={open}
+        title={t('memoryPanel.openTitle')}
+        style={{
+          width: '100%',
+          padding: '5px 10px 3px',
+          background: open || active ? 'var(--cth-lemon-light)' : 'var(--cth-cream-200)',
+          boxShadow: 'inset 0 0 0 1.5px var(--cth-ink-500)',
+          fontFamily: 'var(--cth-font-ui)',
+          fontSize: 12,
+          color: 'var(--cth-ink-900)',
+          cursor: 'pointer',
+          border: 'none'
+        }}
+      >
+        {pill}
+      </button>
+      {panelNode && (host ? createPortal(panelNode, host) : panelNode)}
+    </>
   );
 }

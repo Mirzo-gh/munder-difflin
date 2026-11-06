@@ -109,6 +109,7 @@
     "more": "… +{{count}} more"
   },
   "agentStrip": {
+    "header": "Agents · {{count}}",
     "privateNote": "PRIVATE NOTE · {{name}}",
     "done": "Done",
     "closeNoteEditor": "Close note editor",

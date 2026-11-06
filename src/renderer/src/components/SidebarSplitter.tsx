@@ -1,22 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 
 export interface SidebarSplitterProps {
-  /** Current sidebar width in px. */
+  /** Current width of the agent column (left side), in px. */
   width: number;
-  /** Called with the new width (already clamped externally). */
+  /** Called with the new width, clamped to [min, max]. */
   onChange: (px: number) => void;
-  /** Containing viewport width — used to clamp delta to a sane max. */
+  /** Containing viewport width — keeps room for the terminal on the right. */
   viewportWidth: number;
   min?: number;
   max?: number;
+  /** Width restored on double-click. */
+  defaultWidth?: number;
 }
 
 /**
- * Vertical drag handle. Sits between the floor canvas (left) and the sidebar
- * (right). Drag left → wider sidebar. Cursor + pixel-stripe affordance.
+ * Vertical drag handle between the agent column (left) and the terminal
+ * (right). Drag right → wider column. Cursor + pixel-stripe affordance.
  */
 export function SidebarSplitter({
-  width, onChange, viewportWidth, min = 320, max = 1200
+  width, onChange, viewportWidth, min = 200, max = 420, defaultWidth = 260
 }: SidebarSplitterProps) {
   const startRef = useRef<{ clientX: number; width: number } | null>(null);
   const [active, setActive] = useState(false);
@@ -24,7 +26,11 @@ export function SidebarSplitter({
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       if (!startRef.current) return;
-      const delta = startRef.current.clientX - e.clientX; // left drag = positive delta → grow sidebar
+      // The column sits on the inline-start side: in an RTL document the row is
+      // mirrored, so a LEFT drag grows it there.
+      const rtl = document.documentElement.dir === 'rtl';
+      const dx = e.clientX - startRef.current.clientX;
+      const delta = rtl ? -dx : dx; // drag away from the column = grow it
       const clampMax = Math.min(max, Math.max(min, viewportWidth - 360));
       const next = Math.min(clampMax, Math.max(min, startRef.current.width + delta));
       onChange(next);
@@ -54,7 +60,7 @@ export function SidebarSplitter({
         setActive(true);
         e.preventDefault();
       }}
-      onDoubleClick={() => onChange(420)}
+      onDoubleClick={() => onChange(defaultWidth)}
       title="Drag to resize · double-click to reset"
       style={{
         width: 10,
