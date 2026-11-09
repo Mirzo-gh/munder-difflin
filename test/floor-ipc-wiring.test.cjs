@@ -162,3 +162,9 @@ test('the promoted primary becomes the default PTY sink', () => {
   const closed = closedHandler(main());
   assert.match(closed, /mainWindow = w; ptyManager\.attachWebContents\(w\.webContents\); break;/);
 });
+
+test('floor:listRepos normalizes registered repos in parallel', () => {
+  const list = handlerBody(main(), "ipcMain.handle('floor:listRepos'");
+  assert.match(list, /await Promise\.all\(\(cfg\.registeredRepos \?\? \[\]\)\.map\(floorRepoFromInput\)\)/);
+  assert.doesNotMatch(list, /for \(const raw of cfg\.registeredRepos/);
+});

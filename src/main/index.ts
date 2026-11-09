@@ -3679,8 +3679,9 @@ ipcMain.handle('floor:listRepos', async () => {
       if (!out.has(r.repoRoot)) out.set(r.repoRoot, { repoRoot: r.repoRoot, agentCount: r.agentCount, open: floors.ownerOf(r.repoRoot) !== null });
     }
   }
-  for (const raw of cfg.registeredRepos ?? []) {
-    const repo = await floorRepoFromInput(raw);
+  // Normalized in parallel (each may spawn git); order is kept.
+  const registered = await Promise.all((cfg.registeredRepos ?? []).map(floorRepoFromInput));
+  for (const repo of registered) {
     if (repo && !out.has(repo)) out.set(repo, { repoRoot: repo, agentCount: 0, open: floors.ownerOf(repo) !== null });
   }
   return [...out.values()];
