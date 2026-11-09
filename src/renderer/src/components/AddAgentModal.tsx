@@ -1,5 +1,5 @@
 import { effortFor, effortLevelsFor, type EffortLevel } from '@shared/effort';
-import { useEffect, useLayoutEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PixelPanel } from './PixelPanel';
 import { PixelButton } from './PixelButton';
@@ -31,6 +31,7 @@ import {
   isClaudeProvider
 } from '@/store/config';
 import { useRtl } from '@/i18n/useDirection';
+import { existingAgentsOf, modelIdsByProvider } from './composeTeamFlow';
 
 const ACCENTS: AccentColorName[] = ['coral', 'mint', 'sky', 'lemon', 'lilac', 'peach'];
 
@@ -264,6 +265,39 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
   // "Generate a hire with AI" helper — reveals a copy-paste prompt (item 7).
   const [showHirePrompt, setShowHirePrompt] = useState(false);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
+  // "Describe the agent" → a hidden read-only Claude drafts a manifest (name,
+  // role, goal, provider/model/effort) that pre-fills the form for review.
+  const agents = useStore(s => s.agents);
+  const [draftRequest, setDraftRequest] = useState('');
+  const [drafting, setDrafting] = useState(false);
+  const [draftWhy, setDraftWhy] = useState('');
+  const draftingRef = useRef(false);
+  draftingRef.current = drafting;
+  useEffect(() => () => { if (draftingRef.current) void window.cth.teamDraftAgentCancel(); }, []);
+  const draftAgent = async () => {
+    const request = draftRequest.trim();
+    if (!request || drafting) return;
+    setError(undefined);
+    setDraftWhy('');
+    setDrafting(true);
+    try {
+      const res = await window.cth.teamDraftAgent({
+        request,
+        existingAgents: existingAgentsOf(agents),
+        models: modelIdsByProvider((p) => modelsForProvider(p as AgentProvider))
+      });
+      if (res.kind === 'agents' && res.agents[0]) {
+        applyManifest(res.agents[0].manifest);
+        setDraftWhy(res.agents[0].why);
+      } else if (res.kind === 'error' && res.error !== 'cancelled') {
+        setError(tr('addAgent.draftFailed', { error: res.error }));
+      }
+    } catch (e) {
+      setError(tr('addAgent.draftFailed', { error: e instanceof Error ? e.message : String(e) }));
+    } finally {
+      setDrafting(false);
+    }
+  };
   const copyHirePrompt = async () => {
     try {
       await navigator.clipboard.writeText(HIRE_PROMPT);
@@ -546,6 +580,42 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
               around the section pane. maxHeight keeps the dialog within the
               viewport (title bar stays pinned). */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, maxHeight: '86vh', overflowY: 'auto' }}>
+            {!pendingHire && (
+              <div style={{
+                padding: '8px 10px',
+                background: 'var(--cth-cream-100)',
+                boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
+                display: 'flex', flexDirection: 'column', gap: 6
+              }}>
+                <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 11, lineHeight: '16px', color: 'var(--cth-ink-700)' }}>
+                  {tr('addAgent.draftTitle')}
+                </span>
+                <textarea
+                  value={draftRequest}
+                  onChange={(e) => setDraftRequest(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void draftAgent(); } }}
+                  placeholder={tr('addAgent.draftPlaceholder')}
+                  rows={2}
+                  maxLength={2000}
+                  disabled={drafting}
+                  style={{ ...inputStyle, fontSize: 14, resize: 'vertical' }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <PixelButton variant="secondary" size="sm" onClick={draftAgent} disabled={drafting || !draftRequest.trim()}>
+                    {drafting ? tr('addAgent.drafting') : tr('addAgent.draftBtn')}
+                  </PixelButton>
+                  {drafting && (
+                    <PixelButton variant="ghost" size="sm" onClick={() => void window.cth.teamDraftAgentCancel()}>
+                      {tr('common.cancel')}
+                    </PixelButton>
+                  )}
+                  <span style={{ fontSize: 12, color: 'var(--cth-ink-500)', lineHeight: '16px', flex: 1, minWidth: 200 }}>
+                    {draftWhy || tr('addAgent.draftHint')}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {hireMeta && (
               <div style={{
                 padding: '6px 10px',

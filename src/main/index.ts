@@ -61,7 +61,7 @@ import { RosterStore, listRepoRosters, readAllRosterAgents } from './roster';
 import { migrateLegacyRoster } from './rosterMigration';
 import { FloorRegistry, normalizeFloorRepo } from './floors';
 import { runHiddenClaude } from './hiddenClaude';
-import { runTeamAnalysis, writeTeamHires, hiresDir, sanitizeTeamInput, TEAM_INPUT_CAPS } from './teamComposer';
+import { runAgentDraft, runTeamAnalysis, writeTeamHires, hiresDir, sanitizeAgentDraftInput, sanitizeTeamInput, TEAM_INPUT_CAPS } from './teamComposer';
 import { buildTeamPrompt, type TeamPromptInput } from '../shared/teamPrompt';
 import { buildWorkerLaunch } from './workerLaunch';
 import { ControlRegistry } from './control';
@@ -3703,6 +3703,38 @@ ipcMain.handle('team:analyze', async (evt, raw: unknown) => {
   } finally {
     if (teamAnalyses.get(repo)?.ctl === ctl) teamAnalyses.delete(repo);
   }
+});
+// Add Agent → "describe it": one hidden read-only run per window drafts a
+// single hire manifest from the user's description. Runs in the floor repo
+// when there is one (so the goal can cite real paths), else in the harness home.
+const agentDrafts = new Map<number, AbortController>();
+ipcMain.handle('team:draftAgent', async (evt, raw: unknown) => {
+  const ownerId = evt.sender.id;
+  const repo = teamRepoOf(evt.sender);
+  const input = sanitizeAgentDraftInput(raw, repo, readConfig().defaultModel ?? undefined);
+  if (!input) return { kind: 'error', error: 'invalid input' };
+  const cwd = repo ?? readConfig().harnessHome;
+  if (!cwd || !existsSync(cwd)) return { kind: 'error', error: 'no folder to run in' };
+  if (agentDrafts.has(ownerId)) return { kind: 'error', error: 'draft already running' };
+  const ctl = new AbortController();
+  agentDrafts.set(ownerId, ctl);
+  const onGone = (): void => ctl.abort();
+  evt.sender.once('destroyed', onGone);
+  try { ensureClaudePermissionsAccepted(cwd); } catch { /* best-effort */ }
+  try {
+    return await runAgentDraft(input, (prompt) => runHiddenClaude(prompt, {
+      model: readConfig().defaultModel ?? 'claude-fable-5',
+      cwd, idleMs: 15000, timeoutMs: 300000, signal: ctl.signal,
+      sessionId: randomUUID(),
+      disallowedTools: ['Edit', 'Write', 'NotebookEdit', 'Bash']
+    }));
+  } finally {
+    if (!evt.sender.isDestroyed()) evt.sender.removeListener('destroyed', onGone);
+    if (agentDrafts.get(ownerId) === ctl) agentDrafts.delete(ownerId);
+  }
+});
+ipcMain.handle('team:draftAgentCancel', async (evt) => {
+  agentDrafts.get(evt.sender.id)?.abort();
 });
 ipcMain.handle('team:cancel', async (evt) => {
   const root = teamRepoOf(evt.sender);

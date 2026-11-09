@@ -1,6 +1,9 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildTeamPrompt, parseTeamResponse, type TeamPromptInput, type TeamResponse } from '../shared/teamPrompt';
+import {
+  buildAgentDraftPrompt, buildTeamPrompt, parseTeamResponse, MAX_AGENT_REQUEST,
+  type AgentDraftInput, type TeamPromptInput, type TeamResponse
+} from '../shared/teamPrompt';
 import { HIRE_LIMITS, HIRE_PROVIDERS, validateHireManifest, type HireManifest } from '../shared/hire';
 import { repoSlug } from './roster';
 
@@ -10,7 +13,25 @@ const RETRY_SUFFIX = "\n\nTa réponse précédente n'était pas un JSON valide :
 
 /** Runs the hidden analysis; one retry when the answer is not parseable JSON. */
 export async function runTeamAnalysis(input: TeamPromptInput, run: TeamRunner): Promise<TeamResponse> {
-  const prompt = buildTeamPrompt(input);
+  return runJsonPrompt(buildTeamPrompt(input), run);
+}
+
+/** Drafts ONE agent from a free-text description. More than one agent in the
+ *  answer is trimmed to the first; none at all is an error. */
+export async function runAgentDraft(input: AgentDraftInput, run: TeamRunner): Promise<TeamResponse> {
+  const r = await runJsonPrompt(buildAgentDraftPrompt(input), run);
+  if (r.kind === 'questions') return { kind: 'error', error: 'expected an agent, got questions' };
+  if (r.kind === 'agents') {
+    if (r.agents.length === 0) {
+      const why = r.invalid[0]?.errors.join('; ');
+      return { kind: 'error', error: why ? `invalid agent: ${why}` : 'no agent in the response' };
+    }
+    return { ...r, agents: r.agents.slice(0, 1) };
+  }
+  return r;
+}
+
+async function runJsonPrompt(prompt: string, run: TeamRunner): Promise<TeamResponse> {
   let last: TeamResponse = { kind: 'error', error: 'no response' };
   for (let attempt = 0; attempt < 2; attempt++) {
     const r = await run(attempt === 0 ? prompt : prompt + RETRY_SUFFIX);
@@ -77,6 +98,19 @@ export function sanitizeTeamInput(raw: unknown, repoRoot: string, defaultModel?:
     answers,
     defaultModel
   };
+}
+
+/** Untrusted renderer input → a bounded AgentDraftInput; the repo is the
+ *  sender's bound floor (or null), never a path the renderer sent. */
+export function sanitizeAgentDraftInput(raw: unknown, repoRoot: string | null, defaultModel?: string): AgentDraftInput | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const o = raw as { request?: unknown };
+  const request = typeof o.request === 'string' ? o.request.trim().slice(0, MAX_AGENT_REQUEST) : '';
+  if (!request) return null;
+  // Reuse the team caps for the shared fields (existing agents, model ids).
+  const base = sanitizeTeamInput({ ...(raw as object), round: 1 }, repoRoot ?? '', defaultModel);
+  if (!base) return null;
+  return { repoRoot, request, existingAgents: base.existingAgents, models: base.models, defaultModel };
 }
 
 export function hiresDir(home: string, repoRoot: string): string {

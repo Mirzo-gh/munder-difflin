@@ -93,3 +93,31 @@ test('an agent proposed with an effort keeps it; an unknown effort makes it inva
   assert.equal(r.agents[0].manifest.effort, 'max');
   assert.equal(r.invalid[0].name, 'Bad');
 });
+
+test('the team prompt sizes the team to the project, mandates a QA/Reviewer and no default docs role', () => {
+  const { TEAM_SIZE } = loadTs('src/shared/teamPrompt.ts');
+  for (const round of [1, 2]) {
+    const p = buildTeamPrompt({ ...base, round });
+    assert.ok(!p.includes('2 à 5'), 'no more hard 2-5 cap');
+    assert.ok(p.includes(`de ${TEAM_SIZE.min} à ${TEAM_SIZE.max} agents`));
+    assert.match(p, /OBLIGATOIRE : l'équipe contient un agent QA \/ Reviewer/);
+    assert.match(p, /Pas de rôle documentation par défaut/);
+  }
+  assert.ok(TEAM_SIZE.max > 5);
+});
+
+test('the agent draft prompt carries the request, the repo, existing agents and the spec', () => {
+  const { buildAgentDraftPrompt } = loadTs('src/shared/teamPrompt.ts');
+  const p = buildAgentDraftPrompt({
+    repoRoot: '/work/my-repo', request: 'relit mes migrations SQL',
+    existingAgents: [{ name: 'Dwight' }], models: { claude: ['claude-opus-5-5'] }
+  });
+  assert.ok(p.includes('relit mes migrations SQL'));
+  assert.ok(p.includes('/work/my-repo'));
+  assert.ok(p.includes('Dwight'));
+  assert.ok(p.includes('munder-difflin/hire@1'));
+  assert.match(p, /- claude : claude-opus-5-5/);
+  assert.match(p, /exactement UN agent/);
+  const noRepo = buildAgentDraftPrompt({ repoRoot: null, request: 'x', existingAgents: [] });
+  assert.ok(!noRepo.includes('LECTURE SEULE'));
+});

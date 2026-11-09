@@ -131,3 +131,23 @@ test('sanitizeTeamInput keeps model ids for known providers only, id-shaped and 
   assert.equal(input.models.claude.length, 24);
   assert.equal(sanitizeTeamInput({ round: 1 }, '/work/repo').models, undefined);
 });
+
+test('runAgentDraft keeps the first agent and rejects an empty or questions answer', async () => {
+  const { runAgentDraft, sanitizeAgentDraftInput } = loadTs('src/main/teamComposer.ts');
+  const draft = { repoRoot: '/r', request: 'qa', existingAgents: [] };
+  const two = JSON.stringify({ agents: [{ spec: 'munder-difflin/hire@1', name: 'A', why: 'w' }, { spec: 'munder-difflin/hire@1', name: 'B' }] });
+  const r = await runAgentDraft(draft, async () => ({ ok: true, text: two }));
+  assert.equal(r.kind, 'agents');
+  assert.equal(r.agents.length, 1);
+  assert.equal(r.agents[0].manifest.name, 'A');
+  const none = await runAgentDraft(draft, async () => ({ ok: true, text: '{"agents": []}' }));
+  assert.equal(none.kind, 'error');
+  const q = await runAgentDraft(draft, async () => ({ ok: true, text: '{"analysis": "a", "questions": ["?"]}' }));
+  assert.equal(q.kind, 'error');
+
+  assert.equal(sanitizeAgentDraftInput({ request: '   ' }, '/r'), null);
+  const s = sanitizeAgentDraftInput({ request: 'x'.repeat(5000), existingAgents: [{ name: 'Jim' }], repoRoot: '/evil' }, null);
+  assert.equal(s.request.length, 2000);
+  assert.equal(s.repoRoot, null);
+  assert.deepEqual(s.existingAgents.map((a) => a.name), ['Jim']);
+});

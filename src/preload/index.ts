@@ -1259,6 +1259,10 @@ const api = {
   teamAnalyze: (input: Omit<TeamPromptInput, 'defaultModel'>): Promise<TeamResponse> =>
     ipcRenderer.invoke('team:analyze', input),
   teamCancel: (repoRoot: string): Promise<void> => ipcRenderer.invoke('team:cancel', repoRoot),
+  /** Add Agent: draft ONE hire manifest from a free-text description (hidden read-only Claude). */
+  teamDraftAgent: (input: { request: string; existingAgents: { name: string; description?: string }[]; models?: Record<string, string[]> }): Promise<TeamResponse> =>
+    ipcRenderer.invoke('team:draftAgent', input),
+  teamDraftAgentCancel: (): Promise<void> => ipcRenderer.invoke('team:draftAgentCancel'),
   teamPrompt: (input: Omit<TeamPromptInput, 'defaultModel'>): Promise<string> =>
     ipcRenderer.invoke('team:prompt', input),
   teamWrite: (repoRoot: string, manifests: HireManifest[]): Promise<{ written: string[]; errors: string[]; manifests: HireManifest[] }> =>
