@@ -28,8 +28,9 @@
  *      into place, so a crash mid-write leaves the previous file untouched.
  *   3. Never let an empty renderer erase a full roster. See `write`.
  */
-import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, join } from 'node:path';
 
 /** What the renderer mirrors to disk. The inner agent shape is deliberately
  *  opaque here — the renderer's store owns it, and repeating it would mean
@@ -42,6 +43,8 @@ export interface RosterSnapshot {
   restorable: unknown[];
   queues: Record<string, unknown[]>;
   selectedId: string | null;
+  /** Set by a repo-bound store: the repo this roster belongs to. */
+  repoRoot?: string;
 }
 
 export interface RosterWriteResult {
@@ -57,6 +60,22 @@ export function rosterPath(home: string): string {
 
 export function rosterBackupDir(home: string): string {
   return join(home, 'roster-backups');
+}
+
+/** `<basename slugified, max 40>-<first 8 hex of sha1(repoRoot)>`: readable, and
+ *  two repos with the same folder name still get distinct slugs. */
+export function repoSlug(repoRoot: string): string {
+  const base = basename(repoRoot).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/g, '') || 'repo';
+  const hash = createHash('sha1').update(repoRoot).digest('hex').slice(0, 8);
+  return `${base}-${hash}`;
+}
+
+export function repoRosterPath(home: string, repoRoot: string): string {
+  return join(home, 'rosters', `${repoSlug(repoRoot)}.json`);
+}
+
+export function repoRosterBackupDir(home: string, repoRoot: string): string {
+  return join(home, 'rosters', 'backups', repoSlug(repoRoot));
 }
 
 function isSnapshot(v: unknown): v is RosterSnapshot {
@@ -89,7 +108,18 @@ export class RosterStore {
    *  the first — a backup folder that quietly loses backups is worse than none. */
   private backupSeq = 0;
 
-  constructor(private readonly getHome: () => string | null) {}
+  constructor(
+    private readonly getHome: () => string | null,
+    private readonly repoRoot?: string
+  ) {}
+
+  private filePath(home: string): string {
+    return this.repoRoot ? repoRosterPath(home, this.repoRoot) : rosterPath(home);
+  }
+
+  private backupDir(home: string): string {
+    return this.repoRoot ? repoRosterBackupDir(home, this.repoRoot) : rosterBackupDir(home);
+  }
 
   private home(): string | null {
     try { return this.getHome(); } catch { return null; }
@@ -102,7 +132,7 @@ export class RosterStore {
     const home = this.home();
     if (!home) return null;
     try {
-      const p = rosterPath(home);
+      const p = this.filePath(home);
       if (!existsSync(p)) return null;
       const parsed = JSON.parse(readFileSync(p, 'utf8'));
       return isSnapshot(parsed) ? parsed : null;
@@ -130,9 +160,9 @@ export class RosterStore {
     const home = this.home();
     if (!home) return { ok: false, error: 'no harnessHome' };
     if (!isSnapshot(snap)) return { ok: false, error: 'invalid snapshot' };
-    const p = rosterPath(home);
+    const p = this.filePath(home);
     try {
-      mkdirSync(home, { recursive: true });
+      mkdirSync(this.repoRoot ? join(home, 'rosters') : home, { recursive: true });
       const existing = this.read();
 
       if (!this.wrote && existing && entryCount(existing) > 0 && entryCount(snap) === 0) {
@@ -153,7 +183,8 @@ export class RosterStore {
         archived: snap.archived,
         restorable: snap.restorable,
         queues: snap.queues && typeof snap.queues === 'object' ? snap.queues : {},
-        selectedId: typeof snap.selectedId === 'string' ? snap.selectedId : null
+        selectedId: typeof snap.selectedId === 'string' ? snap.selectedId : null,
+        ...(this.repoRoot ? { repoRoot: this.repoRoot } : {})
       };
       // Temp + rename: `rename` is atomic within a filesystem, so a crash leaves
       // either the old file or the new one, never half of either.
@@ -180,7 +211,7 @@ export class RosterStore {
   archive(): void {
     const home = this.home();
     if (!home) return;
-    const p = rosterPath(home);
+    const p = this.filePath(home);
     try {
       if (!existsSync(p)) return;
       this.backup(home, p, 'reset');
@@ -194,11 +225,60 @@ export class RosterStore {
   private backup(home: string, p: string, reason: string): void {
     try {
       if (!existsSync(p)) return;
-      const dir = rosterBackupDir(home);
+      const dir = this.backupDir(home);
       mkdirSync(dir, { recursive: true });
       const stamp = new Date().toISOString().replace(/[:.]/g, '-');
       this.backupSeq += 1;
       copyFileSync(p, join(dir, `roster-${stamp}-${this.backupSeq}-${reason}.json`));
     } catch { /* a failed backup must never block the write */ }
   }
+}
+
+export interface RepoRosterInfo {
+  repoRoot: string;
+  slug: string;
+  agentCount: number;
+  savedAt: string;
+}
+
+function readRepoSnapshots(home: string): { file: string; snap: RosterSnapshot }[] {
+  const dir = join(home, 'rosters');
+  let names: string[];
+  try { names = readdirSync(dir); } catch { return []; }
+  const out: { file: string; snap: RosterSnapshot }[] = [];
+  for (const name of names) {
+    if (!name.endsWith('.json')) continue;
+    try {
+      const parsed = JSON.parse(readFileSync(join(dir, name), 'utf8'));
+      if (isSnapshot(parsed)) out.push({ file: name, snap: parsed });
+    } catch { /* unreadable roster: skip */ }
+  }
+  return out;
+}
+
+/** Every per-repo roster under `<home>/rosters/`, newest first. */
+export function listRepoRosters(home: string): RepoRosterInfo[] {
+  return readRepoSnapshots(home)
+    .filter(({ snap }) => typeof snap.repoRoot === 'string')
+    .map(({ file, snap }) => ({
+      repoRoot: snap.repoRoot as string,
+      slug: file.replace(/\.json$/, ''),
+      agentCount: snap.agents.length,
+      savedAt: typeof snap.savedAt === 'string' ? snap.savedAt : ''
+    }))
+    .sort((a, b) => (a.savedAt < b.savedAt ? 1 : a.savedAt > b.savedAt ? -1 : 0));
+}
+
+/** Agents of every per-repo roster plus the legacy `roster.json`. */
+export function readAllRosterAgents(home: string): unknown[] {
+  const agents: unknown[] = [];
+  try {
+    const p = rosterPath(home);
+    if (existsSync(p)) {
+      const parsed = JSON.parse(readFileSync(p, 'utf8'));
+      if (isSnapshot(parsed)) agents.push(...parsed.agents);
+    }
+  } catch { /* unreadable legacy roster: skip */ }
+  for (const { snap } of readRepoSnapshots(home)) agents.push(...snap.agents);
+  return agents;
 }
