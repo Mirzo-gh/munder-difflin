@@ -2428,7 +2428,9 @@ function createWindow(opts: { floor?: boolean; repoRoot?: string } = {}): Browse
   // intercept it the same way before-quit does so PTY users aren't surprised.
   win.on('close', (e) => {
     if (allowQuit) return;
-    if (isFloor) {
+    // Any window but the last one (the primary included) closes as a floor;
+    // the app-wide quit warning is only for the last window.
+    if (isFloor || allWindows.size > 1) {
       // A floor's close is NOT an app quit — confirm only its OWN terminals,
       // via a self-contained native dialog (no renderer modal). Confirming lets
       // the window close; its PTYs are stopped in the 'closed' handler.
@@ -2487,10 +2489,12 @@ function createWindow(opts: { floor?: boolean; repoRoot?: string } = {}): Browse
     if (hadRepo && !appQuitting && !allowQuit && !lastWindowQuits) persistOpenFloors();
     // A closed floor must not leave its terminals running headless. (Natural
     // onExit teardown — archive + worktree cleanup — still runs per PTY.)
-    if (isFloor) { try { ptyManager.killByOwner(wc); } catch { /* best-effort */ } }
+    // The primary closing while other windows remain is a floor close too
+    // (the shared god PTY has no owner, so it survives).
+    if (isFloor || allWindows.size > 0) { try { ptyManager.killByOwner(wc); } catch { /* best-effort */ } }
     if (mainWindow === win) {
       mainWindow = null;
-      for (const w of allWindows) { if (!w.isDestroyed()) { mainWindow = w; break; } }
+      for (const w of allWindows) { if (!w.isDestroyed()) { mainWindow = w; ptyManager.attachWebContents(w.webContents); break; } }
     }
     syncKeepAwake();
   });

@@ -141,3 +141,24 @@ test('team analyses are aborted with their window, on reload, and at quit', () =
   const teardown = source.slice(t, source.indexOf('\n}', t));
   assert.match(teardown, /abortTeamAnalyses\(\)/);
 });
+
+function closeHandler(source) {
+  const start = source.indexOf("win.on('close', (e)", source.indexOf('function createWindow('));
+  assert.ok(start >= 0, 'createWindow has a close interceptor');
+  return source.slice(start, source.indexOf('\n  });', start));
+}
+
+test('closing the primary while other windows remain is a plain floor close', () => {
+  const source = main();
+  const close = closeHandler(source);
+  assert.match(close, /if \(isFloor \|\| allWindows\.size > 1\) \{/);
+  const floorBranch = close.slice(close.indexOf('if (isFloor || allWindows.size > 1)'));
+  assert.ok(floorBranch.indexOf('countByOwner(wc)') < floorBranch.indexOf("app:closeRequested"), 'floor branch first');
+  const closed = closedHandler(source);
+  assert.match(closed, /if \(isFloor \|\| allWindows\.size > 0\) \{ try \{ ptyManager\.killByOwner\(wc\)/);
+});
+
+test('the promoted primary becomes the default PTY sink', () => {
+  const closed = closedHandler(main());
+  assert.match(closed, /mainWindow = w; ptyManager\.attachWebContents\(w\.webContents\); break;/);
+});
