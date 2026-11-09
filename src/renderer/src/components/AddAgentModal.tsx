@@ -1,3 +1,4 @@
+import { effortFor, effortLevelsFor, type EffortLevel } from '@shared/effort';
 import { useEffect, useLayoutEffect, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PixelPanel } from './PixelPanel';
@@ -96,6 +97,7 @@ Return EXACTLY this shape (omit optional fields you don't need; keep the spec st
   "goal": "standing directive injected on every prompt — specific and outcome-oriented",
   "provider": "claude",
   "model": "claude-opus-4-8[1m]",
+  "effort": "high",
   "capabilities": ["code-review", "docs"],
   "isolate": false,
   "tokenCap": 2000000,
@@ -104,6 +106,7 @@ Return EXACTLY this shape (omit optional fields you don't need; keep the spec st
 
 Rules:
 - "provider" MUST be one of: cursor | claude | codex | antigravity. "model" must be a real model id for that provider (e.g. gpt-5.6-luna-high, claude-opus-4-8[1m], gpt-5-codex, "Gemini 3.1 Pro (High)").
+- "effort" (optional) is one of low | medium | high | xhigh | max — match it to the role (high/max for review or architecture, low for docs or routine chores). Claude takes all five, Codex up to xhigh, other engines ignore it.
 - Do NOT include shell commands or any flags beyond these fields.
 - Make "description" + "goal" concrete enough that the agent knows exactly what to do on its first turn.
 
@@ -179,7 +182,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
    *  appended. A manifest can never name the binary itself. */
   const hireCommand = (m: HireManifest): string => {
     const prov: AgentProvider = m.provider ?? inferAgentProvider(config.defaultCommand);
-    const base = buildSpawnCommand(config, m.model, prov);
+    const base = buildSpawnCommand(config, m.model, prov, m.effort);
     return m.commandFlags?.length ? `${base} ${m.commandFlags.join(' ')}` : base;
   };
 
@@ -200,6 +203,11 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
   const [model, setModel] = useState<string | undefined>(
     pendingHire ? pendingHire.model : initialModel
   );
+  // Reasoning effort (Claude `--effort`, Codex `model_reasoning_effort`); an
+  // imported hire carries its own, clamped to what the provider accepts.
+  const [effort, setEffort] = useState<EffortLevel | undefined>(
+    pendingHire ? effortFor(pendingHire.provider ?? initialProvider, pendingHire.effort) : undefined
+  );
   const [command, setCommand] = useState(
     pendingHire ? hireCommand(pendingHire) : buildSpawnCommand(config, initialModel, initialProvider)
   );
@@ -210,7 +218,11 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
   // power users (it's the source of truth for the actual spawn).
   const pickModel = (id?: string) => {
     setModel(id);
-    setCommand(buildSpawnCommand(config, id, provider));
+    setCommand(buildSpawnCommand(config, id, provider, effort));
+  };
+  const pickEffort = (level?: EffortLevel) => {
+    setEffort(level);
+    setCommand(buildSpawnCommand(config, model, provider, level));
   };
   // Switching provider resets the model to that CLI's default and rebuilds the
   // command from the provider's preset binary (so Antigravity spawns `agy` and
@@ -232,7 +244,9 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
       setCommand(command.trim() || config.defaultCommand || '');
       return;
     }
-    setCommand(buildSpawnCommand(config, nextModel, id));
+    const nextEffort = effortFor(id, effort);
+    setEffort(nextEffort);
+    setCommand(buildSpawnCommand(config, nextModel, id, nextEffort));
   };
   const preset = providerPreset(provider);
   const [goal, setGoal] = useState(pendingHire?.goal ?? '');
@@ -345,6 +359,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
     setAccent(knownAccent(m.accent));
     setProvider(m.provider ?? initialProvider);
     setModel(m.model);
+    setEffort(effortFor(m.provider ?? initialProvider, m.effort));
     setCommand(hireCommand(m));
     setDescription(m.description ?? 'a fresh harness');
     setGoal(m.goal ?? '');
@@ -915,6 +930,36 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                               }}
                             >
                               {m.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </Row>}
+
+                    {effortLevelsFor(provider).length === 0 && hireMeta?.effort && (
+                      <Row label={tr('addAgent.effort')}>
+                        <span style={{ fontSize: 12, color: 'var(--cth-ink-500)' }}>{tr('addAgent.effortUnsupported')}</span>
+                      </Row>
+                    )}
+                    {effortLevelsFor(provider).length > 0 && <Row label={tr('addAgent.effort')}>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {[undefined, ...effortLevelsFor(provider)].map((level) => {
+                          const active = effort === level;
+                          return (
+                            <button
+                              key={level ?? 'default'}
+                              onClick={() => pickEffort(level)}
+                              style={{
+                                padding: '3px 8px 1px',
+                                background: active ? `var(--cth-${accent}-light)` : 'var(--cth-cream-100)',
+                                boxShadow: active
+                                  ? 'inset 0 0 0 1px var(--cth-ink-500)'
+                                  : 'inset 0 0 0 1px var(--cth-ink-100)',
+                                fontFamily: 'var(--cth-font-ui)', fontSize: 12,
+                                color: 'var(--cth-ink-900)', cursor: 'pointer', border: 'none'
+                              }}
+                            >
+                              {level ?? tr('addAgent.effortDefault')}
                             </button>
                           );
                         })}

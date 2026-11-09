@@ -14,6 +14,7 @@ import type {
   WebhookTrigger
 } from '@shared/triggers';
 import { isNewer } from '@shared/updateState';
+import { effortArg, type EffortLevel } from '@shared/effort';
 import modelCatalog from '@shared/modelCatalog.json';
 import type { CatalogModel, ModelCatalog } from '@shared/modelCatalogPayload';
 
@@ -407,7 +408,8 @@ export function decodeProviderModel(value: string): {
 export function buildSpawnCommand(
   config: Pick<HarnessConfig, 'defaultCommand' | 'autoMode'>,
   model?: string,
-  provider: AgentProvider = inferAgentProvider(config.defaultCommand)
+  provider: AgentProvider = inferAgentProvider(config.defaultCommand),
+  effort?: EffortLevel
 ): string {
   const preset = providerPreset(provider);
   // Claude keeps the user's configured defaultCommand; custom falls back to it
@@ -426,6 +428,10 @@ export function buildSpawnCommand(
     const m = /\s/.test(model) ? `"${model}"` : model;
     cmd = `${cmd} ${preset.modelFlag} ${m}`;
   }
+  // Reasoning effort, for the CLIs that take it (Claude `--effort`, Codex
+  // `-c model_reasoning_effort=`); a no-op everywhere else.
+  const eff = provider === 'custom' ? '' : effortArg(provider, effort);
+  if (eff) cmd = `${cmd} ${eff}`;
   // Auto (skip-permissions) mode appends each provider's own flag — Claude's
   // bypassPermissions, Codex's dangerous bypass, Grok's always-approve, Kimi's
   // auto, or agy's skip flag.

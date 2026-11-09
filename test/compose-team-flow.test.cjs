@@ -77,3 +77,11 @@ test('compose is highlighted on a god-only floor', () => {
 test('compose is not highlighted once a worker exists', () => {
   assert.equal(shouldHighlightCompose([{ name: 'Michael', isGod: true }, { name: 'Jim' }]), false);
 });
+
+test('modelIdsByProvider lists catalog ids per hire provider, skipping the default entry', () => {
+  const { modelIdsByProvider } = loadTs('src/renderer/src/components/composeTeamFlow.ts');
+  const out = modelIdsByProvider((p) => p === 'claude'
+    ? [{ label: 'Default' }, { id: 'claude-opus-5-5' }]
+    : p === 'codex' ? [{ id: 'gpt-5.6-sol' }] : []);
+  assert.deepEqual(out, { claude: ['claude-opus-5-5'], codex: ['gpt-5.6-sol'] });
+});

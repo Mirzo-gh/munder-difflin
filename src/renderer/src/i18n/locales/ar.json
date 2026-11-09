@@ -65,7 +65,11 @@
     "errorsTitle": "الأخطاء",
     "importNow": "استيراد الآن",
     "openFolder": "فتح المجلد",
-    "emptyHint": "لا يوجد وكلاء في هذا الطابق بعد. كوّن فريقًا يناسب هذا المستودع، أو أضف وكيلًا يدويًا."
+    "emptyHint": "لا يوجد وكلاء في هذا الطابق بعد. كوّن فريقًا يناسب هذا المستودع، أو أضف وكيلًا يدويًا.",
+    "modelDefault": "افتراضي الأداة",
+    "fieldEffort": "الجهد",
+    "effortDefault": "الافتراضي",
+    "effortUnsupported": "هذا المزوّد لا يقبل مستوى جهد"
   },
   "commandBar": {
     "free": "حر",
@@ -558,7 +562,10 @@
     "errFolder": "اختر مجلدًا أولًا",
     "errCommand": "الأمر مطلوب",
     "hireProgress": "التعيين {{current}} من {{total}}",
-    "skipHire": "تخطَّ التعيين"
+    "skipHire": "تخطَّ التعيين",
+    "effort": "الجهد",
+    "effortDefault": "افتراضي الأداة",
+    "effortUnsupported": "هذا المحرك لا يقبل مستوى جهد."
   },
   "onboarding": {
     "titles": {

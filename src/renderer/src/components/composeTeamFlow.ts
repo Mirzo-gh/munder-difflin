@@ -3,7 +3,7 @@
  * no I/O — loaded directly by test/compose-team-flow.test.cjs.
  */
 import type { TeamResponse } from '@shared/teamPrompt';
-import { HIRE_SPEC_V1, validateHireManifest, type HireManifest } from '@shared/hire';
+import { HIRE_PROVIDERS, HIRE_SPEC_V1, validateHireManifest, type HireManifest } from '@shared/hire';
 
 export type ComposeStep = 'idle' | 'analyzing' | 'questions' | 'proposal' | 'written' | 'error';
 
@@ -64,4 +64,16 @@ export function prepareWrite(cards: readonly ComposeCard[]): { manifests: HireMa
     return v.errors;
   });
   return { manifests, cardErrors };
+}
+
+/** Model ids the app offers for each hire provider, for the analysis prompt and
+ *  the card pickers. `modelsFor` is the catalog lookup (injected for tests);
+ *  entries without an id (the "CLI default" option) are skipped. */
+export function modelIdsByProvider(modelsFor: (provider: string) => { id?: string }[]): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const p of HIRE_PROVIDERS) {
+    const ids = modelsFor(p).map((m) => m.id).filter((id): id is string => !!id);
+    if (ids.length > 0) out[p] = ids;
+  }
+  return out;
 }

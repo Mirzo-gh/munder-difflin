@@ -23,6 +23,7 @@
 
 import { mcpCatalogEntry } from './mcpCatalog';
 import { MAX_AGENT_TOKEN_CAP } from './tokenCaps';
+import { EFFORT_LEVELS, isEffortLevel, type EffortLevel } from './effort';
 
 export const HIRE_SPEC_V1 = 'munder-difflin/hire@1';
 
@@ -57,6 +58,10 @@ export interface HireManifest {
   provider?: HireProvider;
   /** Model id/label for that provider (e.g. 'claude-sonnet-4-6'). */
   model?: string;
+  /** Reasoning effort (see shared/effort.ts). Applied as `--effort` (Claude) or
+   *  `-c model_reasoning_effort=` (Codex, `max` clamped to `xhigh`); ignored by
+   *  other providers. A typed field, never a raw flag. */
+  effort?: EffortLevel;
   /** Extra flag-shaped args appended to the locally-built spawn command. Each flag
    *  must be in the safe-flag allowlist (see SAFE_FLAG_NAMES) and shell-metachar-free;
    *  anything else rejects the manifest (the command stays editable post-import). */
@@ -215,6 +220,12 @@ export function validateHireManifest(raw: unknown): HireValidation {
     else errors.push(`"provider" must be one of ${PROVIDERS.join(', ')} (or "agy")`);
   }
 
+  let effort: EffortLevel | undefined;
+  if (o.effort !== undefined && o.effort !== null && o.effort !== '') {
+    if (isEffortLevel(o.effort)) effort = o.effort;
+    else errors.push(`"effort" must be one of ${EFFORT_LEVELS.join(', ')}`);
+  }
+
   let commandFlags: string[] | undefined;
   if (o.commandFlags !== undefined) {
     if (!Array.isArray(o.commandFlags) || o.commandFlags.length > HIRE_LIMITS.commandFlags) {
@@ -331,7 +342,7 @@ export function validateHireManifest(raw: unknown): HireValidation {
     ok: true,
     errors: [],
     consentRequired: consentRequired.length > 0 ? consentRequired : undefined,
-    manifest: { spec: HIRE_SPEC_V1, name, description, goal, character, accent, provider, model, commandFlags, capabilities, isolate, tokenCap, author, homepage, skills, mcpServers }
+    manifest: { spec: HIRE_SPEC_V1, name, description, goal, character, accent, provider, model, effort, commandFlags, capabilities, isolate, tokenCap, author, homepage, skills, mcpServers }
   };
 }
 

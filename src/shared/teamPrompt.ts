@@ -16,6 +16,7 @@ import {
   type HireManifest
 } from './hire';
 import { MCP_CATALOG } from './mcpCatalog';
+import { EFFORT_LEVELS, effortLevelsFor } from './effort';
 
 const MAX_ANALYSIS = 6000;
 const MAX_QUESTIONS = 3;
@@ -25,6 +26,9 @@ export interface TeamPromptInput {
   repoRoot: string;
   existingAgents: { name: string; description?: string }[];
   defaultModel?: string;
+  /** Model ids the app offers per hire provider (from the model catalog), so the
+   *  analysis picks real ids per role instead of inventing them. */
+  models?: Record<string, string[]>;
   round: 1 | 2;
   analysis?: string;
   answers?: { question: string; answer: string }[];
@@ -52,9 +56,21 @@ export function buildTeamPrompt(input: TeamPromptInput): string {
     for (const a of input.existingAgents) lines.push(`- ${a.name}${a.description ? ` : ${a.description}` : ''}`);
     lines.push('');
   }
-  if (input.defaultModel) {
-    lines.push(`Modèle par défaut de l'utilisateur : ${input.defaultModel} (ne renseigne \`model\` que si un autre modèle est vraiment justifié).`, '');
+  lines.push(
+    'MODÈLE ET EFFORT PAR RÔLE : pour CHAQUE agent, choisis `provider`, `model` et `effort` selon son rôle.',
+    '- Rôles exigeants (architecture, revue, sécurité, débogage difficile, orchestration d\'un domaine) : modèle le plus capable, effort high à max.',
+    '- Rôles courants (implémentation guidée, tests, refactors simples) : modèle intermédiaire, effort medium.',
+    '- Rôles mécaniques ou volumineux (documentation, tri, mises à jour répétitives) : modèle rapide et économique, effort low.',
+    '- Dis en une phrase dans `why` pourquoi ce modèle et cet effort conviennent au rôle.'
+  );
+  if (input.defaultModel) lines.push(`- Modèle par défaut de l'utilisateur : ${input.defaultModel}.`);
+  const models = input.models ?? {};
+  const offered = HIRE_PROVIDERS.filter((p) => (models[p] ?? []).length > 0);
+  if (offered.length > 0) {
+    lines.push('- `model` doit être un de ces ids exacts (n\'en invente pas) :');
+    for (const p of offered) lines.push(`  - ${p} : ${(models[p] ?? []).join(', ')}`);
   }
+  lines.push('');
 
   lines.push(
     `SPÉCIFICATION D'UN AGENT (${HIRE_SPEC_V1}) — objet JSON avec ces clés (en anglais) :`,
@@ -64,6 +80,7 @@ export function buildTeamPrompt(input: TeamPromptInput): string {
     `- "goal": ≤ ${L.goal} caractères (mission permanente de l'agent, précise et spécifique au projet)`,
     `- "provider": parmi ${HIRE_PROVIDERS.join(', ')}`,
     `- "model": ≤ ${L.model} caractères`,
+    `- "effort": parmi ${EFFORT_LEVELS.join(', ')} (claude : ${effortLevelsFor('claude').join(', ')} ; codex : ${effortLevelsFor('codex').join(', ')} ; ignoré par les autres providers)`,
     `- "commandFlags": ≤ ${L.commandFlags} éléments ; seuls ces flags sont autorisés : ${[...SAFE_FLAG_NAMES].join(', ')} (une valeur peut suivre un flag)`,
     `- "capabilities": ≤ ${L.capabilities} étiquettes de ≤ ${L.capabilityChars} caractères`,
     '- "isolate": booléen (travailler dans un worktree git isolé)',

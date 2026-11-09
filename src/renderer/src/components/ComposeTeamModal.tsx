@@ -6,9 +6,13 @@ import { PixelButton } from '@/components/PixelButton';
 import { Icon } from '@/components/Icon';
 import { HIRE_LIMITS, HIRE_PROVIDERS, type HireManifest, type HireProvider } from '@shared/hire';
 import { parseTeamResponse, type TeamResponse } from '@shared/teamPrompt';
+import { effortFor, effortLevelsFor, type EffortLevel } from '@shared/effort';
+import { modelsForProvider } from '@/store/config';
+import type { AgentProvider } from '@shared/agentProvider';
 import {
   cardsFromResponse,
   existingAgentsOf,
+  modelIdsByProvider,
   nextStep,
   prepareWrite,
   type ComposeCard,
@@ -58,6 +62,7 @@ export function ComposeTeamModal({ onClose }: { onClose: () => void }) {
   const promptInput = (round: 1 | 2) => ({
     repoRoot: repo,
     existingAgents: existingAgentsOf(agents),
+    models: modelIdsByProvider((p) => modelsForProvider(p as AgentProvider)),
     round,
     ...(round === 2 ? { analysis, answers: questions.map((q, i) => ({ question: q, answer: answers[i] ?? '' })) } : {})
   });
@@ -405,11 +410,16 @@ function AgentCardEditor({ card, onToggle, onField }: {
                 style={{ ...inputStyle, fontSize: 13, resize: 'vertical' }}
               />
             </Field>
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) auto', gap: 10, alignItems: 'end' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 0.8fr) auto', gap: 10, alignItems: 'end' }}>
               <Field label={t('team.fieldProvider')}>
                 <select
                   value={m.provider ?? ''}
-                  onChange={(e) => onField('provider', e.target.value as HireProvider | '')}
+                  onChange={(e) => {
+                    const next = e.target.value as HireProvider | '';
+                    onField('provider', next);
+                    // Keep the effort valid for the new CLI (codex has no `max`).
+                    onField('effort', effortFor(next || 'claude', m.effort));
+                  }}
                   style={inputStyle}
                 >
                   <option value="">{t('team.providerDefault')}</option>
@@ -417,7 +427,32 @@ function AgentCardEditor({ card, onToggle, onField }: {
                 </select>
               </Field>
               <Field label={t('team.fieldModel')} value={m.model ?? ''} max={HIRE_LIMITS.model}>
-                <input value={m.model ?? ''} onChange={(e) => onField('model', e.target.value)} style={inputStyle} />
+                {/* A list of the catalog's models for this provider, but free
+                    text stays possible (a model newer than the catalog). */}
+                <input
+                  value={m.model ?? ''}
+                  onChange={(e) => onField('model', e.target.value)}
+                  list={`team-models-${m.provider || 'claude'}`}
+                  placeholder={t('team.modelDefault')}
+                  style={inputStyle}
+                />
+                <datalist id={`team-models-${m.provider || 'claude'}`}>
+                  {modelsForProvider((m.provider || 'claude') as AgentProvider)
+                    .filter((o) => !!o.id)
+                    .map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </datalist>
+              </Field>
+              <Field label={t('team.fieldEffort')}>
+                <select
+                  value={m.effort ?? ''}
+                  onChange={(e) => onField('effort', (e.target.value || undefined) as EffortLevel | undefined)}
+                  disabled={effortLevelsFor(m.provider || 'claude').length === 0}
+                  title={effortLevelsFor(m.provider || 'claude').length === 0 ? t('team.effortUnsupported') : undefined}
+                  style={inputStyle}
+                >
+                  <option value="">{t('team.effortDefault')}</option>
+                  {effortLevelsFor(m.provider || 'claude').map((l) => <option key={l} value={l}>{l}</option>)}
+                </select>
               </Field>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, paddingBottom: 6, ...labelStyle }}>
                 <input type="checkbox" checked={!!m.isolate} onChange={(e) => onField('isolate', e.target.checked)} />

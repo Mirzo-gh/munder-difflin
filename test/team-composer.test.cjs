@@ -7,7 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const loadTs = require('./load-ts.cjs');
-const { runTeamAnalysis, writeTeamHires } = loadTs('src/main/teamComposer.ts');
+const { runTeamAnalysis, writeTeamHires, sanitizeTeamInput } = loadTs('src/main/teamComposer.ts');
 const { repoSlug } = loadTs('src/main/roster.ts');
 
 const input = { repoRoot: '/work/my-repo', existingAgents: [], round: 1 };
@@ -114,4 +114,20 @@ test('sanitizeTeamInput rejects non-objects', () => {
   const { sanitizeTeamInput } = loadTs('src/main/teamComposer.ts');
   assert.equal(sanitizeTeamInput(null, '/r'), null);
   assert.equal(sanitizeTeamInput('x', '/r'), null);
+});
+
+test('sanitizeTeamInput keeps model ids for known providers only, id-shaped and capped', () => {
+  const input = sanitizeTeamInput({
+    round: 1,
+    models: {
+      claude: ['claude-opus-5-5', 'bad;rm -rf', 42, ...Array(40).fill('m')],
+      custom: ['x'],
+      codex: 'not-a-list'
+    }
+  }, '/work/repo');
+  assert.deepEqual(Object.keys(input.models), ['claude']);
+  assert.equal(input.models.claude[0], 'claude-opus-5-5');
+  assert.ok(!input.models.claude.includes('bad;rm -rf'));
+  assert.equal(input.models.claude.length, 24);
+  assert.equal(sanitizeTeamInput({ round: 1 }, '/work/repo').models, undefined);
 });

@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildTeamPrompt, parseTeamResponse, type TeamPromptInput, type TeamResponse } from '../shared/teamPrompt';
-import { HIRE_LIMITS, validateHireManifest, type HireManifest } from '../shared/hire';
+import { HIRE_LIMITS, HIRE_PROVIDERS, validateHireManifest, type HireManifest } from '../shared/hire';
 import { repoSlug } from './roster';
 
 export type TeamRunner = (prompt: string) => Promise<{ ok: boolean; text?: string; error?: string }>;
@@ -58,8 +58,21 @@ export function sanitizeTeamInput(raw: unknown, repoRoot: string, defaultModel?:
         .slice(0, C.answers)
         .map((a) => ({ question: a.question.slice(0, C.answerChars), answer: a.answer.slice(0, C.answerChars) }))
     : undefined;
+  // Model ids per hire provider: known providers only, capped, id-shaped.
+  let models: Record<string, string[]> | undefined;
+  if (o.models && typeof o.models === 'object' && !Array.isArray(o.models)) {
+    models = {};
+    for (const p of HIRE_PROVIDERS) {
+      const list = (o.models as Record<string, unknown>)[p];
+      if (!Array.isArray(list)) continue;
+      const ids = list
+        .filter((m): m is string => typeof m === 'string' && /^[A-Za-z0-9 ._()[\]\/:@+-]{1,80}$/.test(m))
+        .slice(0, 24);
+      if (ids.length > 0) models[p] = ids;
+    }
+  }
   return {
-    repoRoot, existingAgents, round,
+    repoRoot, existingAgents, round, models,
     analysis: typeof o.analysis === 'string' ? o.analysis.slice(0, C.analysisChars) : undefined,
     answers,
     defaultModel

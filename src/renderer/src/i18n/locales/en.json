@@ -65,7 +65,11 @@
     "errorsTitle": "Errors",
     "importNow": "Import now",
     "openFolder": "Open the folder",
-    "emptyHint": "No agents on this floor yet. Compose a team suited to this repo, or add one by hand."
+    "emptyHint": "No agents on this floor yet. Compose a team suited to this repo, or add one by hand.",
+    "modelDefault": "CLI default",
+    "fieldEffort": "Effort",
+    "effortDefault": "Default",
+    "effortUnsupported": "This provider does not take an effort level"
   },
   "commandBar": {
     "free": "free",
@@ -558,7 +562,10 @@
     "errFolder": "Pick a folder first",
     "errCommand": "Command is required",
     "hireProgress": "hire {{current}} of {{total}}",
-    "skipHire": "skip hire"
+    "skipHire": "skip hire",
+    "effort": "Effort",
+    "effortDefault": "CLI default",
+    "effortUnsupported": "This engine does not take an effort level."
   },
   "onboarding": {
     "titles": {

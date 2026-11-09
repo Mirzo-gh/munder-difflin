@@ -65,7 +65,11 @@
     "errorsTitle": "错误",
     "importNow": "立即导入",
     "openFolder": "打开文件夹",
-    "emptyHint": "此楼层还没有智能体。组建一支适合此仓库的团队，或手动添加一个。"
+    "emptyHint": "此楼层还没有智能体。组建一支适合此仓库的团队，或手动添加一个。",
+    "modelDefault": "CLI 默认",
+    "fieldEffort": "推理强度",
+    "effortDefault": "默认",
+    "effortUnsupported": "该提供方不支持推理强度"
   },
   "commandBar": {
     "free": "自由",
@@ -558,7 +562,10 @@
     "errFolder": "请先选择文件夹",
     "errCommand": "必须填写命令",
     "hireProgress": "hire 第 {{current}} / {{total}} 项",
-    "skipHire": "跳过 hire"
+    "skipHire": "跳过 hire",
+    "effort": "推理强度",
+    "effortDefault": "CLI 默认",
+    "effortUnsupported": "该引擎不支持推理强度。"
   },
   "onboarding": {
     "titles": {

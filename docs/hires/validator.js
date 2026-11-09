@@ -121,6 +121,10 @@ window.HireSpec = (function () {
       errors.push('"capabilities" must be an array of at most 12 items');
     }
     if (raw.isolate !== undefined && typeof raw.isolate !== 'boolean') errors.push('"isolate" must be a boolean');
+    if (raw.effort !== undefined && raw.effort !== null && raw.effort !== '' &&
+        ['low', 'medium', 'high', 'xhigh', 'max'].indexOf(raw.effort) === -1) {
+      errors.push('"effort" must be one of low, medium, high, xhigh, max');
+    }
     if (raw.tokenCap !== undefined && !(Number.isInteger(raw.tokenCap) && raw.tokenCap > 0 && raw.tokenCap <= 1e10)) {
       errors.push('"tokenCap" must be a positive integer (max 1e10)');
     }
