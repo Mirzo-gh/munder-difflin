@@ -34,7 +34,7 @@ test('migrateLegacyRoster is awaited before the first createWindow( in whenReady
   const win = body.indexOf('createWindow(');
   assert.ok(mig >= 0, 'migration runs at startup');
   assert.ok(win > mig, 'migration precedes the first window');
-  assert.match(body.slice(0, win), /await\s+[\s\S]*migrateLegacyRoster\(/);
+  assert.match(body.slice(0, win), /await migrateLegacyRoster\(/);
 });
 
 test("changeHome move copies the per-repo 'rosters' folder", () => {
@@ -72,4 +72,24 @@ test('reset archives every per-repo roster too', () => {
   const reset = handlerBody(source, "ipcMain.handle('app:resetAll'");
   assert.match(reset, /roster\.archive\(\)/);
   assert.match(reset, /listRepoRosters\(/);
+});
+
+function closedHandler(source) {
+  const start = source.indexOf("win.on('closed'", source.indexOf('function createWindow('));
+  assert.ok(start >= 0, 'createWindow has a closed handler');
+  return source.slice(start, source.indexOf('\n  });', start));
+}
+
+test('the closed handler only drops a floor from openFloors on a deliberate close', () => {
+  const closed = closedHandler(main());
+  assert.match(closed, /appQuitting/);
+  assert.match(closed, /floors\.unbind\(ownerId\)/);
+});
+
+test('on Windows/Linux closing the last window keeps its floor (that close is the quit)', () => {
+  const closed = closedHandler(main());
+  assert.match(closed, /process\.platform !== 'darwin' && allWindows\.size === 0/);
+  assert.match(closed, /!lastWindowQuits\) persistOpenFloors\(\)/);
+  const del = closed.indexOf('allWindows.delete(win)');
+  assert.ok(del >= 0 && del < closed.indexOf('allWindows.size === 0'), 'size is read after this window is removed');
 });

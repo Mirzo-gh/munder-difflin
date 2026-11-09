@@ -2467,10 +2467,13 @@ function createWindow(opts: { floor?: boolean; repoRoot?: string } = {}): Browse
     allWindows.delete(win);
     // Unbind the repo; drop it from openFloors only on a deliberate close — a
     // window closing because the app quits must reopen on the next launch.
+    // On Windows/Linux closing the last window IS the quit (window-all-closed →
+    // teardownAndQuit runs only after this handler), so keep its repo too.
     const hadRepo = floors.repoOf(ownerId) !== null;
+    const lastWindowQuits = process.platform !== 'darwin' && allWindows.size === 0;
     floors.unbind(ownerId);
     floorWritesBlocked.delete(ownerId);
-    if (hadRepo && !appQuitting && !allowQuit) persistOpenFloors();
+    if (hadRepo && !appQuitting && !allowQuit && !lastWindowQuits) persistOpenFloors();
     // A closed floor must not leave its terminals running headless. (Natural
     // onExit teardown — archive + worktree cleanup — still runs per PTY.)
     if (isFloor) { try { ptyManager.killByOwner(wc); } catch { /* best-effort */ } }
