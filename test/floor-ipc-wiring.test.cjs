@@ -189,3 +189,30 @@ test('floor:listRepos normalizes registered repos in parallel', () => {
   assert.match(list, /await Promise\.all\(\(cfg\.registeredRepos \?\? \[\]\)\.map\(floorRepoFromInput\)\)/);
   assert.doesNotMatch(list, /for \(const raw of cfg\.registeredRepos/);
 });
+
+test('choosing a repo resolves its harness and switches the app when it differs', () => {
+  const source = main();
+  const start = source.indexOf("ipcMain.handle('floor:chooseRepo'");
+  const body = source.slice(start, source.indexOf("ipcMain.handle('floor:harnessInfo'", start));
+  assert.match(body, /harnessForRepo\(repo\)/);
+  assert.match(body, /switchHarness: target\.harness/, 'other floors open → ask first');
+  assert.match(body, /setRepoHarness\(repo, target\.harness\)/);
+  assert.match(body, /changeHarnessHome\(target\.harness, 'fresh', repo\)/);
+});
+
+test('a harness switch links the asking repo and closes floors of other harnesses', () => {
+  const source = main();
+  const start = source.indexOf('async function changeHarnessHome(');
+  const body = source.slice(start, source.indexOf('app.relaunch();', start));
+  const link = body.indexOf('setRepoHarness(linkRepo, newHome)');
+  const close = body.indexOf('closeFloorsNotIn(newHome)');
+  const repoint = body.indexOf('writeConfig({ harnessHome: newHome })');
+  assert.ok(link > 0 && close > link && repoint > close);
+  assert.match(source, /ipcMain\.handle\('config:changeHome'[\s\S]{0,600}changeHarnessHome\(p\.newHome, mode, floors\.repoOf\(evt\.sender\.id\)\)/);
+});
+
+test('restored floors are limited to repos of the running harness', () => {
+  const source = main();
+  const start = source.indexOf('app.whenReady().then(');
+  assert.match(source.slice(start), /restored = \(cfg\.openFloors \?\? \[\]\)\.filter\(\(r\) => existsSync\(r\) && \(!links\[r\] \|\| links\[r\] === home\)\)/);
+});

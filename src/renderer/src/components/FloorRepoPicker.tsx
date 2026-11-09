@@ -8,13 +8,9 @@ interface FloorRepo {
   repoRoot: string;
   agentCount: number;
   open: boolean;
+  /** The repo's linked harness; null = not linked yet (one is adopted/created). */
+  harness: string | null;
 }
-
-// Same one-shot flag HivePicker sets before its relaunch: binding a floor
-// reloads this window, and choosing a repo already means "work in the current
-// hive", so the reload must not land on the hive picker. Cleared if no reload
-// follows. App.tsx reads + clears it on mount.
-const SKIP_HIVE_PICKER_KEY = 'cth.skipHivePickerOnce';
 
 function folderName(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
@@ -40,22 +36,25 @@ export function FloorRepoPicker() {
     return () => { cancelled = true; };
   }, []);
 
-  const choose = async (path: string) => {
+  // A repo of another harness switches the whole app; with other floors open it
+  // asks first (they close) — `confirm` holds that pending choice.
+  const [confirm, setConfirm] = useState<{ path: string; harness: string; closes: number } | undefined>();
+
+  const choose = async (path: string, confirmSwitch = false) => {
     if (!path || busy) return;
     setNotice(undefined);
+    setConfirm(undefined);
     setBusy(path);
-    const undo = (message?: string) => {
-      try { window.localStorage.removeItem(SKIP_HIVE_PICKER_KEY); } catch { /* noop */ }
-      setNotice(message);
-      setBusy(undefined);
-    };
     try {
-      try { window.localStorage.setItem(SKIP_HIVE_PICKER_KEY, '1'); } catch { /* noop */ }
-      const res = await window.cth.chooseFloorRepo(path);
-      // Success reloads the window; a return means it did not happen.
-      if (!res.ok) undo(res.focused ? t('floor.alreadyOpen') : res.error);
+      const res = await window.cth.chooseFloorRepo(path, confirmSwitch ? { confirmSwitch: true } : undefined);
+      // Success reloads the window (or relaunches on a harness switch).
+      if (res.ok) return;
+      setBusy(undefined);
+      if (res.switchHarness) setConfirm({ path, harness: res.switchHarness, closes: res.closes ?? 0 });
+      else setNotice(res.focused ? t('floor.alreadyOpen') : res.error);
     } catch (e) {
-      undo(e instanceof Error ? e.message : String(e));
+      setBusy(undefined);
+      setNotice(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -114,6 +113,11 @@ export function FloorRepoPicker() {
                         <bdi>{r.repoRoot}</bdi>
                       </div>
                     </div>
+                    {r.harness && (
+                      <span title={r.harness} style={{ fontSize: 11, color: 'var(--cth-ink-500)', flexShrink: 0 }}>
+                        {t('floor.harnessLabel', { name: folderName(r.harness) })}
+                      </span>
+                    )}
                     {r.open && (
                       <span style={{
                         fontSize: 11, padding: '1px 6px', flexShrink: 0,
@@ -126,6 +130,21 @@ export function FloorRepoPicker() {
                     </span>
                   </button>
                 ))}
+              </div>
+            )}
+
+            {confirm && (
+              <div style={{
+                display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 10px',
+                background: 'var(--cth-coral-light)', boxShadow: 'inset 0 0 0 1px var(--cth-coral)'
+              }}>
+                <span style={{ fontSize: 12, color: 'var(--cth-ink-900)' }}>
+                  {t('floor.switchConfirm', { harness: folderName(confirm.harness), count: confirm.closes })}
+                </span>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <PixelButton variant="ghost" size="md" onClick={() => setConfirm(undefined)}>{t('floor.switchCancel')}</PixelButton>
+                  <PixelButton variant="primary" size="md" onClick={() => void choose(confirm.path, true)}>{t('floor.switchGo')}</PixelButton>
+                </div>
               </div>
             )}
 

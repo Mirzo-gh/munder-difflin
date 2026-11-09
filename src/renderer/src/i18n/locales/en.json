@@ -20,12 +20,16 @@
   },
   "floor": {
     "pickTitle": "Choose a repo for this floor",
-    "pickHint": "Each window is one floor, working on one repo with its own team. Pick a repo you already work in, or choose another folder.",
+    "pickHint": "Each window is one floor, working on one repo with its own team. A repo works in its own harness: the linked one, or a new one created for it. Pick a repo, or choose another folder.",
     "chooseFolder": "Choose a folder…",
     "alreadyOpen": "That repo is already open in another window — it has been brought to the front.",
     "agents_one": "{{count}} agent",
     "agents": "{{count}} agents",
-    "openBadge": "open"
+    "openBadge": "open",
+    "harnessLabel": "Harness: {{name}}",
+    "switchConfirm": "This repo works in the harness “{{harness}}”. Opening it switches the app to that harness and closes the {{count}} other open floor(s).",
+    "switchCancel": "Cancel",
+    "switchGo": "Switch harness"
   },
   "team": {
     "button": "Compose the team",

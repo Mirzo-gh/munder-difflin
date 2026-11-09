@@ -91,32 +91,9 @@ export function App() {
   const setIdeOpen = useStore(s => s.setIdeOpen);
 
   const [config, setConfig] = useState<HarnessConfig | null>(null);
-  // Whether the user has passed the launch-time hive picker this session. Starts
-  // true (skip the picker) right after a hive SWITCH — changeHome relaunches and
-  // leaves a one-shot localStorage flag so we don't bounce back onto the picker for
-  // the hive we just chose. Also set true on onboarding completion (below).
-  // The initializer only READS the flag; the effect below consumes it. StrictMode
-  // (dev) mounts App twice with fresh state, so removing the flag inside the
-  // initializer let the second mount — the one React keeps — miss it and show
-  // the picker anyway.
-  // Main also says whether this window needs the picker at all: the harness home
-  // is app-wide, so only the primary window shows it, once per launch — a New
-  // Floor never does (switching there would relaunch every window).
-  const [hiveOpened, setHiveOpened] = useState<boolean>(() => {
-    try {
-      if (window.cth?.hivePickerNeededSync?.() === false) return true;
-    } catch { /* main unreachable — fall through */ }
-    try {
-      return window.localStorage.getItem('cth.skipHivePickerOnce') !== null;
-    } catch { /* localStorage unavailable — show the picker */ }
-    return false;
-  });
-  useEffect(() => {
-    try { window.localStorage.removeItem('cth.skipHivePickerOnce'); } catch { /* noop */ }
-  }, []);
-  useEffect(() => {
-    if (hiveOpened) { try { window.cth?.hivePickerPassed?.(); } catch { /* noop */ } }
-  }, [hiveOpened]);
+  // The harness switcher (header button). There is no launch-time harness
+  // picker any more: a floor's repo decides its harness (main/repoHarness.ts).
+  const [harnessPickerOpen, setHarnessPickerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   /** Which tab Settings opens on. Set by a `cth:open-settings` deep link, reset
    *  to undefined (→ General) whenever the modal is opened the normal way. */
@@ -217,7 +194,7 @@ export function App() {
   // about to switch to a different one.
   // An unbound window (no floor repo yet) boots nothing: it only shows the
   // repo picker, and god belongs to a floor.
-  useHive(hiveOpened && floorRepo !== null ? config : null);
+  useHive(floorRepo !== null ? config : null);
 
   // Pre-warm a persistent terminal for every live agent so its output is
   // buffered from spawn. Switching agents then re-attaches an already-rendered
@@ -283,21 +260,12 @@ export function App() {
   }
 
   if (!config.onboardingComplete) {
-    // Just-onboarded users go straight into the hive they set up — skip the picker.
-    return <OnboardingWizard onComplete={(next) => { setConfig(next); setHiveOpened(true); }} />;
+    return <OnboardingWizard onComplete={(next) => { setConfig(next); }} />;
   }
 
-  // Launch-time hive picker: on reopen, let the user open their current hive,
-  // switch to a recent one, or open/create another. Skipped right after onboarding
-  // and right after a switch-relaunch (see hiveOpened init).
-  if (!hiveOpened) {
-    return <HivePicker config={config} onOpenCurrent={() => setHiveOpened(true)} />;
-  }
-
-  // One window = one repo, chosen AFTER the hive (the repo's roster lives in
-  // it). A window not bound to a repo yet shows only the repo picker — no
-  // floor, no god boot. Choosing a repo reloads the window, skipping the hive
-  // picker on the way back.
+  // One window = one repo, and the repo picks its harness: a window not bound
+  // to a repo yet shows only the repo picker — no floor, no god boot. Choosing
+  // a repo reloads the window (or switches the app to the repo's harness).
   if (floorRepo === null) {
     return <FloorRepoPicker />;
   }
@@ -348,6 +316,23 @@ export function App() {
         >
           {repoName(floorRepo)}
         </span>
+        <button
+          className="cth-titlebar-nodrag cth-settings-btn"
+          onClick={() => setHarnessPickerOpen(true)}
+          title={config.harnessHome ?? ''}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            height: 24, padding: '0 8px', maxWidth: 200,
+            background: 'var(--cth-paper-100)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
+            border: 'none', borderRadius: 2, cursor: 'pointer',
+            fontFamily: 'var(--cth-font-ui)', fontSize: 12, color: 'var(--cth-ink-700)'
+          }}
+        >
+          <Icon name="folder" />
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {t('floor.harnessLabel', { name: repoName(config.harnessHome ?? '') })}
+          </span>
+        </button>
         {/* Primary (filled) while the floor has no worker yet — god doesn't count. */}
         <button
           className={highlightCompose ? 'cth-titlebar-nodrag' : 'cth-titlebar-nodrag cth-settings-btn'}
@@ -575,6 +560,9 @@ export function App() {
         <ComposeTeamModal onClose={() => setComposeTeamOpen(false)} />
       )}
 
+      {harnessPickerOpen && (
+        <HivePicker config={config} onOpenCurrent={() => setHarnessPickerOpen(false)} onClose={() => setHarnessPickerOpen(false)} />
+      )}
       {settingsOpen && (
         <SettingsModal
           config={config}

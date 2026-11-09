@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PixelPanel } from './PixelPanel';
 import { PixelButton } from './PixelButton';
 import { Icon } from './Icon';
@@ -8,12 +9,9 @@ export interface HivePickerProps {
   config: HarnessConfig;
   /** Open the CURRENT harness home in-place (no relaunch). */
   onOpenCurrent: () => void;
+  /** Close the switcher without changing anything. */
+  onClose?: () => void;
 }
-
-// Set right before a hive SWITCH so App skips this picker once after the relaunch
-// changeHome triggers — otherwise the user would land back on the picker for the
-// hive they just chose. App.tsx reads + clears it on mount.
-const SKIP_KEY = 'cth.skipHivePickerOnce';
 
 function folderName(path: string): string {
   return path.split('/').filter(Boolean).pop() ?? path;
@@ -27,7 +25,19 @@ function folderName(path: string): string {
  * changeHome('fresh'), which tears down services and relaunches against it — so
  * every switch is a clean process restart (cheap here, before any work is live).
  */
-export function HivePicker({ config, onOpenCurrent }: HivePickerProps) {
+export function HivePicker({ config, onOpenCurrent, onClose }: HivePickerProps) {
+  const { t } = useTranslation();
+  // Other floors open in this harness close on a switch (one harness at a time):
+  // say so and ask before switching.
+  const [otherFloors, setOtherFloors] = useState(0);
+  const [confirming, setConfirming] = useState<string | undefined>();
+  useEffect(() => {
+    let cancelled = false;
+    window.cth.floorHarnessInfo()
+      .then((info) => { if (!cancelled) setOtherFloors(info.otherFloors); })
+      .catch(() => { /* unknown → no warning */ });
+    return () => { cancelled = true; };
+  }, []);
   const current = config.harnessHome;
   const recents = (config.recentHives ?? []).filter((h) => h && h !== current);
   const [busy, setBusy] = useState<string | undefined>();
@@ -35,22 +45,22 @@ export function HivePicker({ config, onOpenCurrent }: HivePickerProps) {
 
   // Open a hive. Same folder as the current one → just enter it (no relaunch).
   // A different folder → changeHome('fresh') re-points + relaunches the process.
-  const openHive = async (path: string) => {
+  const openHive = async (path: string, confirmed = false) => {
     if (!path) return;
     if (current && path === current) { onOpenCurrent(); return; }
+    if (otherFloors > 0 && !confirmed) { setConfirming(path); return; }
+    setConfirming(undefined);
     setError(undefined);
     setBusy(path);
     try {
-      window.localStorage.setItem(SKIP_KEY, '1');
+      // The floor's repo becomes linked to this harness (main side).
       const res = await window.cth.changeHome(path, 'fresh');
-      // Success never returns (the process relaunches). A return means an error.
+      // Success relaunches (dev: reloads). A return with ok=false is an error.
       if (!res.ok) {
-        window.localStorage.removeItem(SKIP_KEY);
         setError(res.error ?? 'Could not open that folder.');
         setBusy(undefined);
       }
     } catch (e) {
-      window.localStorage.removeItem(SKIP_KEY);
       setError(e instanceof Error ? e.message : String(e));
       setBusy(undefined);
     }
@@ -149,6 +159,21 @@ export function HivePicker({ config, onOpenCurrent }: HivePickerProps) {
               </div>
             )}
 
+            {confirming && (
+              <div style={{
+                display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 10px',
+                background: 'var(--cth-coral-light)', boxShadow: 'inset 0 0 0 1px var(--cth-coral)'
+              }}>
+                <span style={{ fontSize: 12, color: 'var(--cth-ink-900)' }}>
+                  {t('floor.switchConfirm', { harness: folderName(confirming), count: otherFloors })}
+                </span>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <PixelButton variant="ghost" size="md" onClick={() => setConfirming(undefined)}>{t('floor.switchCancel')}</PixelButton>
+                  <PixelButton variant="primary" size="md" onClick={() => void openHive(confirming, true)}>{t('floor.switchGo')}</PixelButton>
+                </div>
+              </div>
+            )}
+
             {error && (
               <div style={{
                 padding: '6px 10px', background: 'var(--cth-coral-light)',
@@ -165,6 +190,9 @@ export function HivePicker({ config, onOpenCurrent }: HivePickerProps) {
             {/* OPEN / CREATE — both browse to a folder; "fresh" mode re-points at it
                 (bootstrapping an empty one, or reusing existing hive data in place). */}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              {onClose && (
+                <PixelButton variant="ghost" size="md" onClick={onClose} disabled={!!busy}>{t('floor.switchCancel')}</PixelButton>
+              )}
               <PixelButton variant="secondary" size="md" onClick={browse} disabled={!!busy}>
                 <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
                   <Icon name="folder" /> open existing config…

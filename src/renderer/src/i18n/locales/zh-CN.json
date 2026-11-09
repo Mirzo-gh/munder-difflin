@@ -20,12 +20,16 @@
   },
   "floor": {
     "pickTitle": "为此楼层选择一个仓库",
-    "pickHint": "每个窗口是一层楼，使用自己的团队处理一个仓库。选择你已经在用的仓库，或选择其他文件夹。",
+    "pickHint": "每个窗口是一个楼层，在一个仓库上工作，拥有自己的团队。每个仓库使用自己的 harness：已关联的那个，或为它新建一个。选择一个仓库，或选择其他文件夹。",
     "chooseFolder": "选择文件夹…",
     "alreadyOpen": "该仓库已在另一个窗口中打开——已将其置于前台。",
     "agents_one": "{{count}} 个智能体",
     "agents": "{{count}} 个智能体",
-    "openBadge": "已打开"
+    "openBadge": "已打开",
+    "harnessLabel": "Harness：{{name}}",
+    "switchConfirm": "此仓库使用 harness“{{harness}}”。打开它会将应用切换到该 harness，并关闭其他 {{count}} 个已打开的楼层。",
+    "switchCancel": "取消",
+    "switchGo": "切换 harness"
   },
   "team": {
     "button": "组建团队",

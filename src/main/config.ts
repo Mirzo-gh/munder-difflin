@@ -190,6 +190,8 @@ export interface HarnessConfig {
   registeredRepos: string[];
   /** Repo roots that had a floor window open at last quit (reopened at launch). */
   openFloors?: string[];
+  /** Repo root → the harness home it works in (see main/repoHarness.ts). */
+  repoHarnesses?: Record<string, string>;
   /** When true, new agents are spawned with --permission-mode bypassPermissions. */
   autoMode: boolean;
   /** May the orchestrator ("Michael") spin up agents on its own?
@@ -660,6 +662,13 @@ export function writeConfig(patch: Partial<HarnessConfig>): HarnessConfig {
     next.registeredRepos = patch.registeredRepos
       .map((r) => expandTilde(r))
       .filter((r) => r && !seen.has(r) && (seen.add(r), true));
+  }
+  if (patch.repoHarnesses && typeof patch.repoHarnesses === 'object' && !Array.isArray(patch.repoHarnesses)) {
+    const clean: Record<string, string> = {};
+    for (const [repo, home] of Object.entries(patch.repoHarnesses)) {
+      if (isAbsolute(repo) && typeof home === 'string' && isAbsolute(home)) clean[repo] = home;
+    }
+    next.repoHarnesses = clean;
   }
   if (Array.isArray(patch.openFloors)) {
     const seen = new Set<string>();

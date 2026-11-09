@@ -87,6 +87,7 @@ import { toolCatalog, type ToolStatus } from '../shared/toolCatalog';
 import { listLocalSkills, loadCatalog, installSkill, uninstallSkill, type LocalSkill } from './skills';
 import { loadHero } from './hero';
 import { loadModelCatalog } from './modelCatalog';
+import { resolveRepoHarness } from './repoHarness';
 import {
   CODEX_REMOTE_SOCKET_RELATIVE,
   codexRemoteAliasPath,
@@ -2382,11 +2383,6 @@ function createWindow(opts: { floor?: boolean; repoRoot?: string } = {}): Browse
   // primary. The primary is also seeded synchronously so boot events route now.
   win.on('focus', () => { mainWindow = win; });
   if (!isFloor) mainWindow = win;
-  if (isFloor) {
-    const wcId = win.webContents.id;
-    floorWebContentsIds.add(wcId);
-    win.webContents.once('destroyed', () => floorWebContentsIds.delete(wcId));
-  }
 
   // Permission gate for the renderer (our own trusted, local content). The voice
   // features (Free Flow dictation, Realtime voice) were removed, so nothing needs
@@ -3297,16 +3293,29 @@ ipcMain.handle('config:ensureHome', (_evt, path: unknown) => {
 // optionally MOVING the existing hive + palace and relaunching so every service
 // re-binds against the new root. mode: 'move' copies the data (old kept as a
 // safety net), 'fresh' just re-points and bootstraps an empty home.
-ipcMain.handle('config:changeHome', async (_evt, payload: unknown) => {
+ipcMain.handle('config:changeHome', async (evt, payload: unknown) => {
   const p = (payload ?? {}) as { newHome?: unknown; mode?: unknown };
   if (typeof p.newHome !== 'string' || !p.newHome) return { ok: false, error: 'invalid newHome' };
   const mode: 'move' | 'fresh' = p.mode === 'fresh' ? 'fresh' : 'move';
+  // The floor that asked keeps working on its repo, now linked to the new home.
+  return changeHarnessHome(p.newHome, mode, floors.repoOf(evt.sender.id));
+});
+
+/** Re-point the app at another harness home: tear down, optionally copy, then
+ *  relaunch (dev: re-bind in place). `linkRepo` becomes linked to the new home;
+ *  every open floor whose repo is NOT linked to it is closed first — one harness
+ *  runs at a time, so those floors cannot follow. */
+async function changeHarnessHome(
+  rawNewHome: string,
+  mode: 'move' | 'fresh',
+  linkRepo: string | null
+): Promise<{ ok: true } | { ok: false; error?: string }> {
   // expandTilde BEFORE resolve: both UI callers feed a folder-dialog result
   // (always absolute), but the hive picker's recents list can serve a literal
   // "~/…" persisted by a pre-#140 build — resolve() would anchor that at cwd
   // and the app would relaunch against a real directory named "~". Same
   // defence-in-depth-at-the-consumer rule as expandTilde's own doc.
-  const newHome = resolve(expandTilde(p.newHome));
+  const newHome = resolve(expandTilde(rawNewHome));
   const oldRaw = readConfig().harnessHome;
   const oldHome = oldRaw ? resolve(oldRaw) : null;
 
@@ -3362,6 +3371,10 @@ ipcMain.handle('config:changeHome', async (_evt, payload: unknown) => {
     }
   }
 
+  // Link the asking floor's repo, then close the floors that belong elsewhere.
+  if (linkRepo) setRepoHarness(linkRepo, newHome);
+  closeFloorsNotIn(newHome);
+
   // Repoint config and relaunch so every service re-bootstraps against newHome.
   // (Identical recovery path to resetAll — relaunch is the clean re-bind.)
   writeConfig({ harnessHome: newHome });
@@ -3387,13 +3400,38 @@ ipcMain.handle('config:changeHome', async (_evt, payload: unknown) => {
       wc.once('did-fail-load', unblock);
       wc.reload();
     }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
     return { ok: true as const };
   }
   allowQuit = true;
   app.relaunch();
   app.exit(0);
   return { ok: true as const }; // unreachable (process exits) — typed for the renderer
-});
+}
+
+/** Save `repo → home` (config.repoHarnesses). */
+function setRepoHarness(repo: string, home: string): void {
+  try {
+    const cur = readConfig().repoHarnesses ?? {};
+    if (cur[repo] === home) return;
+    writeConfig({ repoHarnesses: { ...cur, [repo]: home } });
+  } catch (e) { console.error('[floors] repoHarnesses:', e); }
+}
+
+/** Close every floor window whose repo is not linked to `home` (unbound windows
+ *  stay: they have no repo yet). Their repos leave openFloors. */
+function closeFloorsNotIn(home: string): void {
+  const mapping = readConfig().repoHarnesses ?? {};
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (w.isDestroyed()) continue;
+    const repo = floors.repoOf(w.webContents.id);
+    if (!repo || mapping[repo] === home) continue;
+    floors.unbind(w.webContents.id);
+    try { ptyManager.killByOwner(w.webContents); } catch { /* best-effort */ }
+    w.destroy();
+  }
+  persistOpenFloors();
+}
 
 // ─── IPC: filesystem (sandboxed to a root) ──────────────────────────────────
 ipcMain.handle('fs:listDir', (_evt, root: unknown, rel: unknown) => {
@@ -3623,16 +3661,6 @@ async function migrateLegacyRosterOfHome(): Promise<void> {
 
 ipcMain.on('floor:repoSync', (evt) => { evt.returnValue = floors.repoOf(evt.sender.id); });
 
-// The harness home is app-wide: switching it relaunches every window. So the
-// launch-time hive picker belongs to the primary window only, once per launch.
-// Floors (New Floor, restored floors) never show it, and once the primary has
-// passed it a reopened primary (macOS dock) does not show it again either.
-const floorWebContentsIds = new Set<number>();
-let hivePickerPassed = false;
-ipcMain.on('hive:pickerNeededSync', (evt) => {
-  evt.returnValue = !hivePickerPassed && !floorWebContentsIds.has(evt.sender.id);
-});
-ipcMain.on('hive:pickerPassed', () => { hivePickerPassed = true; });
 
 // ─── Compose the team: hidden analysis + hire manifests on disk ─────────────
 // One analysis per repo at a time. The repo is always the SENDER's bound floor
@@ -3702,7 +3730,36 @@ ipcMain.handle('team:openFolder', async (evt) => {
   await shell.openPath(dir);
 });
 
-ipcMain.handle('floor:chooseRepo', async (evt, path: unknown) => {
+/** A harness with no team at all yet (no legacy roster, no per-repo roster). */
+function harnessUnused(home: string): boolean {
+  if (existsSync(join(home, 'roster.json'))) return false;
+  try { return readdirSync(join(home, 'rosters')).every((f) => !f.endsWith('.json')); } catch { return true; }
+}
+/** An existing folder that may be adopted as a harness: already one, or empty. */
+function looksLikeHarness(path: string): boolean {
+  if (['hive', 'roster.json', 'rosters'].some((f) => existsSync(join(path, f)))) return true;
+  try { return readdirSync(path).length === 0; } catch { return false; }
+}
+/** The harness `repo` works in (saved link, adopted, or to create). */
+function harnessForRepo(repo: string): { harness: string; create: boolean } {
+  const cfg = readConfig();
+  const abs = (h: string): string => resolve(expandTilde(h));
+  return resolveRepoHarness(repo, {
+    mapping: cfg.repoHarnesses ?? {},
+    current: cfg.harnessHome ? abs(cfg.harnessHome) : null,
+    recents: (cfg.recentHives ?? []).map(abs),
+    exists: existsSync,
+    isUnused: harnessUnused,
+    looksLikeHarness,
+    defaultParent: join(homedir(), 'munder')
+  });
+}
+
+// Choosing a repo picks its harness too (one repo ↔ one harness). Same harness
+// as the running one → bind + reload. Another harness → the whole app switches
+// to it (one harness runs at a time): when other floors are open the renderer
+// first gets `switchHarness` to confirm, since they will be closed.
+ipcMain.handle('floor:chooseRepo', async (evt, path: unknown, opts: unknown) => {
   const repo = await floorRepoFromInput(path);
   if (!repo) return { ok: false, error: 'folder not found' };
   const senderId = evt.sender.id;
@@ -3713,14 +3770,39 @@ ipcMain.handle('floor:chooseRepo', async (evt, path: unknown) => {
   }
   const win = BrowserWindow.fromWebContents(evt.sender);
   if (!win || win.isDestroyed()) return { ok: false, error: 'no window' };
+
+  const confirmSwitch = typeof opts === 'object' && opts !== null && (opts as { confirmSwitch?: unknown }).confirmSwitch === true;
+  const cfg = readConfig();
+  const current = cfg.harnessHome ? resolve(expandTilde(cfg.harnessHome)) : null;
+  const target = harnessForRepo(repo);
+  const switching = target.harness !== current;
+  if (switching) {
+    const others = floors.openRepos().filter((r) => floors.ownerOf(r) !== senderId);
+    if (others.length > 0 && !confirmSwitch) {
+      return { ok: false, switchHarness: target.harness, closes: others.length };
+    }
+    if (target.create) {
+      const made = ensureHarnessHome(target.harness);
+      if (!made.ok) return { ok: false, error: made.error };
+    }
+  }
+
   const bound = floors.bind(senderId, repo);
   if (!bound.ok) { focusOwner(bound.ownerId); return { ok: false, focused: true }; }
+  setRepoHarness(repo, target.harness);
   persistOpenFloors();
   try {
     const repos = readConfig().registeredRepos ?? [];
     writeConfig({ registeredRepos: [repo, ...repos.filter((r) => r !== repo)] });
   } catch (e) { console.error('[floors] registeredRepos:', e); }
   win.setTitle(floorTitle(repo));
+
+  if (switching) {
+    // Relaunches (dev: reloads every window) — this window comes back bound.
+    const res = await changeHarnessHome(target.harness, 'fresh', repo);
+    if (!res.ok) { floors.unbind(senderId); persistOpenFloors(); }
+    return res;
+  }
   floorWritesBlocked.add(senderId);
   const unblock = (): void => { floorWritesBlocked.delete(senderId); };
   evt.sender.once('did-finish-load', unblock);
@@ -3729,18 +3811,30 @@ ipcMain.handle('floor:chooseRepo', async (evt, path: unknown) => {
   return { ok: true };
 });
 
+/** The current harness and the repos linked to it, for the header switcher. */
+ipcMain.handle('floor:harnessInfo', (evt) => {
+  const cfg = readConfig();
+  return {
+    harness: cfg.harnessHome ? resolve(expandTilde(cfg.harnessHome)) : null,
+    otherFloors: floors.openRepos().filter((r) => floors.ownerOf(r) !== evt.sender.id).length
+  };
+});
+
 ipcMain.handle('floor:listRepos', async () => {
   const cfg = readConfig();
-  const out = new Map<string, { repoRoot: string; agentCount: number; open: boolean }>();
+  // `harness` = the repo's linked harness (null: not linked yet); agentCount is
+  // only known for repos of the running harness.
+  const links = cfg.repoHarnesses ?? {};
+  const out = new Map<string, { repoRoot: string; agentCount: number; open: boolean; harness: string | null }>();
   if (cfg.harnessHome) {
     for (const r of listRepoRosters(cfg.harnessHome)) {
-      if (!out.has(r.repoRoot)) out.set(r.repoRoot, { repoRoot: r.repoRoot, agentCount: r.agentCount, open: floors.ownerOf(r.repoRoot) !== null });
+      if (!out.has(r.repoRoot)) out.set(r.repoRoot, { repoRoot: r.repoRoot, agentCount: r.agentCount, open: floors.ownerOf(r.repoRoot) !== null, harness: links[r.repoRoot] ?? null });
     }
   }
   // Normalized in parallel (each may spawn git); order is kept.
   const registered = await Promise.all((cfg.registeredRepos ?? []).map(floorRepoFromInput));
   for (const repo of registered) {
-    if (repo && !out.has(repo)) out.set(repo, { repoRoot: repo, agentCount: 0, open: floors.ownerOf(repo) !== null });
+    if (repo && !out.has(repo)) out.set(repo, { repoRoot: repo, agentCount: 0, open: floors.ownerOf(repo) !== null, harness: links[repo] ?? null });
   }
   return [...out.values()];
 });
@@ -3750,6 +3844,11 @@ ipcMain.handle('floor:openForRepo', async (_evt, path: unknown) => {
   if (!repo) return { ok: false, error: 'folder not found' };
   const owner = floors.ownerOf(repo);
   if (owner !== null) { focusOwner(owner); return { ok: true }; }
+  // A repo of another harness cannot open here (one harness at a time).
+  const home = readConfig().harnessHome;
+  if (home && harnessForRepo(repo).harness !== resolve(expandTilde(home))) {
+    return { ok: false, error: 'this repo works in another harness' };
+  }
   createWindow({ floor: true, repoRoot: repo });
   persistOpenFloors();
   return { ok: true };
@@ -5483,7 +5582,14 @@ app.whenReady().then(async () => {
   // exist); the first is the primary window. None → one unbound primary window,
   // which shows the repo picker.
   let restored: string[] = [];
-  try { restored = (readConfig().openFloors ?? []).filter((r) => existsSync(r)); }
+  // Only floors of the running harness come back (a repo linked to another
+  // harness would otherwise open against the wrong hive).
+  try {
+    const cfg = readConfig();
+    const home = cfg.harnessHome ? resolve(expandTilde(cfg.harnessHome)) : null;
+    const links = cfg.repoHarnesses ?? {};
+    restored = (cfg.openFloors ?? []).filter((r) => existsSync(r) && (!links[r] || links[r] === home));
+  }
   catch (e) { console.error('[floors] read openFloors:', e); }
   if (restored.length === 0) createWindow();
   else restored.forEach((repoRoot, i) => { createWindow(i === 0 ? { repoRoot } : { floor: true, repoRoot }); });

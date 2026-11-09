@@ -1245,17 +1245,16 @@ const api = {
   floorRepoSync: (): string | null => {
     try { return ipcRenderer.sendSync('floor:repoSync') ?? null; } catch { return null; }
   },
-  /** Whether THIS window should show the launch-time hive picker: only the
-   *  primary window, once per launch (the harness home is app-wide). */
-  hivePickerNeededSync: (): boolean => {
-    try { return ipcRenderer.sendSync('hive:pickerNeededSync') !== false; } catch { return true; }
-  },
-  /** Tell main the hive picker was passed, so no other window shows it. */
-  hivePickerPassed: (): void => { ipcRenderer.send('hive:pickerPassed'); },
   /** Bind THIS window to a repo, then main reloads it. `focused` = that repo is
    *  already open in another window, which was brought to the front instead. */
-  chooseFloorRepo: (path: string): Promise<{ ok: true } | { ok: false; focused?: true; error?: string }> =>
-    ipcRenderer.invoke('floor:chooseRepo', path),
+  chooseFloorRepo: (
+    path: string,
+    opts?: { confirmSwitch?: boolean }
+  ): Promise<{ ok: true } | { ok: false; focused?: true; error?: string; switchHarness?: string; closes?: number }> =>
+    ipcRenderer.invoke('floor:chooseRepo', path, opts),
+  /** The running harness + how many OTHER floors are open (they close on a switch). */
+  floorHarnessInfo: (): Promise<{ harness: string | null; otherFloors: number }> =>
+    ipcRenderer.invoke('floor:harnessInfo'),
   /** Compose the team: hidden read-only analysis of the repo (main supplies the model). */
   teamAnalyze: (input: Omit<TeamPromptInput, 'defaultModel'>): Promise<TeamResponse> =>
     ipcRenderer.invoke('team:analyze', input),
@@ -1266,7 +1265,7 @@ const api = {
     ipcRenderer.invoke('team:write', repoRoot, manifests),
   teamOpenFolder: (repoRoot: string): Promise<void> => ipcRenderer.invoke('team:openFolder', repoRoot),
   /** Known repos: those with a roster plus the registered ones (0 agents). */
-  listFloorRepos: (): Promise<{ repoRoot: string; agentCount: number; open: boolean }[]> =>
+  listFloorRepos: (): Promise<{ repoRoot: string; agentCount: number; open: boolean; harness: string | null }[]> =>
     ipcRenderer.invoke('floor:listRepos'),
   /** Open a new window already bound to `path` (or focus the one that has it). */
   openFloorForRepo: (path: string): Promise<{ ok: boolean; error?: string }> =>
