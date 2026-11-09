@@ -162,6 +162,8 @@ input, textarea, [contenteditable='true'] {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.45; }
 }
+@keyframes cth-spin { to { transform: rotate(360deg); } }
+.cth-spin { animation: cth-spin 0.9s linear infinite; }
 
 /* Reduce motion */
 @media (prefers-reduced-motion: reduce) {

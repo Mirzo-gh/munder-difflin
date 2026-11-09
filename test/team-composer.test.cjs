@@ -63,6 +63,13 @@ test('writeTeamHires rejects a manifest that fails validation', () => {
   assert.equal(r.written.length, 1);
 });
 
+test('writeTeamHires returns the manifests actually written, in order', () => {
+  const home = tmp();
+  const r = writeTeamHires(home, '/work/r', [m('Jim'), { spec: 'munder-difflin/hire@1', name: 'x'.repeat(41) }, m('Pam')]);
+  assert.deepEqual(r.manifests.map((x) => x.name), ['Jim', 'Pam']);
+  assert.equal(r.manifests.length, r.written.length);
+});
+
 test('a hostile name cannot escape the hires directory', () => {
   const home = tmp();
   const r = writeTeamHires(home, '/work/r', [m('../../evil/..')], new Date('2026-11-09T10:00:00Z'));

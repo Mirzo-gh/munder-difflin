@@ -36,18 +36,20 @@ function nameSlug(name: string): string {
 }
 
 /** Writes each manifest (revalidated) as `<YYYY-MM-DD>-<slug>.json` strictly
- *  under `<home>/hires/<repoSlug>/`; never overwrites an existing file. */
+ *  under `<home>/hires/<repoSlug>/`; never overwrites an existing file.
+ *  `manifests` lists the validated manifests actually written, aligned with `written`. */
 export function writeTeamHires(
   home: string,
   repoRoot: string,
-  manifests: HireManifest[],
+  input: HireManifest[],
   now: Date = new Date()
-): { written: string[]; errors: string[] } {
+): { written: string[]; errors: string[]; manifests: HireManifest[] } {
   const written: string[] = [];
   const errors: string[] = [];
+  const manifests: HireManifest[] = [];
   const dir = hiresDir(home, repoRoot);
   const day = now.toISOString().slice(0, 10);
-  for (const raw of manifests) {
+  for (const raw of input) {
     const v = validateHireManifest(raw);
     if (!v.ok) {
       const nm = raw && typeof (raw as { name?: unknown }).name === 'string' ? (raw as { name: string }).name.slice(0, 40) : '?';
@@ -63,9 +65,10 @@ export function writeTeamHires(
       for (let n = 2; existsSync(file); n++) file = join(dir, `${base}-${n}.json`);
       writeFileSync(file, JSON.stringify(manifest, null, 2) + '\n', { flag: 'wx' });
       written.push(file);
+      manifests.push(manifest);
     } catch (e) {
       errors.push(`${manifest.name}: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
-  return { written, errors };
+  return { written, errors, manifests };
 }

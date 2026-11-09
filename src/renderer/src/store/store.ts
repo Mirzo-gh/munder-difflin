@@ -181,6 +181,8 @@ interface State {
   selectedId: string | null;
   feeds: Record<string, string[]>;
   addAgentOpen: boolean;
+  /** "Compose the team" modal (analysis → proposal → hire files). */
+  composeTeamOpen: boolean;
   fullscreenAgentId: string | null;
   /** Does the user work in focus mode by default? Persisted as a boolean, and
    *  written ONLY by an explicit toggle. Kept in the store rather than read once
@@ -288,6 +290,7 @@ interface State {
   /** Clear an agent's entire pending queue. */
   clearQueue: (agentId: string) => void;
   setAddAgentOpen: (open: boolean) => void;
+  setComposeTeamOpen: (open: boolean) => void;
   /** Validated manifests waiting for one-at-a-time human review. */
   hireQueue: HireReviewQueue;
   enqueuePendingHires: (manifests: readonly HireManifest[]) => void;
@@ -669,6 +672,7 @@ export const useStore = create<State>((set, get) => ({
   selectedId: initialSelectedId,
   feeds: {},
   addAgentOpen: false,
+  composeTeamOpen: false,
   ccTabRequest: null,
   requestCommandCenterTab: (tab) =>
     set((s) => ({ ccTabRequest: { tab, seq: (s.ccTabRequest?.seq ?? 0) + 1 } })),
@@ -969,6 +973,7 @@ export const useStore = create<State>((set, get) => ({
       return { agents, feeds, selectedId, restorableAgents, fullscreenAgentId };
     }),
   setAddAgentOpen: (open) => set({ addAgentOpen: open }),
+  setComposeTeamOpen: (open) => set({ composeTeamOpen: open }),
   hireQueue: EMPTY_HIRE_QUEUE,
   enqueuePendingHires: (manifests) => set((s) => ({
     hireQueue: enqueueHires(s.hireQueue, manifests)

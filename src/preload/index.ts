@@ -1255,7 +1255,7 @@ const api = {
   teamCancel: (repoRoot: string): Promise<void> => ipcRenderer.invoke('team:cancel', repoRoot),
   teamPrompt: (input: Omit<TeamPromptInput, 'defaultModel'>): Promise<string> =>
     ipcRenderer.invoke('team:prompt', input),
-  teamWrite: (repoRoot: string, manifests: HireManifest[]): Promise<{ written: string[]; errors: string[] }> =>
+  teamWrite: (repoRoot: string, manifests: HireManifest[]): Promise<{ written: string[]; errors: string[]; manifests: HireManifest[] }> =>
     ipcRenderer.invoke('team:write', repoRoot, manifests),
   teamOpenFolder: (repoRoot: string): Promise<void> => ipcRenderer.invoke('team:openFolder', repoRoot),
   /** Known repos: those with a roster plus the registered ones (0 agents). */

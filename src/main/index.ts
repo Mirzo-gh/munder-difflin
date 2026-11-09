@@ -3620,8 +3620,8 @@ ipcMain.handle('team:prompt', async (_evt, raw: unknown) => {
 ipcMain.handle('team:write', async (_evt, repo: unknown, manifests: unknown) => {
   const root = await teamRepoFromInput(repo);
   const home = readConfig().harnessHome;
-  if (!root || !home) return { written: [], errors: ['folder not found'] };
-  if (!Array.isArray(manifests)) return { written: [], errors: ['invalid manifests'] };
+  if (!root || !home) return { written: [], errors: ['folder not found'], manifests: [] };
+  if (!Array.isArray(manifests)) return { written: [], errors: ['invalid manifests'], manifests: [] };
   return writeTeamHires(home, root, manifests as HireManifest[]);
 });
 ipcMain.handle('team:openFolder', async (_evt, repo: unknown) => {

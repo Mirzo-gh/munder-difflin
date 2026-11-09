@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStore, selectedAgent, floorRepo } from '@/store/store';
 import { startMockLoop, stopMockLoop } from '@/store/mockEvents';
 import type { HarnessConfig } from '@/store/config';
@@ -11,6 +12,7 @@ import { MEMORY_OVERLAY_HOST_ID } from '@/components/MemoryPanel';
 import { AgentDetailPanel } from '@/components/AgentDetailPanel';
 import { AgentStrip } from '@/components/AgentStrip';
 import { AddAgentModal } from '@/components/AddAgentModal';
+import { ComposeTeamModal } from '@/components/ComposeTeamModal';
 import { MichaelBooting } from '@/components/MichaelBooting';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { HivePicker } from '@/components/HivePicker';
@@ -68,6 +70,9 @@ export function App() {
   const agentCount = agents.length;
   const addAgentOpen = useStore(s => s.addAgentOpen);
   const setAddAgentOpen = useStore(s => s.setAddAgentOpen);
+  const composeTeamOpen = useStore(s => s.composeTeamOpen);
+  const setComposeTeamOpen = useStore(s => s.setComposeTeamOpen);
+  const { t } = useTranslation();
   const clearPendingHires = useStore(s => s.clearPendingHires);
   const godStatus = useStore(s => s.godStatus);
   const fullscreenAgentId = useStore(s => s.fullscreenAgentId);
@@ -326,6 +331,21 @@ export function App() {
         >
           {repoName(floorRepo)}
         </span>
+        <button
+          className="cth-titlebar-nodrag cth-settings-btn"
+          onClick={() => setComposeTeamOpen(true)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            height: 24, padding: '0 8px',
+            background: 'var(--cth-paper-100)',
+            boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
+            border: 'none', borderRadius: 2, cursor: 'pointer',
+            fontFamily: 'var(--cth-font-ui)', fontSize: 12,
+            color: 'var(--cth-ink-900)'
+          }}
+        >
+          <Icon name="sparkle" /> {t('team.button')}
+        </button>
         <span style={{
           fontFamily: 'var(--cth-font-ui)',
           fontSize: 13,
@@ -461,7 +481,12 @@ export function App() {
                     <p style={{ margin: 0, fontSize: 13, lineHeight: '20px' }}>
                       No agents on the floor yet. Spawn one to see real claude output stream in here.
                     </p>
-                    <PixelButton variant="primary" size="md" onClick={() => setAddAgentOpen(true)}>
+                    <PixelButton variant="primary" size="md" onClick={() => setComposeTeamOpen(true)}>
+                      <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                        <Icon name="sparkle" /> {t('team.button')}
+                      </span>
+                    </PixelButton>
+                    <PixelButton variant="secondary" size="md" onClick={() => setAddAgentOpen(true)}>
                       <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
                         <Icon name="plus" /> add agent
                       </span>
@@ -500,6 +525,10 @@ export function App() {
           config={config}
           onConfigChange={setConfig}
         />
+      )}
+
+      {composeTeamOpen && (
+        <ComposeTeamModal onClose={() => setComposeTeamOpen(false)} />
       )}
 
       {settingsOpen && (
