@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { openForRead, safeResolve } from './fs';
 
 /** Run git in `cwd` with `args`. Returns stdout text or an error. */
-function runGit(cwd: string, args: string[], timeoutMs = 8000): Promise<{
+export function runGit(cwd: string, args: string[], timeoutMs = 8000): Promise<{
   ok: true; stdout: string;
 } | { ok: false; error: string }> {
   return new Promise((resolve) => {

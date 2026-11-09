@@ -42,6 +42,7 @@ import { selectBroadcastTargets } from '../shared/broadcast';
 import { preferredAgentRole } from '../shared/agentRole';
 import { mergeTaskLedger } from '../shared/taskLedger';
 import { expandTilde } from './fs';
+import { projectBlock, type ProjectInfo } from './projectInfo';
 import { resolveGodName } from '../shared/godIdentity';
 import { INBOX_NUDGE_PROTOCOL, GOD_INBOX_REPORT } from '../shared/hiveNudge';
 
@@ -128,6 +129,8 @@ export interface AgentMeta {
   role?: string;
   capabilities?: string[];
   cwd: string;
+  /** Which repo / isolation mode this agent works in (shown in identity.md). */
+  project?: ProjectInfo;
   isGod?: boolean;
   /** Michael's prep assistant — enriches prompts and forwards them to Michael.
    *  Send-only: excluded from broadcast fan-out so it never drains an inbox. */
@@ -1435,6 +1438,7 @@ export class HiveManager {
       `- Role: ${meta.role ?? (meta.isGod ? 'orchestrator (god)' : 'agent')}`,
       `- Capabilities: ${caps}`,
       `- Working directory: ${meta.cwd}`,
+      meta.project ? `- ${projectBlock(meta.project)}` : '',
       meta.isGod ? '- You are the **god / orchestrator**. You run the floor — keep awareness of the whole team, delegate execution, and personally own only the important calls (decomposition, sign-offs, conflicts, integration), not the grunt work.' : '',
       meta.isGod ? '- Monitor the team with `fleet.json` (live per-agent status/tokens/cost/breaker) and `registry.json`; full command reference in `COMMANDS.md`. `claude agents` does NOT list your hive siblings.' : '',
       ''

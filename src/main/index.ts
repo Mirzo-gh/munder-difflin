@@ -23,6 +23,7 @@ import {
   addWorktree, removeWorktree, worktreeHasUnintegratedWork, worktreeIsGcSafe,
   getLogGraph, getCommitFiles, getFileAtRev, compareRefs, listWorktrees, checkoutRef
 } from './git';
+import { resolveProjectInfo, type ProjectInfo } from './projectInfo';
 import { linkWorktreeDeps, unlinkWorktreeDeps } from './worktreeDeps';
 import { HiveManager, type AgentMeta, type HiveMessage, type HiveTask } from './hive';
 import { HookServer } from './hooks';
@@ -2742,6 +2743,7 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
   // `isolate:true` recipe spawned against an already-existing worktree path would
   // make addWorktree below conflict (path/branch exists) and fall back to the base
   // cwd — reuse-existing-worktree handling here is the follow-up.
+  let baseBranchHint: string | undefined;
   if (opts.isolate === true && await isRepo(opts.cwd)) {
     try {
       const origCwd = opts.cwd;
@@ -2757,6 +2759,7 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
       } else {
         const br = await getBranch(origCwd);
         const baseBranch = 'current' in br && br.current ? br.current : 'main';
+        baseBranchHint = baseBranch;
         const wt = await addWorktree(origCwd, wtPath, baseBranch);
         if (wt.ok) {
           opts.cwd = wtPath;
@@ -2792,8 +2795,13 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
   let seedPrompt: string | undefined;
   if (opts.hive && hive.enabled()) {
     try {
+      // Never blocks the spawn: any failure just omits the Projet block.
+      let project: ProjectInfo | undefined;
+      if (!opts.hive.isGod) {
+        try { project = await resolveProjectInfo(opts.cwd, { baseBranch: baseBranchHint }); } catch { /* spawn without project */ }
+      }
       const inj = await hive.ensureAgent(
-        { ...opts.hive, cwd: opts.cwd, provider },
+        { ...opts.hive, cwd: opts.cwd, provider, project },
         {
           semanticMemory: memory.active(),
           knowledgeGraph: knowledge.active(),
