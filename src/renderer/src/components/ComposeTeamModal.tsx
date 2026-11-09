@@ -167,11 +167,13 @@ export function ComposeTeamModal({ onClose }: { onClose: () => void }) {
     onClose();
   };
 
+  const closeRef = useRef(close);
+  closeRef.current = close;
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeRef.current(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  });
+  }, []);
 
   const checkedCount = cards.filter((c) => c.checked && !c.invalid).length;
   const tabsLocked = step === 'analyzing' || step === 'proposal' || step === 'written';

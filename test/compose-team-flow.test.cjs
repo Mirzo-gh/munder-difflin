@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 
 const loadTs = require('./load-ts.cjs');
-const { nextStep, existingAgentsOf, cardsFromResponse, prepareWrite } =
+const { nextStep, existingAgentsOf, cardsFromResponse, prepareWrite, shouldHighlightCompose } =
   loadTs('src/renderer/src/components/composeTeamFlow.ts');
 
 const SPEC = 'munder-difflin/hire@1';
@@ -21,9 +21,10 @@ test('nextStep: error → error', () => {
   assert.equal(nextStep('analyzing', { kind: 'error', error: 'boom' }), 'error');
 });
 
-test('existing agents exclude god', () => {
+test('existing agents exclude god and system assistants', () => {
   const agents = [
     { name: 'Michael', description: 'boss', isGod: true },
+    { name: 'Helper', description: 'system', isAssistant: true },
     { name: 'Jim', description: 'sales' },
     { name: 'Pam', description: '' }
   ];
@@ -65,4 +66,14 @@ test('prepareWrite revalidates checked cards and drops the failing ones', () => 
   assert.equal(r.cardErrors[0].length, 0);
   assert.ok(r.cardErrors[1].length > 0);
   assert.equal(r.cardErrors[2].length, 0);
+});
+
+test('compose is highlighted on a god-only floor', () => {
+  assert.equal(shouldHighlightCompose([{ name: 'Michael', isGod: true }]), true);
+  assert.equal(shouldHighlightCompose([]), true);
+  assert.equal(shouldHighlightCompose([{ name: 'Michael', isGod: true }, { name: 'Helper', isAssistant: true }]), true);
+});
+
+test('compose is not highlighted once a worker exists', () => {
+  assert.equal(shouldHighlightCompose([{ name: 'Michael', isGod: true }, { name: 'Jim' }]), false);
 });

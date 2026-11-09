@@ -16,11 +16,17 @@ export function nextStep(_step: ComposeStep, res: TeamResponse): ComposeStep {
   }
 }
 
-/** The floor's current team as the prompt sees it: every non-god agent. */
-export function existingAgentsOf(
-  agents: readonly { name: string; description?: string; isGod?: boolean }[]
-): { name: string; description?: string }[] {
-  return agents.filter((a) => !a.isGod).map((a) => ({ name: a.name, description: a.description }));
+type FloorAgent = { name: string; description?: string; isGod?: boolean; isAssistant?: boolean };
+
+/** The floor's current team as the prompt sees it: every worker agent
+ *  (god and system assistants excluded). */
+export function existingAgentsOf(agents: readonly FloorAgent[]): { name: string; description?: string }[] {
+  return agents.filter((a) => !a.isGod && !a.isAssistant).map((a) => ({ name: a.name, description: a.description }));
+}
+
+/** "Compose the team" is the primary call to action while the floor has no worker yet. */
+export function shouldHighlightCompose(agents: readonly FloorAgent[]): boolean {
+  return existingAgentsOf(agents).length === 0;
 }
 
 export interface ComposeCard {

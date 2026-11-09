@@ -64,7 +64,8 @@
     "writtenNone": "没有写入任何文件。",
     "errorsTitle": "错误",
     "importNow": "立即导入",
-    "openFolder": "打开文件夹"
+    "openFolder": "打开文件夹",
+    "emptyHint": "此楼层还没有智能体。组建一支适合此仓库的团队，或手动添加一个。"
   },
   "commandBar": {
     "free": "自由",

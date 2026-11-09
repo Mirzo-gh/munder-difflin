@@ -13,6 +13,7 @@ import { AgentDetailPanel } from '@/components/AgentDetailPanel';
 import { AgentStrip } from '@/components/AgentStrip';
 import { AddAgentModal } from '@/components/AddAgentModal';
 import { ComposeTeamModal } from '@/components/ComposeTeamModal';
+import { shouldHighlightCompose } from '@/components/composeTeamFlow';
 import { MichaelBooting } from '@/components/MichaelBooting';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { HivePicker } from '@/components/HivePicker';
@@ -73,6 +74,7 @@ export function App() {
   const composeTeamOpen = useStore(s => s.composeTeamOpen);
   const setComposeTeamOpen = useStore(s => s.setComposeTeamOpen);
   const { t } = useTranslation();
+  const highlightCompose = shouldHighlightCompose(agents);
   const clearPendingHires = useStore(s => s.clearPendingHires);
   const godStatus = useStore(s => s.godStatus);
   const fullscreenAgentId = useStore(s => s.fullscreenAgentId);
@@ -331,17 +333,19 @@ export function App() {
         >
           {repoName(floorRepo)}
         </span>
+        {/* Primary (filled) while the floor has no worker yet — god doesn't count. */}
         <button
-          className="cth-titlebar-nodrag cth-settings-btn"
+          className={highlightCompose ? 'cth-titlebar-nodrag' : 'cth-titlebar-nodrag cth-settings-btn'}
           onClick={() => setComposeTeamOpen(true)}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             height: 24, padding: '0 8px',
-            background: 'var(--cth-paper-100)',
-            boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
+            background: highlightCompose ? 'var(--cth-ink-900)' : 'var(--cth-paper-100)',
+            boxShadow: `inset 0 0 0 1px ${highlightCompose ? 'var(--cth-ink-900)' : 'var(--cth-ink-300)'}`,
             border: 'none', borderRadius: 2, cursor: 'pointer',
             fontFamily: 'var(--cth-font-ui)', fontSize: 12,
-            color: 'var(--cth-ink-900)'
+            fontWeight: highlightCompose ? 600 : 400,
+            color: highlightCompose ? 'var(--cth-cream-50)' : 'var(--cth-ink-900)'
           }}
         >
           <Icon name="sparkle" /> {t('team.button')}
@@ -466,7 +470,32 @@ export function App() {
           display: 'flex', flexDirection: 'column'
         }}>
           {agent ? (
-            <AgentDetailPanel agent={agent} />
+            <>
+              {/* God-only floor: the team is still to be composed. */}
+              {highlightCompose && (
+                <PixelPanel variant="active" style={{
+                  marginBottom: 12, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12
+                }}>
+                  <p style={{ margin: 0, fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-700)' }}>
+                    {t('team.emptyHint')}
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                    <PixelButton variant="secondary" size="sm" onClick={() => setAddAgentOpen(true)}>
+                      <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                        <Icon name="plus" /> add agent
+                      </span>
+                    </PixelButton>
+                    <PixelButton variant="primary" size="sm" onClick={() => setComposeTeamOpen(true)}>
+                      <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                        <Icon name="sparkle" /> {t('team.button')}
+                      </span>
+                    </PixelButton>
+                  </div>
+                </PixelPanel>
+              )}
+              <AgentDetailPanel agent={agent} />
+            </>
           ) : agentCount === 0 && godStatus === 'booting' ? (
             <MichaelBooting />
           ) : agentCount === 0 ? (

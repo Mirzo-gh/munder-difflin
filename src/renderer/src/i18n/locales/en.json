@@ -64,7 +64,8 @@
     "writtenNone": "No file was written.",
     "errorsTitle": "Errors",
     "importNow": "Import now",
-    "openFolder": "Open the folder"
+    "openFolder": "Open the folder",
+    "emptyHint": "No agents on this floor yet. Compose a team suited to this repo, or add one by hand."
   },
   "commandBar": {
     "free": "free",
