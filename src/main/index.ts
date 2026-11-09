@@ -5,7 +5,7 @@ import {
   unlinkSync, mkdirSync, renameSync, createWriteStream, copyFileSync, lstatSync,
   readlinkSync, symlinkSync
 } from 'node:fs';
-import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, createHash, timingSafeEqual } from 'node:crypto';
 import { join, resolve, sep, basename, dirname, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import { request as httpsRequest } from 'node:https';
@@ -3600,9 +3600,12 @@ ipcMain.handle('team:analyze', async (_evt, raw: unknown) => {
   const ctl = new AbortController();
   teamAnalyses.set(repo, ctl);
   try {
+    // A fresh session id per run (the retry gets its own): the answer is read
+    // from that exact transcript, never from an agent working in the same repo.
     return await runTeamAnalysis(input, (prompt) => runHiddenClaude(prompt, {
       model: readConfig().defaultModel ?? 'claude-fable-5',
-      cwd: repo, idleMs: 15000, timeoutMs: 600000, signal: ctl.signal
+      cwd: repo, idleMs: 15000, timeoutMs: 600000, signal: ctl.signal,
+      sessionId: randomUUID()
     }));
   } finally {
     if (teamAnalyses.get(repo) === ctl) teamAnalyses.delete(repo);

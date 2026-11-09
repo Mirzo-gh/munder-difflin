@@ -99,3 +99,8 @@ test('startup migration passes the home floor and registered repos as fallbacks'
   assert.match(source, /migrateLegacyRoster\(home, resolveAgentRepo, \{ home: homeFloor, registeredRepos \}\)/);
   assert.match(source, /const homeFloor = \(await floorRepoFromInput\(home\)\) \?\? home/);
 });
+
+test('team:analyze pins a fresh session id per hidden run', () => {
+  const analyze = handlerBody(main(), "ipcMain.handle('team:analyze'");
+  assert.match(analyze, /runTeamAnalysis\(input, \(prompt\) => runHiddenClaude\(prompt, \{[\s\S]*sessionId: randomUUID\(\)/);
+});

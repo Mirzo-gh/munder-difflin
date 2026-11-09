@@ -47,6 +47,10 @@ export interface HiddenClaudeOptions {
   env?: Record<string, string>;
   /** Aborting kills the session and resolves `{ ok:false, error:'cancelled' }`. */
   signal?: AbortSignal;
+  /** Pins the session id (`--session-id <uuid>`): the answer is then read from
+   *  exactly `<projectDir(cwd)>/<sessionId>.jsonl`, never from another session
+   *  running in the same folder. Without it, the newest transcript is used. */
+  sessionId?: string;
 }
 
 export interface HiddenClaudeResult {
@@ -56,24 +60,44 @@ export interface HiddenClaudeResult {
   error?: string;
 }
 
+/** CLI args for a hidden session (exported for tests). */
+export function hiddenClaudeArgs(opts: HiddenClaudeOptions, addDirs: string[]): string[] {
+  const disallowed = opts.disallowedTools ?? ['Edit', 'Write', 'NotebookEdit'];
+  const args: string[] = [
+    '--model', opts.model,
+    '--permission-mode', 'bypassPermissions',
+    '--disallowedTools', ...disallowed,
+  ];
+  for (const d of addDirs) { args.push('--add-dir', d); }
+  if (opts.sessionId) args.push('--session-id', opts.sessionId);
+  return args;
+}
+
 /**
  * Extract the last assistant text block from the transcript JSONL written
- * at or after `spawnedAt`. Reuses projectDir() from transcript.ts.
+ * at or after `spawnedAt`. Reuses projectDir() from transcript.ts. With a
+ * `sessionId`, only that session's transcript is read.
  */
-function extractLastAssistantText(cwd: string, spawnedAt: number): string | null {
+export function extractLastAssistantText(cwd: string, spawnedAt: number, sessionId?: string): string | null {
   try {
     const dir = projectDir(cwd);
     if (!existsSync(dir)) return null;
 
     const candidates: { f: string; mtime: number }[] = [];
-    for (const f of readdirSync(dir)) {
-      if (!f.endsWith('.jsonl')) continue;
-      try {
-        const mtime = statSync(path.join(dir, f)).mtimeMs;
-        // 5 s slack: include files that already existed at spawn but were
-        // updated by this session. Sort by mtime and take the newest.
-        if (mtime >= spawnedAt - 5000) candidates.push({ f, mtime });
-      } catch { /* file removed between readdir and stat — skip */ }
+    if (sessionId) {
+      const f = `${sessionId}.jsonl`;
+      if (path.basename(f) !== f || !existsSync(path.join(dir, f))) return null;
+      candidates.push({ f, mtime: 0 });
+    } else {
+      for (const f of readdirSync(dir)) {
+        if (!f.endsWith('.jsonl')) continue;
+        try {
+          const mtime = statSync(path.join(dir, f)).mtimeMs;
+          // 5 s slack: include files that already existed at spawn but were
+          // updated by this session. Sort by mtime and take the newest.
+          if (mtime >= spawnedAt - 5000) candidates.push({ f, mtime });
+        } catch { /* file removed between readdir and stat — skip */ }
+      }
     }
     if (!candidates.length) return null;
     candidates.sort((a, b) => b.mtime - a.mtime);
@@ -111,15 +135,8 @@ export function runHiddenClaude(prompt: string, opts: HiddenClaudeOptions): Prom
 
     const binary = (opts.command || 'claude').trim().split(/\s+/)[0] || 'claude';
     const exe = resolveCommand(binary);
-    const disallowed = opts.disallowedTools ?? ['Edit', 'Write', 'NotebookEdit'];
     const addDirs = (opts.addDirs ?? []).filter((d) => d && existsSync(d));
-
-    const args: string[] = [
-      '--model', opts.model,
-      '--permission-mode', 'bypassPermissions',
-      '--disallowedTools', ...disallowed,
-    ];
-    for (const d of addDirs) { args.push('--add-dir', d); }
+    const args = hiddenClaudeArgs(opts, addDirs);
 
     const bootCapMs = opts.bootCapMs ?? 7000;
     const idleMs = opts.idleMs ?? 3500;
@@ -183,7 +200,7 @@ export function runHiddenClaude(prompt: string, opts: HiddenClaudeOptions): Prom
     opts.signal?.addEventListener('abort', onAbort, { once: true });
 
     const captureAndFinish = () => {
-      const text = extractLastAssistantText(opts.cwd, spawnedAt);
+      const text = extractLastAssistantText(opts.cwd, spawnedAt, opts.sessionId);
       finish(text
         ? { ok: true, text }
         : { ok: false, error: 'no assistant response found in transcript' });
