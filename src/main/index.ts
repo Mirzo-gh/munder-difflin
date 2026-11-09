@@ -10,6 +10,7 @@ import { join, resolve, sep, basename, dirname, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import { request as httpsRequest } from 'node:https';
 import { PtyManager, type SpawnOptions } from './pty';
+import { isSharedPtySpawn } from './ptyRouting';
 import { resolveCommand as resolveCliCommand, isSafeCommandName } from './shellEnv';
 import { initAutoUpdater, abortPendingRestart } from './updater';
 import {
@@ -110,6 +111,9 @@ process.on('unhandledRejection', (reason) => {
 });
 
 const ptyManager = new PtyManager();
+// The god PTY is shared by every floor: its output goes to all windows.
+ptyManager.setBroadcastSinks(() =>
+  [...allWindows].filter((w) => !w.isDestroyed() && !w.webContents.isDestroyed()).map((w) => w.webContents));
 
 function runCodexDaemonCommand(
   executable: string,
@@ -2657,6 +2661,8 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
   // returned to the caller so the renderer records the same absolute path.
   opts.cwd = expandTilde(opts.cwd);
   if (opts.hive) opts.hive = { ...opts.hive, cwd: expandTilde(opts.hive.cwd) };
+  // The god is owner-less: every floor sees him and no floor close kills him.
+  const sharedPty = isSharedPtySpawn(opts);
   // Which CLI is this? Explicit wins; else inferred from the binary
   // (claude/codex/grok/agy). Non-Claude providers skip every Claude-only spawn step
   // below. Persist the resolved provider onto opts (+ hive meta) so the registry
@@ -2711,7 +2717,8 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
           rows: opts.rows,
           shellScript: buildMissingCliScript(bin, provider, npmAvailable, process.platform, nodeInstaller)
         },
-        owner
+        owner,
+        sharedPty
       );
       // Arm auto restart-and-continue: when this installer PTY exits cleanly, the
       // exit handler re-runs the spawn so the just-installed CLI launches in place
@@ -3048,7 +3055,7 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
   if (provider === 'codex' && opts.hive?.id) {
     await enableCodexRemoteForSpawn(opts, opts.hive.id);
   }
-  const res = ptyManager.spawn(opts, owner);
+  const res = ptyManager.spawn(opts, owner, sharedPty);
   if (res.ok) analytics.track('agent_spawned', { provider });
   else analytics.track('agent_spawn_failed', { provider, reason: spawnFailReason(res.error) });
   syncKeepAwake(); // arm the power-save blocker while ≥1 agent PTY is alive (#18)
