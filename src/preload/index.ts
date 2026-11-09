@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import type { AgentProvider } from '../shared/agentProvider';
 import type { HireManifest } from '../shared/hire';
+import type { TeamPromptInput, TeamResponse } from '../shared/teamPrompt';
+export type { TeamPromptInput, TeamResponse } from '../shared/teamPrompt';
 export type { HireManifest } from '../shared/hire';
 import type { IntegrationRecord, IntegrationTemplate } from '../shared/integrations';
 export type { IntegrationRecord, IntegrationTemplate } from '../shared/integrations';
@@ -1247,6 +1249,15 @@ const api = {
    *  already open in another window, which was brought to the front instead. */
   chooseFloorRepo: (path: string): Promise<{ ok: true } | { ok: false; focused?: true; error?: string }> =>
     ipcRenderer.invoke('floor:chooseRepo', path),
+  /** Compose the team: hidden read-only analysis of the repo (main supplies the model). */
+  teamAnalyze: (input: Omit<TeamPromptInput, 'defaultModel'>): Promise<TeamResponse> =>
+    ipcRenderer.invoke('team:analyze', input),
+  teamCancel: (repoRoot: string): Promise<void> => ipcRenderer.invoke('team:cancel', repoRoot),
+  teamPrompt: (input: Omit<TeamPromptInput, 'defaultModel'>): Promise<string> =>
+    ipcRenderer.invoke('team:prompt', input),
+  teamWrite: (repoRoot: string, manifests: HireManifest[]): Promise<{ written: string[]; errors: string[] }> =>
+    ipcRenderer.invoke('team:write', repoRoot, manifests),
+  teamOpenFolder: (repoRoot: string): Promise<void> => ipcRenderer.invoke('team:openFolder', repoRoot),
   /** Known repos: those with a roster plus the registered ones (0 agents). */
   listFloorRepos: (): Promise<{ repoRoot: string; agentCount: number; open: boolean }[]> =>
     ipcRenderer.invoke('floor:listRepos'),

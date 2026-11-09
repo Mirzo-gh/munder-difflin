@@ -45,6 +45,8 @@ export interface HiddenClaudeOptions {
   timeoutMs?: number;
   /** Extra env merged over the resolved shell env (e.g. the shared MemPalace). */
   env?: Record<string, string>;
+  /** Aborting kills the session and resolves `{ ok:false, error:'cancelled' }`. */
+  signal?: AbortSignal;
 }
 
 export interface HiddenClaudeResult {
@@ -123,6 +125,7 @@ export function runHiddenClaude(prompt: string, opts: HiddenClaudeOptions): Prom
     const idleMs = opts.idleMs ?? 3500;
     const timeoutMs = opts.timeoutMs ?? 180_000;
 
+    if (opts.signal?.aborted) { resolve({ ok: false, error: 'cancelled' }); return; }
     const spawnedAt = Date.now();
     // Windows: node-pty's CreateProcess can't exec the npm `.cmd`/extensionless
     // `claude` shim directly (ERROR_BAD_EXE_FORMAT, error 193) — route non-.exe
@@ -171,9 +174,13 @@ export function runHiddenClaude(prompt: string, opts: HiddenClaudeOptions): Prom
       if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
       clearTimeout(bootMaxTimer);
       clearTimeout(globalTimer);
+      opts.signal?.removeEventListener('abort', onAbort);
       kill();
       resolve(r);
     };
+
+    const onAbort = () => finish({ ok: false, error: 'cancelled' });
+    opts.signal?.addEventListener('abort', onAbort, { once: true });
 
     const captureAndFinish = () => {
       const text = extractLastAssistantText(opts.cwd, spawnedAt);
