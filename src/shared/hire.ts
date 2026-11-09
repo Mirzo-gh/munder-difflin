@@ -91,7 +91,25 @@ export interface HireValidation {
   consentRequired?: string[];
 }
 
-const PROVIDERS: readonly string[] = ['claude', 'antigravity', 'codex', 'cursor'];
+/** Single source of truth for the hire@1 caps (also embedded in the team-composition prompt). */
+export const HIRE_LIMITS = {
+  name: 40,
+  description: 200,
+  goal: 4000,
+  character: 24,
+  accent: 24,
+  model: 80,
+  author: 80,
+  homepage: 300,
+  capabilities: 12,
+  capabilityChars: 40,
+  commandFlags: 16,
+  skills: 8,
+  mcpServers: 8
+} as const;
+
+export const HIRE_PROVIDERS: readonly string[] = ['claude', 'antigravity', 'codex', 'cursor'];
+const PROVIDERS = HIRE_PROVIDERS;
 const MAX_BYTES = 64 * 1024;
 
 /** A flag ("-x", "--flag", "--flag=value") or a bare value token that may follow
@@ -136,7 +154,7 @@ const MODEL_RE = /^[A-Za-z0-9 ._()[\]\/:@+-]{1,80}$/;
  *  `--flag value` and `--flag=value` are covered. NOTHING permission / sandbox /
  *  approval / dir / config (incl. codex `-c`) / mcp / provider / base-url /
  *  system-prompt / settings related is ever allowlisted. */
-const SAFE_FLAG_NAMES: ReadonlySet<string> = new Set([
+export const SAFE_FLAG_NAMES: ReadonlySet<string> = new Set([
   '--model',
   '--max-turns',
   '--output-format',
@@ -178,17 +196,17 @@ export function validateHireManifest(raw: unknown): HireValidation {
     return { ok: false, errors: [`unsupported spec "${String(o.spec)}" (expected "${HIRE_SPEC_V1}")`] };
   }
 
-  const name = capped(o.name, 40, 'name', errors, true);
-  const description = capped(o.description, 200, 'description', errors);
-  const goal = capped(o.goal, 4000, 'goal', errors);
-  const character = capped(o.character, 24, 'character', errors)?.toLowerCase();
-  const accent = capped(o.accent, 24, 'accent', errors)?.toLowerCase();
-  const model = capped(o.model, 80, 'model', errors);
+  const name = capped(o.name, HIRE_LIMITS.name, 'name', errors, true);
+  const description = capped(o.description, HIRE_LIMITS.description, 'description', errors);
+  const goal = capped(o.goal, HIRE_LIMITS.goal, 'goal', errors);
+  const character = capped(o.character, HIRE_LIMITS.character, 'character', errors)?.toLowerCase();
+  const accent = capped(o.accent, HIRE_LIMITS.accent, 'accent', errors)?.toLowerCase();
+  const model = capped(o.model, HIRE_LIMITS.model, 'model', errors);
   if (model !== undefined && !MODEL_RE.test(model)) {
     errors.push('"model" contains disallowed characters (it goes onto the spawn command line; letters, digits, spaces and . _ - ( ) [ ] / : @ + only)');
   }
-  const author = capped(o.author, 80, 'author', errors);
-  const homepage = capped(o.homepage, 300, 'homepage', errors);
+  const author = capped(o.author, HIRE_LIMITS.author, 'author', errors);
+  const homepage = capped(o.homepage, HIRE_LIMITS.homepage, 'homepage', errors);
 
   let provider: HireProvider | undefined;
   if (o.provider !== undefined) {
@@ -199,8 +217,8 @@ export function validateHireManifest(raw: unknown): HireValidation {
 
   let commandFlags: string[] | undefined;
   if (o.commandFlags !== undefined) {
-    if (!Array.isArray(o.commandFlags) || o.commandFlags.length > 16) {
-      errors.push('"commandFlags" must be an array of at most 16 items');
+    if (!Array.isArray(o.commandFlags) || o.commandFlags.length > HIRE_LIMITS.commandFlags) {
+      errors.push(`"commandFlags" must be an array of at most ${HIRE_LIMITS.commandFlags} items`);
     } else {
       commandFlags = [];
       // DEFAULT-DENY: every flag-shaped token must name an allowlisted safe flag;
@@ -243,10 +261,10 @@ export function validateHireManifest(raw: unknown): HireValidation {
 
   let capabilities: string[] | undefined;
   if (o.capabilities !== undefined) {
-    if (!Array.isArray(o.capabilities) || o.capabilities.length > 12) {
-      errors.push('"capabilities" must be an array of at most 12 items');
+    if (!Array.isArray(o.capabilities) || o.capabilities.length > HIRE_LIMITS.capabilities) {
+      errors.push(`"capabilities" must be an array of at most ${HIRE_LIMITS.capabilities} items`);
     } else {
-      capabilities = o.capabilities.filter(str).map(c => c.trim().slice(0, 40)).filter(Boolean);
+      capabilities = o.capabilities.filter(str).map(c => c.trim().slice(0, HIRE_LIMITS.capabilityChars)).filter(Boolean);
       if (capabilities.length === 0) capabilities = undefined;
     }
   }
@@ -266,8 +284,8 @@ export function validateHireManifest(raw: unknown): HireValidation {
   // skills — allowlist: references into BUNDLED_SKILL_IDS only; max 8
   let skills: string[] | undefined;
   if (o.skills !== undefined) {
-    if (!Array.isArray(o.skills) || o.skills.length > 8) {
-      errors.push('"skills" must be an array of at most 8 items');
+    if (!Array.isArray(o.skills) || o.skills.length > HIRE_LIMITS.skills) {
+      errors.push(`"skills" must be an array of at most ${HIRE_LIMITS.skills} items`);
     } else {
       skills = [];
       for (const s of o.skills) {
@@ -287,8 +305,8 @@ export function validateHireManifest(raw: unknown): HireValidation {
   let mcpServers: string[] | undefined;
   const consentRequired: string[] = [];
   if (o.mcpServers !== undefined) {
-    if (!Array.isArray(o.mcpServers) || o.mcpServers.length > 8) {
-      errors.push('"mcpServers" must be an array of at most 8 items');
+    if (!Array.isArray(o.mcpServers) || o.mcpServers.length > HIRE_LIMITS.mcpServers) {
+      errors.push(`"mcpServers" must be an array of at most ${HIRE_LIMITS.mcpServers} items`);
     } else {
       mcpServers = [];
       for (const s of o.mcpServers) {
