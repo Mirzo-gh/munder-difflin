@@ -26,15 +26,36 @@ test('roster IPC routes by the sending window (evt.sender.id)', () => {
 
 test('migrateLegacyRoster is awaited before the first createWindow( in whenReady', () => {
   const source = main();
+  // The helper itself awaits the migration…
+  const fn = source.indexOf('async function migrateLegacyRosterOfHome(');
+  assert.ok(fn >= 0, 'migration helper exists');
+  assert.match(source.slice(fn, fn + 1500), /await migrateLegacyRoster\(/);
+  // …and whenReady awaits the helper before the first window.
   const start = source.indexOf('app.whenReady().then(');
   assert.ok(start >= 0);
   // Code only: comments may mention createWindow() before the real call.
   const body = source.slice(start).replace(/^\s*\/\/.*$/gm, '');
-  const mig = body.indexOf('migrateLegacyRoster(');
+  const mig = body.indexOf('await migrateLegacyRosterOfHome(');
   const win = body.indexOf('createWindow(');
   assert.ok(mig >= 0, 'migration runs at startup');
   assert.ok(win > mig, 'migration precedes the first window');
-  assert.match(body.slice(0, win), /await migrateLegacyRoster\(/);
+});
+
+test('dev changeHome re-binds in place: migrates the new home, blocks and reloads every window', () => {
+  const source = main();
+  const start = source.indexOf("ipcMain.handle('config:changeHome'");
+  const body = source.slice(start, source.indexOf('app.relaunch();', start));
+  assert.match(body, /if \(isDev\) \{/);
+  assert.match(body, /await migrateLegacyRosterOfHome\(\)/);
+  assert.match(body, /bootstrapHiveServices\(\)/);
+  assert.match(body, /floorWritesBlocked\.add\(/);
+  assert.match(body, /\.reload\(\)/);
+});
+
+test('pty:spawn refuses a window whose reload is pending', () => {
+  const source = main();
+  const start = source.indexOf("ipcMain.handle('pty:spawn'");
+  assert.match(source.slice(start, start + 900), /floorWritesBlocked\.has\(evt\.sender\.id\)/);
 });
 
 test("changeHome move copies the per-repo 'rosters' folder", () => {

@@ -2647,6 +2647,9 @@ ipcMain.handle('pty:spawn', async (evt, opts: AgentSpawnOptions) => {
   if (!opts || typeof opts.id !== 'string' || typeof opts.cwd !== 'string' || typeof opts.command !== 'string') {
     return { ok: false, error: 'invalid SpawnOptions' };
   }
+  // A page about to be replaced (repo bind, dev home switch) must not spawn:
+  // its config / floor are stale, and the reloaded page boots its own agents.
+  if (floorWritesBlocked.has(evt.sender.id)) return { ok: false, error: 'window reloading' };
   // Record the spawning window as the PTY's owner so its output routes ONLY back
   // to that floor, then run the shared spawn core.
   const owner = BrowserWindow.fromWebContents(evt.sender)?.webContents ?? null;
@@ -3361,9 +3364,32 @@ ipcMain.handle('config:changeHome', async (_evt, payload: unknown) => {
 
   // Repoint config and relaunch so every service re-bootstraps against newHome.
   // (Identical recovery path to resetAll — relaunch is the clean re-bind.)
-  allowQuit = true;
   writeConfig({ harnessHome: newHome });
   try { ptyManager.killAll(); } catch (e) { console.error('[changeHome] killAll:', e); }
+  // Dev (`npm run dev`): app.relaunch() would orphan the new process — electron-vite
+  // exits with its Electron child, so the relaunched app loads a dead dev-server URL
+  // (black screen). Re-bind in place instead: same services, then reload every
+  // window against the new home. Writes from the old pages are refused until each
+  // reload lands, so a late flush cannot reach the new home's rosters.
+  if (isDev) {
+    await migrateLegacyRosterOfHome();
+    bootstrapHiveServices();
+    const cfg = readConfig();
+    if (cfg.slackEnabled && cfg.slackSigningSecret) void startSlackServer();
+    reconcileWebhookServer();
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (w.isDestroyed()) continue;
+      const wc = w.webContents;
+      const id = wc.id;
+      floorWritesBlocked.add(id);
+      const unblock = (): void => { floorWritesBlocked.delete(id); };
+      wc.once('did-finish-load', unblock);
+      wc.once('did-fail-load', unblock);
+      wc.reload();
+    }
+    return { ok: true as const };
+  }
+  allowQuit = true;
   app.relaunch();
   app.exit(0);
   return { ok: true as const }; // unreachable (process exits) — typed for the renderer
@@ -3577,6 +3603,22 @@ async function resolveAgentRepo(a: { cwd?: string; worktreePath?: string }): Pro
   const p = a.worktreePath && existsSync(a.worktreePath) ? a.worktreePath : a.cwd;
   if (!p || !existsSync(p)) return null;
   return normalizeFloorRepo(p, mainRepoRoot);
+}
+
+/** One-time split of the current home's legacy shared roster.json into
+ *  per-repo rosters. Idempotent (marker file) and never throws. */
+async function migrateLegacyRosterOfHome(): Promise<void> {
+  try {
+    const home = readConfig().harnessHome;
+    if (!home) return;
+    // Fallbacks for agents whose folder is gone: a registered repo matching
+    // their project name, else the harness home itself (the "no repo" floor).
+    const registeredRepos = (await Promise.all((readConfig().registeredRepos ?? []).map(floorRepoFromInput)))
+      .filter((r): r is string => !!r);
+    const homeFloor = (await floorRepoFromInput(home)) ?? home;
+    const res = await migrateLegacyRoster(home, resolveAgentRepo, { home: homeFloor, registeredRepos });
+    if (res.migrated) console.log('[floors] legacy roster migrated to', res.repos.length, 'repo roster(s)');
+  } catch (e) { console.error('[floors] legacy roster migration failed:', e); }
 }
 
 ipcMain.on('floor:repoSync', (evt) => { evt.returnValue = floors.repoOf(evt.sender.id); });
@@ -5436,18 +5478,7 @@ app.whenReady().then(async () => {
   if (readConfig().multiWindow) installAppMenu();
   // One-time split of the legacy shared roster.json into per-repo rosters, done
   // BEFORE any window reads its roster. Never blocks startup.
-  try {
-    const home = readConfig().harnessHome;
-    if (home) {
-      // Fallbacks for agents whose folder is gone: a registered repo matching
-      // their project name, else the harness home itself (the "no repo" floor).
-      const registeredRepos = (await Promise.all((readConfig().registeredRepos ?? []).map(floorRepoFromInput)))
-        .filter((r): r is string => !!r);
-      const homeFloor = (await floorRepoFromInput(home)) ?? home;
-      const res = await migrateLegacyRoster(home, resolveAgentRepo, { home: homeFloor, registeredRepos });
-      if (res.migrated) console.log('[floors] legacy roster migrated to', res.repos.length, 'repo roster(s)');
-    }
-  } catch (e) { console.error('[floors] legacy roster migration failed:', e); }
+  await migrateLegacyRosterOfHome();
   // Reopen the floors that were open at the last quit (folders that still
   // exist); the first is the primary window. None → one unbound primary window,
   // which shows the repo picker.
