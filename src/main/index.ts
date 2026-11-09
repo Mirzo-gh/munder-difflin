@@ -2382,6 +2382,11 @@ function createWindow(opts: { floor?: boolean; repoRoot?: string } = {}): Browse
   // primary. The primary is also seeded synchronously so boot events route now.
   win.on('focus', () => { mainWindow = win; });
   if (!isFloor) mainWindow = win;
+  if (isFloor) {
+    const wcId = win.webContents.id;
+    floorWebContentsIds.add(wcId);
+    win.webContents.once('destroyed', () => floorWebContentsIds.delete(wcId));
+  }
 
   // Permission gate for the renderer (our own trusted, local content). The voice
   // features (Free Flow dictation, Realtime voice) were removed, so nothing needs
@@ -3575,6 +3580,17 @@ async function resolveAgentRepo(a: { cwd?: string; worktreePath?: string }): Pro
 }
 
 ipcMain.on('floor:repoSync', (evt) => { evt.returnValue = floors.repoOf(evt.sender.id); });
+
+// The harness home is app-wide: switching it relaunches every window. So the
+// launch-time hive picker belongs to the primary window only, once per launch.
+// Floors (New Floor, restored floors) never show it, and once the primary has
+// passed it a reopened primary (macOS dock) does not show it again either.
+const floorWebContentsIds = new Set<number>();
+let hivePickerPassed = false;
+ipcMain.on('hive:pickerNeededSync', (evt) => {
+  evt.returnValue = !hivePickerPassed && !floorWebContentsIds.has(evt.sender.id);
+});
+ipcMain.on('hive:pickerPassed', () => { hivePickerPassed = true; });
 
 // ─── Compose the team: hidden analysis + hire manifests on disk ─────────────
 // One analysis per repo at a time. The repo is always the SENDER's bound floor

@@ -99,7 +99,13 @@ export function App() {
   // (dev) mounts App twice with fresh state, so removing the flag inside the
   // initializer let the second mount — the one React keeps — miss it and show
   // the picker anyway.
+  // Main also says whether this window needs the picker at all: the harness home
+  // is app-wide, so only the primary window shows it, once per launch — a New
+  // Floor never does (switching there would relaunch every window).
   const [hiveOpened, setHiveOpened] = useState<boolean>(() => {
+    try {
+      if (window.cth?.hivePickerNeededSync?.() === false) return true;
+    } catch { /* main unreachable — fall through */ }
     try {
       return window.localStorage.getItem('cth.skipHivePickerOnce') !== null;
     } catch { /* localStorage unavailable — show the picker */ }
@@ -108,6 +114,9 @@ export function App() {
   useEffect(() => {
     try { window.localStorage.removeItem('cth.skipHivePickerOnce'); } catch { /* noop */ }
   }, []);
+  useEffect(() => {
+    if (hiveOpened) { try { window.cth?.hivePickerPassed?.(); } catch { /* noop */ } }
+  }, [hiveOpened]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   /** Which tab Settings opens on. Set by a `cth:open-settings` deep link, reset
    *  to undefined (→ General) whenever the modal is opened the normal way. */

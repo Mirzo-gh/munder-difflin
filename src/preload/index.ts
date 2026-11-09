@@ -1245,6 +1245,13 @@ const api = {
   floorRepoSync: (): string | null => {
     try { return ipcRenderer.sendSync('floor:repoSync') ?? null; } catch { return null; }
   },
+  /** Whether THIS window should show the launch-time hive picker: only the
+   *  primary window, once per launch (the harness home is app-wide). */
+  hivePickerNeededSync: (): boolean => {
+    try { return ipcRenderer.sendSync('hive:pickerNeededSync') !== false; } catch { return true; }
+  },
+  /** Tell main the hive picker was passed, so no other window shows it. */
+  hivePickerPassed: (): void => { ipcRenderer.send('hive:pickerPassed'); },
   /** Bind THIS window to a repo, then main reloads it. `focused` = that repo is
    *  already open in another window, which was brought to the front instead. */
   chooseFloorRepo: (path: string): Promise<{ ok: true } | { ok: false; focused?: true; error?: string }> =>
