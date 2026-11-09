@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useStore, selectedAgent } from '@/store/store';
+import { useStore, selectedAgent, floorRepo } from '@/store/store';
 import { startMockLoop, stopMockLoop } from '@/store/mockEvents';
 import type { HarnessConfig } from '@/store/config';
 import { DEFAULT_ORG_TRIGGER } from '@shared/triggers';
@@ -14,6 +14,7 @@ import { AddAgentModal } from '@/components/AddAgentModal';
 import { MichaelBooting } from '@/components/MichaelBooting';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { HivePicker } from '@/components/HivePicker';
+import { FloorRepoPicker } from '@/components/FloorRepoPicker';
 import { QuitWarningModal, type ClosingTimeState } from '@/components/QuitWarningModal';
 import { UpdateToast } from '@/components/UpdateToast';
 import { UpdateBadge } from '@/components/UpdateBadge';
@@ -39,6 +40,11 @@ const AGENT_COLUMN_MAX = 420;
 
 function clampAgentColumnWidth(px: number): number {
   return Math.min(AGENT_COLUMN_MAX, Math.max(AGENT_COLUMN_MIN, Math.round(px)));
+}
+
+/** Last path segment, for the title-bar repo label. */
+function repoName(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 }
 
 function readAgentColumnWidth(): number {
@@ -189,7 +195,9 @@ export function App() {
   // off until the user opens a hive in the launch picker (passing null no-ops the
   // hook) so Michael doesn't boot against the current home while the user may be
   // about to switch to a different one.
-  useHive(hiveOpened ? config : null);
+  // An unbound window (no floor repo yet) boots nothing: it only shows the
+  // repo picker, and god belongs to a floor.
+  useHive(hiveOpened && floorRepo !== null ? config : null);
 
   // Pre-warm a persistent terminal for every live agent so its output is
   // buffered from spawn. Switching agents then re-attaches an already-rendered
@@ -204,7 +212,7 @@ export function App() {
   // empty floor, and stop it the instant the first real PTY agent appears
   // (Michael always spawns, so in normal operation it effectively never runs).
   useEffect(() => {
-    if (!config?.onboardingComplete) return;
+    if (!config?.onboardingComplete || floorRepo === null) return;
     const DEMO = import.meta.env.DEV && import.meta.env.VITE_CTH_DEMO === '1';
     const evaluate = () => {
       const hasLive = useStore.getState().agents.some((a) => a.ptyId);
@@ -259,6 +267,12 @@ export function App() {
     return <OnboardingWizard onComplete={(next) => { setConfig(next); setHiveOpened(true); }} />;
   }
 
+  // One window = one repo. A window not bound to a repo yet shows only the
+  // repo picker — no floor, no god boot. Choosing a repo reloads the window.
+  if (floorRepo === null) {
+    return <FloorRepoPicker />;
+  }
+
   // Launch-time hive picker: on reopen, let the user open their current hive,
   // switch to a recent one, or open/create another. Skipped right after onboarding
   // and right after a switch-relaunch (see hiveOpened init).
@@ -298,6 +312,20 @@ export function App() {
         {/* v0.3.7: the version is no longer inert text — it doubles as the
             update control (check / download / restart to update). */}
         <UpdateBadge />
+        <span
+          className="cth-titlebar-nodrag"
+          title={floorRepo}
+          style={{
+            fontFamily: 'var(--cth-font-ui)',
+            fontSize: 13,
+            fontWeight: 600,
+            color: 'var(--cth-ink-900)',
+            maxWidth: 240,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+          }}
+        >
+          {repoName(floorRepo)}
+        </span>
         <span style={{
           fontFamily: 'var(--cth-font-ui)',
           fontSize: 13,

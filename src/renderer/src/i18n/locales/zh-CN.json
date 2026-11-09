@@ -18,6 +18,15 @@
     "restarting": "重启中…",
     "add": "添加"
   },
+  "floor": {
+    "pickTitle": "为此楼层选择一个仓库",
+    "pickHint": "每个窗口是一层楼，使用自己的团队处理一个仓库。选择你已经在用的仓库，或选择其他文件夹。",
+    "chooseFolder": "选择文件夹…",
+    "alreadyOpen": "该仓库已在另一个窗口中打开——已将其置于前台。",
+    "agents_one": "{{count}} 个智能体",
+    "agents": "{{count}} 个智能体",
+    "openBadge": "已打开"
+  },
   "commandBar": {
     "free": "自由",
     "skill": "/技能",

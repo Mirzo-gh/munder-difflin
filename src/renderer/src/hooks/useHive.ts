@@ -31,6 +31,38 @@ const GOD_ID = 'god';
 const SPAWN_ACCENTS = ['coral', 'mint', 'sky', 'lemon', 'lilac', 'peach'] as const;
 const GOD_PTY = `pty-${GOD_ID}`;
 
+/** The god agent's floor entry. Shared by the spawn path and the "already
+ *  running" path: god's PTY is one per process, so a floor opened after another
+ *  one booted him finds him live but has no entry for him in its own roster. */
+function buildGodAgent(
+  config: HarnessConfig,
+  godName: string,
+  command: string,
+  godProvider: AgentProvider,
+  godModel: string | undefined
+): Agent {
+  return {
+    id: GOD_ID,
+    name: godName,
+    character: 'michael',
+    accent: 'lemon',
+    description: 'god — runs the floor, triages requests, escalates only critical calls to you',
+    project: 'hive',
+    tmuxTarget: '',
+    cwd: config.harnessHome!,
+    status: 'idle',
+    action: 'running the floor',
+    progress: 0,
+    currentStation: 'desk',
+    ptyId: GOD_PTY,
+    command: command.trim(),
+    provider: godProvider,
+    model: godModel,
+    isGod: true,
+    recentTextTs: Date.now()
+  };
+}
+
 const REMOTE_CONTROL_SETTLE_MS = 1500;
 // Provider-agnostic PTY-quiescence idle fallback (#2e). A non-Claude bridge that
 // fires a 'working' event but never its turn-end signal (Stop / session.idle /
@@ -381,7 +413,25 @@ export function useHive(config: HarnessConfig | null): void {
       if (cancelled) return;
       const live = await window.cth.listPtys().catch(() => []);
       if (live.some((p) => p.id === GOD_PTY)) { // already running — keep restored entry
-        if (!cancelled) useStore.getState().setGodStatus('ready');
+        if (cancelled) return;
+        // Started by ANOTHER floor: this floor's roster has no entry for him, so
+        // add one or he would be invisible here.
+        if (!useStore.getState().agents.some((a) => a.id === GOD_ID)) {
+          const reg = await window.cth.hiveRegistry().catch(() => null);
+          if (cancelled) return;
+          if (!useStore.getState().agents.some((a) => a.id === GOD_ID)) {
+            const godProvider = config.godProvider ?? 'claude';
+            const godModel = config.godModel;
+            useStore.getState().addAgent(buildGodAgent(
+              config,
+              resolveGodName(reg?.agents?.[GOD_ID]?.name),
+              buildSpawnCommand(config, godModel, godProvider),
+              godProvider,
+              godModel
+            ));
+          }
+        }
+        useStore.getState().setGodStatus('ready');
         return;
       }
       // Synchronous guard (no await between check and set) → exactly one spawn.
@@ -418,27 +468,7 @@ export function useHive(config: HarnessConfig | null): void {
       });
       if (cancelled) { godSpawning.current = false; return; }
       if (!res.ok) { godSpawning.current = false; useStore.getState().setGodStatus('failed'); return; }
-      const god: Agent = {
-        id: GOD_ID,
-        name: godName,
-        character: 'michael',
-        accent: 'lemon',
-        description: 'god — runs the floor, triages requests, escalates only critical calls to you',
-        project: 'hive',
-        tmuxTarget: '',
-        cwd: config.harnessHome!,
-        status: 'idle',
-        action: 'running the floor',
-        progress: 0,
-        currentStation: 'desk',
-        ptyId: GOD_PTY,
-        command: command.trim(),
-        provider: godProvider,
-        model: godModel,
-        isGod: true,
-        recentTextTs: Date.now()
-      };
-      useStore.getState().addAgent(god);
+      useStore.getState().addAgent(buildGodAgent(config, godName, command, godProvider, godModel));
       useStore.getState().setGodStatus('ready');
 
       // Kick Michael off once his TUI is up. Always re-enable remote control so

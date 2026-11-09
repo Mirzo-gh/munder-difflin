@@ -5,7 +5,7 @@ import { PixelButton } from './PixelButton';
 import { AgentMonogram } from './AgentMonogram';
 import { Icon } from './Icon';
 import { ProviderLogo } from './ProviderLogo';
-import { useStore, type Agent } from '@/store/store';
+import { useStore, floorRepo, type Agent } from '@/store/store';
 import { OFFICE_CAST, DEFAULT_CHARACTER, type OfficeCharacterName } from '@/agents/cast';
 import { type AccentColorName } from '@/design/tokens';
 import type { HireManifest } from '@shared/hire';
@@ -191,7 +191,8 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
   const [name, setName] = useState(pendingHire?.name ?? 'Jim');
   const [character, setCharacter] = useState<OfficeCharacterName>(knownCharacter(pendingHire?.character));
   const [accent, setAccent] = useState<AccentColorName>(knownAccent(pendingHire?.accent));
-  const [cwd, setCwd] = useState<string>(config.registeredRepos[0] ?? '');
+  // The floor's own repo first: a hire on this floor works in this repo.
+  const [cwd, setCwd] = useState<string>(floorRepo ?? config.registeredRepos[0] ?? '');
   // Local mirror of the registered projects so one added from here shows as a
   // quick-pick immediately (the `config` prop is a snapshot taken at open time).
   const [repos, setRepos] = useState<string[]>(config.registeredRepos);

@@ -354,6 +354,14 @@ const fileRoster = (() => {
   try { return window.cth?.rosterReadSync?.() ?? null; } catch { return null; }
 })();
 
+/** The repo this window's floor is bound to — read once, synchronously, beside
+ *  the roster it selects (main routes `rosterReadSync`/`rosterWrite` by window).
+ *  `null` = unbound: App shows the repo picker, nothing loads, nothing is written.
+ *  Choosing a repo reloads the window, so this never changes at runtime. */
+export const floorRepo: string | null = (() => {
+  try { return window.cth?.floorRepoSync?.() ?? null; } catch { return null; }
+})();
+
 /** Which hive we are opening, and which one this origin's localStorage was last
  *  written for. Both read synchronously, for the same reason the roster is: the
  *  store is built at module load, so an async answer would arrive too late. */
@@ -365,6 +373,7 @@ const storedHome = (() => {
 })();
 
 const { useFileRoster, useLocalFallback } = chooseRosterSource({
+  floorRepo,
   fileRoster,
   currentHome,
   storedHome
@@ -394,6 +403,8 @@ let rosterFlush: ReturnType<typeof setTimeout> | null = null;
 
 function flushRosterNow(): void {
   if (rosterFlush) { clearTimeout(rosterFlush); rosterFlush = null; }
+  // An unbound window has no roster file; main would refuse the write anyway.
+  if (floorRepo === null) return;
   try {
     void window.cth?.rosterWrite?.({
       version: 1,

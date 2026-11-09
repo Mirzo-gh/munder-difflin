@@ -18,6 +18,15 @@
     "restarting": "restarting…",
     "add": "add"
   },
+  "floor": {
+    "pickTitle": "Choose a repo for this floor",
+    "pickHint": "Each window is one floor, working on one repo with its own team. Pick a repo you already work in, or choose another folder.",
+    "chooseFolder": "Choose a folder…",
+    "alreadyOpen": "That repo is already open in another window — it has been brought to the front.",
+    "agents_one": "{{count}} agent",
+    "agents": "{{count}} agents",
+    "openBadge": "open"
+  },
   "commandBar": {
     "free": "free",
     "skill": "/skill",
