@@ -1,6 +1,6 @@
 import { app } from 'electron';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 import { homedir } from 'node:os';
 import {
   autoModeFlagForProvider,
@@ -188,6 +188,8 @@ export interface HarnessConfig {
   recentHives?: string[];
   /** Folders the user registered during onboarding (used as quick-picks). */
   registeredRepos: string[];
+  /** Repo roots that had a floor window open at last quit (reopened at launch). */
+  openFloors?: string[];
   /** When true, new agents are spawned with --permission-mode bypassPermissions. */
   autoMode: boolean;
   /** May the orchestrator ("Michael") spin up agents on its own?
@@ -408,6 +410,7 @@ const DEFAULTS: HarnessConfig = {
   harnessHome: null,
   recentHives: [],
   registeredRepos: [],
+  openFloors: [],
   autoMode: true,
   orchestratorMaySpawn: false,
   defaultCommand: 'claude',
@@ -657,6 +660,12 @@ export function writeConfig(patch: Partial<HarnessConfig>): HarnessConfig {
     next.registeredRepos = patch.registeredRepos
       .map((r) => expandTilde(r))
       .filter((r) => r && !seen.has(r) && (seen.add(r), true));
+  }
+  if (Array.isArray(patch.openFloors)) {
+    const seen = new Set<string>();
+    next.openFloors = patch.openFloors.filter(
+      (r): r is string => typeof r === 'string' && isAbsolute(r) && !seen.has(r) && (seen.add(r), true)
+    );
   }
   // The HIVE HOME needs the exact same treatment as registeredRepos above, and for
   // years it did not get it (#140). Onboarding SUGGESTS `~/HarnessAgents` and the
