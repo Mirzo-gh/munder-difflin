@@ -129,3 +129,15 @@ test('team:* handlers use the sender bound repo, never the renderer path', () =>
   assert.match(handlerBody(source, "ipcMain.handle('team:write'"), /manifests\.length > TEAM_INPUT_CAPS\.manifests/);
   assert.match(source, /sanitizeTeamInput\(raw, repoRoot/);
 });
+
+test('team analyses are aborted with their window, on reload, and at quit', () => {
+  const source = main();
+  assert.match(source, /teamAnalyses\.set\(repo, \{ ctl, ownerId: evt\.sender\.id \}\)/);
+  const closed = closedHandler(source);
+  assert.match(closed, /abortTeamAnalyses\(ownerId\)/);
+  const nav = source.slice(source.indexOf("win.webContents.on('did-start-navigation'"));
+  assert.match(nav.slice(0, nav.indexOf('\n  });')), /isMainFrame && !details\.isSameDocument\) abortTeamAnalyses\(ownerId\)/);
+  const t = source.indexOf('function teardownAndQuit');
+  const teardown = source.slice(t, source.indexOf('\n}', t));
+  assert.match(teardown, /abortTeamAnalyses\(\)/);
+});

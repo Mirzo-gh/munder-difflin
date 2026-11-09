@@ -2459,6 +2459,8 @@ function createWindow(opts: { floor?: boolean; repoRoot?: string } = {}): Browse
   // so a later deep link would otherwise queue and sit until a full reload).
   win.webContents.on('did-start-navigation', (details) => {
     if (details.isMainFrame) rendererReadyForHires = false;
+    // A reload drops the renderer awaiting its team analysis: abort it.
+    if (details.isMainFrame && !details.isSameDocument) abortTeamAnalyses(ownerId);
   });
 
   if (isDev && process.env.ELECTRON_RENDERER_URL) {
@@ -2477,6 +2479,7 @@ function createWindow(opts: { floor?: boolean; repoRoot?: string } = {}): Browse
     const lastWindowQuits = process.platform !== 'darwin' && allWindows.size === 0;
     floors.unbind(ownerId);
     floorWritesBlocked.delete(ownerId);
+    abortTeamAnalyses(ownerId);
     if (hadRepo && !appQuitting && !allowQuit && !lastWindowQuits) persistOpenFloors();
     // A closed floor must not leave its terminals running headless. (Natural
     // onExit teardown — archive + worktree cleanup — still runs per PTY.)
@@ -3565,7 +3568,14 @@ ipcMain.on('floor:repoSync', (evt) => { evt.returnValue = floors.repoOf(evt.send
 // ─── Compose the team: hidden analysis + hire manifests on disk ─────────────
 // One analysis per repo at a time. The repo is always the SENDER's bound floor
 // (the renderer's path is ignored) and every input is capped.
-const teamAnalyses = new Map<string, AbortController>();
+// Each run remembers the window that started it: closing or reloading that
+// window (or quitting) aborts it, so the lock never outlives its renderer.
+const teamAnalyses = new Map<string, { ctl: AbortController; ownerId: number }>();
+function abortTeamAnalyses(ownerId?: number): void {
+  for (const a of teamAnalyses.values()) {
+    if (ownerId === undefined || a.ownerId === ownerId) a.ctl.abort();
+  }
+}
 function teamRepoOf(sender: Electron.WebContents): string | null {
   const root = floors.repoOf(sender.id);
   return root && existsSync(root) ? root : null;
@@ -3580,7 +3590,7 @@ ipcMain.handle('team:analyze', async (evt, raw: unknown) => {
   if (!input) return { kind: 'error', error: 'invalid input' };
   if (teamAnalyses.has(repo)) return { kind: 'error', error: 'analysis already running' };
   const ctl = new AbortController();
-  teamAnalyses.set(repo, ctl);
+  teamAnalyses.set(repo, { ctl, ownerId: evt.sender.id });
   // A never-used repo would stall the hidden session on the folder-trust prompt.
   try { ensureClaudePermissionsAccepted(repo); } catch { /* best-effort */ }
   try {
@@ -3594,12 +3604,12 @@ ipcMain.handle('team:analyze', async (evt, raw: unknown) => {
       disallowedTools: ['Edit', 'Write', 'NotebookEdit', 'Bash']
     }));
   } finally {
-    if (teamAnalyses.get(repo) === ctl) teamAnalyses.delete(repo);
+    if (teamAnalyses.get(repo)?.ctl === ctl) teamAnalyses.delete(repo);
   }
 });
 ipcMain.handle('team:cancel', async (evt) => {
   const root = teamRepoOf(evt.sender);
-  if (root) teamAnalyses.get(root)?.abort();
+  if (root) teamAnalyses.get(root)?.ctl.abort();
 });
 ipcMain.handle('team:prompt', async (evt, raw: unknown) => {
   const repo = teamRepoOf(evt.sender);
@@ -3972,6 +3982,7 @@ function teardownAndQuit(): void {
   appQuitting = true;
   // Each teardown step is best-effort: a throw here (e.g. a dying child or a
   // half-torn-down socket) must never abort the quit or pop a crash dialog.
+  try { abortTeamAnalyses(); } catch (e) { console.error('[quit] abortTeamAnalyses:', e); }
   try { clearMissionTimers(); } catch (e) { console.error('[quit] clearMissionTimers:', e); }
   try { clearContextTimers(); } catch (e) { console.error('[quit] clearContextTimers:', e); }
   try { stopWebhookDoneObserver(); } catch (e) { console.error('[quit] stopWebhookDoneObserver:', e); }
