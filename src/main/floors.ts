@@ -4,7 +4,8 @@ import { expandTilde } from './fs';
 
 /**
  * Canonical repo root for a floor: `~` expanded, absolute, symlinks resolved,
- * no trailing slash. Subfolders and linked worktrees collapse to the main repo
+ * no trailing slash, on-disk case restored (`realpathSync.native`, macOS is
+ * case-insensitive). Subfolders and linked worktrees collapse to the main repo
  * root via `mainRoot`. Null when the folder does not exist.
  */
 export async function normalizeFloorRepo(
@@ -15,14 +16,14 @@ export async function normalizeFloorRepo(
   if (!existsSync(abs)) return null;
   let real = abs;
   try {
-    real = realpathSync(abs);
+    real = realpathSync.native(abs);
   } catch {
     /* keep abs */
   }
   const root = await mainRoot(real);
   if (!root) return real;
   try {
-    return realpathSync(resolve(root));
+    return realpathSync.native(resolve(root));
   } catch {
     return resolve(root);
   }

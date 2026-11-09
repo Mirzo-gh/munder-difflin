@@ -70,3 +70,14 @@ test('openFloors survives a config round-trip', () => {
   writeConfig({ openFloors: ['/a', '/a', 'rel', '/b'] });
   assert.deepEqual(readConfig().openFloors, ['/a', '/b']);
 });
+
+test('normalizeFloorRepo restores the on-disk case (case-insensitive FS)', async (t) => {
+  const d = path.join(tmp, 'CaseDir');
+  fs.mkdirSync(d);
+  const lower = path.join(tmp, 'casedir');
+  if (!fs.existsSync(lower)) { t.skip('case-sensitive filesystem'); return; }
+  const expected = fs.realpathSync.native(d);
+  assert.ok(expected.endsWith('CaseDir'));
+  assert.equal(await normalizeFloorRepo(lower, async () => null), expected);
+  assert.equal(await normalizeFloorRepo(lower, async (p) => p), expected);
+});
