@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, powerMonitor, powerSaveBlocker, screen, shell, Notification } from 'electron';
+import { app, BrowserWindow, clipboard, webContents, dialog, ipcMain, Menu, powerMonitor, powerSaveBlocker, screen, shell, Notification } from 'electron';
 import { spawn } from 'node:child_process';
 import {
   rmSync, existsSync, readFileSync, readdirSync, statSync, cpSync, writeFileSync,
@@ -55,7 +55,9 @@ import type { SpawnFailReason } from './analytics';
 import { IntegrationBroker } from './integrationBroker';
 import * as integrations from './integrations';
 import { validateBaseUrl, buildAuthHeaders, resolveUpstreamUrl, secretRefFor, INTEGRATION_TEMPLATES } from '../shared/integrations';
-import { RosterStore } from './roster';
+import { RosterStore, listRepoRosters, readAllRosterAgents } from './roster';
+import { migrateLegacyRoster } from './rosterMigration';
+import { FloorRegistry, normalizeFloorRepo } from './floors';
 import { buildWorkerLaunch } from './workerLaunch';
 import { ControlRegistry } from './control';
 import { WorkerWakeWatchdog, WORKER_WAKE_REPORT_MS, activityEvidenceAt, type WorkerWakeFacts } from './workerWake';
@@ -276,19 +278,26 @@ let breakerBeatTimer: ReturnType<typeof setInterval> | null = null;
 // Feed the breaker's api_error-storm trip from Oscar's OTel api_error spans —
 // Jim's one breaker input with no on-branch source (telemetry.onApiError seam).
 telemetry.onApiError((agentId) => breaker.recordError(agentId));
-// Shared roster on disk — created early so HookServer can re-read standing goals
-// on every UserPromptSubmit (Edit Agent saves land here via persistAgents).
+// Legacy shared roster.json: no window reads or writes it any more (each floor
+// has its own per-repo roster, see `rosterForRepo`); kept for the reset archive.
+// Standing goals (re-read by HookServer on every UserPromptSubmit) search every
+// roster on disk, legacy included.
 const roster = new RosterStore(() => readConfig().harnessHome);
+/** window (webContents id) → repo. One repo = at most one open window. */
+const floors = new FloorRegistry();
 function standingGoalFromRoster(agentId: string): string | null {
-  const snap = roster.read();
-  if (!snap || !Array.isArray(snap.agents)) return null;
-  for (const entry of snap.agents) {
+  const home = readConfig().harnessHome;
+  if (!home) return null;
+  // Legacy roster.json comes first and per-repo rosters after, so the LAST match
+  // wins: a migrated agent's current goal lives in its repo roster.
+  let goal: string | null | undefined;
+  for (const entry of readAllRosterAgents(home)) {
     if (!entry || typeof entry !== 'object') continue;
     const a = entry as { id?: unknown; goal?: unknown };
     if (a.id !== agentId) continue;
-    return typeof a.goal === 'string' && a.goal.trim() ? a.goal.trim() : null;
+    goal = typeof a.goal === 'string' && a.goal.trim() ? a.goal.trim() : null;
   }
-  return null;
+  return goal ?? null;
 }
 // Worker inbox-wake watchdog (#151): finds idle workers with undrained inbox mail
 // and types the same guarded nudge the renderer would have (so a throttled
@@ -352,6 +361,10 @@ let floorSeq = 0;
 
 /** When true, skip the quit interceptor (user already confirmed). */
 let allowQuit = false;
+/** True once the app is really quitting (before-quit not prevented, or
+ *  teardownAndQuit): windows closing then keep their repo in `openFloors` so
+ *  the next launch reopens them. */
+let appQuitting = false;
 
 /** Agents spawned with `isolate: true` get a dedicated git worktree; this maps
  *  the agent/pty id → the worktree path so we can tear it down on kill. */
@@ -2298,7 +2311,7 @@ ipcMain.handle('hire:openFile', async () => {
  * window — cascades its position, and on close stops only its OWN terminals
  * while the app keeps running.
  */
-function createWindow(opts: { floor?: boolean } = {}): BrowserWindow {
+function createWindow(opts: { floor?: boolean; repoRoot?: string } = {}): BrowserWindow {
   const isFloor = opts.floor === true;
 
   // Primary restores saved geometry; floors cascade off the focused window.
@@ -2340,8 +2353,23 @@ function createWindow(opts: { floor?: boolean } = {}): BrowserWindow {
   // Capture the webContents once: after 'closed' the window is gone, but this
   // reference stays valid as the per-PTY ownership key.
   const wc = win.webContents;
+  const ownerId = wc.id;
 
   allWindows.add(win);
+  // Bind the floor's repo BEFORE the page loads: the renderer reads its roster
+  // synchronously at module load, routed by this binding.
+  if (opts.repoRoot) {
+    const bound = floors.bind(ownerId, opts.repoRoot);
+    if (!bound.ok) console.error('[floors] repo already open in another window:', opts.repoRoot);
+    else win.setTitle(floorTitle(opts.repoRoot));
+  }
+  // The page <title> would overwrite the repo title on every load.
+  win.on('page-title-updated', (e) => {
+    const repo = floors.repoOf(ownerId);
+    if (!repo) return;
+    e.preventDefault();
+    win.setTitle(floorTitle(repo));
+  });
   // Global timer events follow the user — the most-recently-focused window is
   // primary. The primary is also seeded synchronously so boot events route now.
   win.on('focus', () => { mainWindow = win; });
@@ -2437,6 +2465,12 @@ function createWindow(opts: { floor?: boolean } = {}): BrowserWindow {
 
   win.on('closed', () => {
     allWindows.delete(win);
+    // Unbind the repo; drop it from openFloors only on a deliberate close — a
+    // window closing because the app quits must reopen on the next launch.
+    const hadRepo = floors.repoOf(ownerId) !== null;
+    floors.unbind(ownerId);
+    floorWritesBlocked.delete(ownerId);
+    if (hadRepo && !appQuitting && !allowQuit) persistOpenFloors();
     // A closed floor must not leave its terminals running headless. (Natural
     // onExit teardown — archive + worktree cleanup — still runs per PTY.)
     if (isFloor) { try { ptyManager.killByOwner(wc); } catch { /* best-effort */ } }
@@ -3273,7 +3307,7 @@ ipcMain.handle('config:changeHome', async (_evt, payload: unknown) => {
       // renderer's half of the same state, and leaving it behind would move the
       // agents' sessions and memory to the new home while their names, notes and
       // worktree paths stayed at the old one.
-      for (const sub of ['hive', 'palace', 'roster.json', 'roster-backups']) {
+      for (const sub of ['hive', 'palace', 'roster.json', 'roster-backups', 'rosters']) {
         const src = join(oldHome, sub);
         if (!existsSync(src)) continue;
         // cpSync copies the whole tree incl. .git and is cross-device safe (unlike
@@ -3447,11 +3481,124 @@ ipcMain.handle('git:checkout', async (_evt, cwd: unknown, ref: unknown, detach: 
 // IPC could resolve, so the read is `ipcMain.on` + `returnValue` — one blocking
 // round trip at boot, in exchange for the roster being correct on first paint
 // instead of flashing an empty floor and then filling in.
-// (`roster` itself is constructed earlier so HookServer can read standing goals.)
-ipcMain.on('roster:readSync', (evt) => { evt.returnValue = roster.read(); });
+//
+// Each window is a FLOOR bound to one repo (`floors`), and its roster IPC is
+// routed by the sender to that repo's own `rosters/<slug>.json`. An unbound
+// window (no repo chosen yet) reads null and can never write a roster.
+ipcMain.on('roster:readSync', (evt) => { evt.returnValue = senderRoster(evt.sender.id)?.read() ?? null; });
 ipcMain.on('config:homeSync', (evt) => { evt.returnValue = readConfig().harnessHome ?? null; });
-ipcMain.handle('roster:read', () => roster.read());
-ipcMain.handle('roster:write', (_evt, snap: unknown) => roster.write(snap));
+ipcMain.handle('roster:read', (evt) => senderRoster(evt.sender.id)?.read() ?? null);
+ipcMain.handle('roster:write', (evt, snap: unknown) => {
+  const repo = floors.repoOf(evt.sender.id);
+  if (!repo || floorWritesBlocked.has(evt.sender.id)) return { ok: false, error: 'no floor repo' };
+  return rosterForRepo(repo).write(snap);
+});
+
+// ─── Floors: window ↔ repo ──────────────────────────────────────────────────
+/** One RosterStore per repo for the whole run: the empty-guard's "has this run
+ *  written yet" state must survive renderer reloads, exactly like the legacy one. */
+const repoRosters = new Map<string, RosterStore>();
+function rosterForRepo(repoRoot: string): RosterStore {
+  let store = repoRosters.get(repoRoot);
+  if (!store) {
+    store = new RosterStore(() => readConfig().harnessHome, repoRoot);
+    repoRosters.set(repoRoot, store);
+  }
+  return store;
+}
+function senderRoster(senderId: number): RosterStore | null {
+  const repo = floors.repoOf(senderId);
+  return repo ? rosterForRepo(repo) : null;
+}
+/** Windows just bound by `floor:chooseRepo`, until their reload finishes: a
+ *  write still in flight from the old, unbound page must not land in the newly
+ *  chosen repo's roster. */
+const floorWritesBlocked = new Set<number>();
+function floorTitle(repoRoot: string): string {
+  return `${basename(repoRoot)} — Munder Difflin`;
+}
+function persistOpenFloors(): void {
+  try {
+    const next = floors.openRepos();
+    const cur = readConfig().openFloors ?? [];
+    if (cur.length === next.length && cur.every((r, i) => r === next[i])) return;
+    writeConfig({ openFloors: next });
+  } catch (e) { console.error('[floors] persist openFloors:', e); }
+}
+function focusOwner(ownerId: number): void {
+  const wc = webContents.fromId(ownerId);
+  const win = wc ? BrowserWindow.fromWebContents(wc) : null;
+  if (!win || win.isDestroyed()) return;
+  if (win.isMinimized()) win.restore();
+  win.focus();
+}
+/** Reject non-string / blank input up front: `normalizeFloorRepo('')` would
+ *  resolve to the process cwd. */
+async function floorRepoFromInput(path: unknown): Promise<string | null> {
+  if (typeof path !== 'string' || !path.trim()) return null;
+  try { return await normalizeFloorRepo(path, mainRepoRoot); } catch { return null; }
+}
+/** Migration resolver: an agent's live worktree, else its cwd, canonicalised the
+ *  same way as a chosen floor so the slugs match. */
+async function resolveAgentRepo(a: { cwd?: string; worktreePath?: string }): Promise<string | null> {
+  const p = a.worktreePath && existsSync(a.worktreePath) ? a.worktreePath : a.cwd;
+  if (!p || !existsSync(p)) return null;
+  return normalizeFloorRepo(p, mainRepoRoot);
+}
+
+ipcMain.on('floor:repoSync', (evt) => { evt.returnValue = floors.repoOf(evt.sender.id); });
+
+ipcMain.handle('floor:chooseRepo', async (evt, path: unknown) => {
+  const repo = await floorRepoFromInput(path);
+  if (!repo) return { ok: false, error: 'folder not found' };
+  const senderId = evt.sender.id;
+  const owner = floors.ownerOf(repo);
+  if (owner !== null && owner !== senderId) {
+    focusOwner(owner);
+    return { ok: false, focused: true };
+  }
+  const win = BrowserWindow.fromWebContents(evt.sender);
+  if (!win || win.isDestroyed()) return { ok: false, error: 'no window' };
+  const bound = floors.bind(senderId, repo);
+  if (!bound.ok) { focusOwner(bound.ownerId); return { ok: false, focused: true }; }
+  persistOpenFloors();
+  try {
+    const repos = readConfig().registeredRepos ?? [];
+    writeConfig({ registeredRepos: [repo, ...repos.filter((r) => r !== repo)] });
+  } catch (e) { console.error('[floors] registeredRepos:', e); }
+  win.setTitle(floorTitle(repo));
+  floorWritesBlocked.add(senderId);
+  const unblock = (): void => { floorWritesBlocked.delete(senderId); };
+  evt.sender.once('did-finish-load', unblock);
+  evt.sender.once('did-fail-load', unblock);
+  evt.sender.reload();
+  return { ok: true };
+});
+
+ipcMain.handle('floor:listRepos', async () => {
+  const cfg = readConfig();
+  const out = new Map<string, { repoRoot: string; agentCount: number; open: boolean }>();
+  if (cfg.harnessHome) {
+    for (const r of listRepoRosters(cfg.harnessHome)) {
+      if (!out.has(r.repoRoot)) out.set(r.repoRoot, { repoRoot: r.repoRoot, agentCount: r.agentCount, open: floors.ownerOf(r.repoRoot) !== null });
+    }
+  }
+  for (const raw of cfg.registeredRepos ?? []) {
+    const repo = await floorRepoFromInput(raw);
+    if (repo && !out.has(repo)) out.set(repo, { repoRoot: repo, agentCount: 0, open: floors.ownerOf(repo) !== null });
+  }
+  return [...out.values()];
+});
+
+ipcMain.handle('floor:openForRepo', async (_evt, path: unknown) => {
+  const repo = await floorRepoFromInput(path);
+  if (!repo) return { ok: false, error: 'folder not found' };
+  const owner = floors.ownerOf(repo);
+  if (owner !== null) { focusOwner(owner); return { ok: true }; }
+  createWindow({ floor: true, repoRoot: repo });
+  persistOpenFloors();
+  return { ok: true };
+});
 
 // ─── IPC: hive (multi-agent coordination) ───────────────────────────────────
 ipcMain.handle('hive:registry', () => hive.registry());
@@ -3747,6 +3894,7 @@ ipcMain.handle('history:search', (_evt, query: unknown, limit: unknown) =>
  *  and the closing-time conclusion (after the god confirmed the floor saved). */
 function teardownAndQuit(): void {
   allowQuit = true;
+  appQuitting = true;
   // Each teardown step is best-effort: a throw here (e.g. a dying child or a
   // half-torn-down socket) must never abort the quit or pop a crash dialog.
   try { clearMissionTimers(); } catch (e) { console.error('[quit] clearMissionTimers:', e); }
@@ -3838,6 +3986,11 @@ ipcMain.handle('app:resetAll', () => {
   // sessions and memory are gone.
   try { roster.archive(); }
   catch (e) { console.error('[reset] roster.archive:', e); }
+  // Same for every per-repo roster (rosters/<slug>.json → its backups folder).
+  try {
+    const home = readConfig().harnessHome;
+    if (home) for (const r of listRepoRosters(home)) rosterForRepo(r.repoRoot).archive();
+  } catch (e) { console.error('[reset] repo rosters archive:', e); }
   // Back to first-run defaults, then relaunch clean so all in-memory services
   // re-bootstrap from scratch and the renderer lands on onboarding.
   resetConfig();
@@ -5119,7 +5272,7 @@ function onSystemResume(reason: string): void {
   }, 15_000);
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Anonymous product analytics (PostHog) — the full contract lives in
   // TELEMETRY.md. No-op unless a build-time key was injected (official releases
   // only), and gated on DO_NOT_TRACK + the telemetryEnabled config (opt-out).
@@ -5167,7 +5320,24 @@ app.whenReady().then(() => {
   // Multi-window floors (opt-in): install the menu carrying "New Floor". When
   // off, the app keeps Electron's default menu — zero behavior change.
   if (readConfig().multiWindow) installAppMenu();
-  createWindow();
+  // One-time split of the legacy shared roster.json into per-repo rosters, done
+  // BEFORE any window reads its roster. Never blocks startup.
+  try {
+    const home = readConfig().harnessHome;
+    if (home) {
+      const res = await migrateLegacyRoster(home, resolveAgentRepo);
+      if (res.migrated) console.log('[floors] legacy roster migrated to', res.repos.length, 'repo roster(s)');
+    }
+  } catch (e) { console.error('[floors] legacy roster migration failed:', e); }
+  // Reopen the floors that were open at the last quit (folders that still
+  // exist); the first is the primary window. None → one unbound primary window,
+  // which shows the repo picker.
+  let restored: string[] = [];
+  try { restored = (readConfig().openFloors ?? []).filter((r) => existsSync(r)); }
+  catch (e) { console.error('[floors] read openFloors:', e); }
+  if (restored.length === 0) createWindow();
+  else restored.forEach((repoRoot, i) => { createWindow(i === 0 ? { repoRoot } : { floor: true, repoRoot }); });
+  persistOpenFloors();
   // Auto-start the Slack webhook server when configured. Best-effort: a tunnel
   // failure (offline) is logged, not fatal. The tunnel URL is ephemeral and
   // changes per restart, so the user re-pastes it via Settings → Start.
@@ -5195,9 +5365,9 @@ app.whenReady().then(() => {
 // before-quit covers Cmd-Q / dock-quit; the per-window close handler covers
 // the red close button. Both routes hit the same warning UX.
 app.on('before-quit', (e) => {
-  if (allowQuit) return;
+  if (allowQuit) { appQuitting = true; return; }
   const count = ptyManager.list().length;
-  if (count === 0) return;
+  if (count === 0) { appQuitting = true; return; }
   e.preventDefault();
   if (mainWindow) {
     mainWindow.focus();

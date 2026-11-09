@@ -1237,6 +1237,23 @@ const api = {
   rosterWrite: (snap: RosterSnapshot): Promise<{ ok: boolean; skipped?: string; error?: string }> =>
     ipcRenderer.invoke('roster:write', snap),
 
+  // ─── Floors: one window = one repo ──────────────────────────────────────────
+  /** The repo this window's floor is bound to, synchronously (read at module
+   *  load beside `rosterReadSync`). `null` = unbound: show the repo picker. */
+  floorRepoSync: (): string | null => {
+    try { return ipcRenderer.sendSync('floor:repoSync') ?? null; } catch { return null; }
+  },
+  /** Bind THIS window to a repo, then main reloads it. `focused` = that repo is
+   *  already open in another window, which was brought to the front instead. */
+  chooseFloorRepo: (path: string): Promise<{ ok: true } | { ok: false; focused?: true; error?: string }> =>
+    ipcRenderer.invoke('floor:chooseRepo', path),
+  /** Known repos: those with a roster plus the registered ones (0 agents). */
+  listFloorRepos: (): Promise<{ repoRoot: string; agentCount: number; open: boolean }[]> =>
+    ipcRenderer.invoke('floor:listRepos'),
+  /** Open a new window already bound to `path` (or focus the one that has it). */
+  openFloorForRepo: (path: string): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('floor:openForRepo', path),
+
   // ─── Auto-update (v0.3.4; full state model v0.3.7) ──────────────────────────
   /** Push channel from main's updater — every stage of the pipeline, so the
    *  toolbar badge can show "checking", download progress, and the staged
