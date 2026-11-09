@@ -4,11 +4,24 @@
  * deleted; a `.migrated` marker makes the migration run once.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { RosterStore, repoRosterPath, rosterPath, type RosterSnapshot } from './roster';
 
-type AgentLike = { id?: unknown; cwd?: unknown; worktreePath?: unknown; isGod?: unknown };
+type AgentLike = { id?: unknown; cwd?: unknown; worktreePath?: unknown; isGod?: unknown; project?: unknown };
 export type ResolveRepo = (agent: { cwd?: string; worktreePath?: string }) => Promise<string | null>;
+
+/** Where an agent goes when its own folder can't be resolved. Group keys are
+ *  never a path missing on disk: an isolated agent's cwd IS its worktree, which
+ *  may be gone, and a roster keyed by a dead path is a floor nobody can open. */
+export interface MigrationFallback {
+  /** The harness home folder: always exists, the "no repo" floor. */
+  home: string;
+  /** Normalized registered repos; an agent's `project` name is matched against
+   *  their basenames and used only when exactly one matches. */
+  registeredRepos: string[];
+  /** Injected for tests; defaults to `existsSync`. */
+  exists?: (p: string) => boolean;
+}
 
 const LISTS = ['agents', 'archived', 'restorable'] as const;
 
@@ -16,10 +29,18 @@ function str(v: unknown): string | undefined {
   return typeof v === 'string' && v ? v : undefined;
 }
 
+function projectRepo(project: string | undefined, repos: string[], exists: (p: string) => boolean): string | null {
+  if (!project) return null;
+  const matches = [...new Set(repos)].filter((r) => basename(r) === project && exists(r));
+  return matches.length === 1 ? matches[0] : null;
+}
+
 export async function planLegacyMigration(
   legacy: RosterSnapshot,
-  resolveRepo: ResolveRepo
+  resolveRepo: ResolveRepo,
+  fallback?: MigrationFallback
 ): Promise<Map<string, RosterSnapshot>> {
+  const exists = fallback?.exists ?? existsSync;
   const groups = new Map<string, RosterSnapshot>();
   const gods: Record<(typeof LISTS)[number], unknown[]> = { agents: [], archived: [], restorable: [] };
   const repoOfId = new Map<string, string>();
@@ -47,8 +68,12 @@ export async function planLegacyMigration(
       const worktreePath = str(entry.worktreePath);
       let repo: string | null = null;
       try { repo = await resolveRepo({ cwd, worktreePath }); } catch { repo = null; }
-      repo = repo || cwd || null;
-      if (!repo) continue; // stays in roster.json only
+      if (repo && !exists(repo)) repo = null;
+      if (!repo && fallback) {
+        repo = projectRepo(str(entry.project), fallback.registeredRepos, exists)
+          ?? (exists(fallback.home) ? fallback.home : null);
+      }
+      if (!repo) continue; // no fallback: stays in roster.json only
       group(repo)[list].push(entry);
       const id = str(entry.id);
       if (id) repoOfId.set(id, repo);
@@ -81,7 +106,8 @@ export async function planLegacyMigration(
 
 export async function migrateLegacyRoster(
   home: string,
-  resolveRepo: ResolveRepo
+  resolveRepo: ResolveRepo,
+  fallback: Partial<MigrationFallback> = {}
 ): Promise<{ migrated: boolean; repos: string[] }> {
   const marker = join(home, 'rosters', '.migrated');
   const legacyFile = rosterPath(home);
@@ -95,7 +121,11 @@ export async function migrateLegacyRoster(
   }
   if (!legacy || typeof legacy !== 'object') return { migrated: false, repos: [] };
 
-  const plan = await planLegacyMigration(legacy, resolveRepo);
+  const plan = await planLegacyMigration(legacy, resolveRepo, {
+    home: fallback.home ?? home,
+    registeredRepos: fallback.registeredRepos ?? [],
+    exists: fallback.exists
+  });
   const repos: string[] = [];
   for (const [repoRoot, snap] of plan) {
     // Never overwrite a repo roster that already exists (retry after a partial

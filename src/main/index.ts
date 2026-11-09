@@ -5410,7 +5410,12 @@ app.whenReady().then(async () => {
   try {
     const home = readConfig().harnessHome;
     if (home) {
-      const res = await migrateLegacyRoster(home, resolveAgentRepo);
+      // Fallbacks for agents whose folder is gone: a registered repo matching
+      // their project name, else the harness home itself (the "no repo" floor).
+      const registeredRepos = (await Promise.all((readConfig().registeredRepos ?? []).map(floorRepoFromInput)))
+        .filter((r): r is string => !!r);
+      const homeFloor = (await floorRepoFromInput(home)) ?? home;
+      const res = await migrateLegacyRoster(home, resolveAgentRepo, { home: homeFloor, registeredRepos });
       if (res.migrated) console.log('[floors] legacy roster migrated to', res.repos.length, 'repo roster(s)');
     }
   } catch (e) { console.error('[floors] legacy roster migration failed:', e); }

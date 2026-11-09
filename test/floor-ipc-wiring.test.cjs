@@ -93,3 +93,9 @@ test('on Windows/Linux closing the last window keeps its floor (that close is th
   const del = closed.indexOf('allWindows.delete(win)');
   assert.ok(del >= 0 && del < closed.indexOf('allWindows.size === 0'), 'size is read after this window is removed');
 });
+
+test('startup migration passes the home floor and registered repos as fallbacks', () => {
+  const source = main();
+  assert.match(source, /migrateLegacyRoster\(home, resolveAgentRepo, \{ home: homeFloor, registeredRepos \}\)/);
+  assert.match(source, /const homeFloor = \(await floorRepoFromInput\(home\)\) \?\? home/);
+});
