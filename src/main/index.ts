@@ -3599,13 +3599,17 @@ ipcMain.handle('team:analyze', async (_evt, raw: unknown) => {
   if (teamAnalyses.has(repo)) return { kind: 'error', error: 'analysis already running' };
   const ctl = new AbortController();
   teamAnalyses.set(repo, ctl);
+  // A never-used repo would stall the hidden session on the folder-trust prompt.
+  try { ensureClaudePermissionsAccepted(repo); } catch { /* best-effort */ }
   try {
     // A fresh session id per run (the retry gets its own): the answer is read
     // from that exact transcript, never from an agent working in the same repo.
     return await runTeamAnalysis(input, (prompt) => runHiddenClaude(prompt, {
       model: readConfig().defaultModel ?? 'claude-fable-5',
       cwd: repo, idleMs: 15000, timeoutMs: 600000, signal: ctl.signal,
-      sessionId: randomUUID()
+      sessionId: randomUUID(),
+      // Read-only: bypassPermissions + Bash could still write to the repo.
+      disallowedTools: ['Edit', 'Write', 'NotebookEdit', 'Bash']
     }));
   } finally {
     if (teamAnalyses.get(repo) === ctl) teamAnalyses.delete(repo);

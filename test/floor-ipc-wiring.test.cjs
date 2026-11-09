@@ -104,3 +104,16 @@ test('team:analyze pins a fresh session id per hidden run', () => {
   const analyze = handlerBody(main(), "ipcMain.handle('team:analyze'");
   assert.match(analyze, /runTeamAnalysis\(input, \(prompt\) => runHiddenClaude\(prompt, \{[\s\S]*sessionId: randomUUID\(\)/);
 });
+
+test('team:analyze is read-only: Bash is disallowed too', () => {
+  const analyze = handlerBody(main(), "ipcMain.handle('team:analyze'");
+  assert.match(analyze, /disallowedTools: \['Edit', 'Write', 'NotebookEdit', 'Bash'\]/);
+});
+
+test('team:analyze pre-accepts the folder trust prompt before the hidden run', () => {
+  const analyze = handlerBody(main(), "ipcMain.handle('team:analyze'");
+  const trust = analyze.indexOf('ensureClaudePermissionsAccepted(repo)');
+  assert.ok(trust >= 0, 'trust prompt pre-accepted');
+  assert.ok(trust < analyze.indexOf('runHiddenClaude('), 'before the hidden session');
+  assert.match(analyze, /try \{ ensureClaudePermissionsAccepted\(repo\); \} catch/);
+});
