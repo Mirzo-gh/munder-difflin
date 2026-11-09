@@ -5,7 +5,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { RosterStore, rosterPath, type RosterSnapshot } from './roster';
+import { RosterStore, repoRosterPath, rosterPath, type RosterSnapshot } from './roster';
 
 type AgentLike = { id?: unknown; cwd?: unknown; worktreePath?: unknown; isGod?: unknown };
 export type ResolveRepo = (agent: { cwd?: string; worktreePath?: string }) => Promise<string | null>;
@@ -23,6 +23,7 @@ export async function planLegacyMigration(
   const groups = new Map<string, RosterSnapshot>();
   const gods: Record<(typeof LISTS)[number], unknown[]> = { agents: [], archived: [], restorable: [] };
   const repoOfId = new Map<string, string>();
+  const godIds = new Set<string>();
 
   const group = (repo: string): RosterSnapshot => {
     let g = groups.get(repo);
@@ -36,7 +37,12 @@ export async function planLegacyMigration(
   for (const list of LISTS) {
     for (const entry of (legacy[list] ?? []) as AgentLike[]) {
       if (!entry || typeof entry !== 'object') continue;
-      if (entry.isGod === true) { gods[list].push(entry); continue; }
+      if (entry.isGod === true) {
+        gods[list].push(entry);
+        const gid = str(entry.id);
+        if (gid) godIds.add(gid);
+        continue;
+      }
       const cwd = str(entry.cwd);
       const worktreePath = str(entry.worktreePath);
       let repo: string | null = null;
@@ -55,12 +61,20 @@ export async function planLegacyMigration(
   }
 
   for (const [id, q] of Object.entries(legacy.queues ?? {})) {
+    if (godIds.has(id)) {
+      for (const g of groups.values()) g.queues[id] = q;
+      continue;
+    }
     const repo = repoOfId.get(id);
     if (repo) group(repo).queues[id] = q;
   }
   if (legacy.selectedId) {
-    const repo = repoOfId.get(legacy.selectedId);
-    if (repo) group(repo).selectedId = legacy.selectedId;
+    if (godIds.has(legacy.selectedId)) {
+      for (const g of groups.values()) g.selectedId = legacy.selectedId;
+    } else {
+      const repo = repoOfId.get(legacy.selectedId);
+      if (repo) group(repo).selectedId = legacy.selectedId;
+    }
   }
   return groups;
 }
@@ -84,11 +98,16 @@ export async function migrateLegacyRoster(
   const plan = await planLegacyMigration(legacy, resolveRepo);
   const repos: string[] = [];
   for (const [repoRoot, snap] of plan) {
+    // Never overwrite a repo roster that already exists (retry after a partial
+    // migration, or one the user has since modified).
+    if (existsSync(repoRosterPath(home, repoRoot))) continue;
     const res = new RosterStore(() => home, repoRoot).write(snap);
     if (!res.ok) return { migrated: false, repos }; // no marker: retried next launch
     repos.push(repoRoot);
   }
-  mkdirSync(join(home, 'rosters'), { recursive: true });
-  writeFileSync(marker, new Date().toISOString(), 'utf8');
+  try {
+    mkdirSync(join(home, 'rosters'), { recursive: true });
+    writeFileSync(marker, new Date().toISOString(), 'utf8');
+  } catch { /* rosters are written; a missing marker only means a harmless no-overwrite retry */ }
   return { migrated: true, repos };
 }

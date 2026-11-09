@@ -39,6 +39,19 @@ test('god is copied into every group', async () => {
   assert.deepEqual(ids(plan.get('/r2')).sort(), ['c', 'g']);
 });
 
+test('god queue and god selection are copied into every group', async () => {
+  const legacy = snap({
+    agents: [{ id: 'g', cwd: '/r1', isGod: true }, { id: 'a', cwd: '/r1' }, { id: 'c', cwd: '/r2' }],
+    queues: { g: [9] },
+    selectedId: 'g',
+  });
+  const plan = await planLegacyMigration(legacy, table({ '/r1': '/r1', '/r2': '/r2' }));
+  for (const r of ['/r1', '/r2']) {
+    assert.deepEqual(plan.get(r).queues.g, [9]);
+    assert.equal(plan.get(r).selectedId, 'g');
+  }
+});
+
 test('a god-only roster creates no group', async () => {
   const plan = await planLegacyMigration(snap({ agents: [{ id: 'g', cwd: '/r1', isGod: true }] }), table({}));
   assert.equal(plan.size, 0);
@@ -89,4 +102,17 @@ test('migrateLegacyRoster writes repo rosters, leaves roster.json byte-identical
 test('migrateLegacyRoster is a no-op without roster.json', async () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'md-mig-'));
   assert.deepEqual(await migrateLegacyRoster(home, async () => null), { migrated: false, repos: [] });
+});
+
+test('a retry never overwrites an existing repo roster', async () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'md-mig-'));
+  fs.writeFileSync(path.join(home, 'roster.json'), JSON.stringify(snap({ agents: [{ id: 'a', cwd: '/r1' }, { id: 'c', cwd: '/r2' }] })));
+  fs.mkdirSync(path.join(home, 'rosters'), { recursive: true });
+  const existing = repoRosterPath(home, '/r1');
+  fs.writeFileSync(existing, JSON.stringify(snap({ agents: [{ id: 'user-edit', cwd: '/r1' }], repoRoot: '/r1' })));
+  const before = fs.readFileSync(existing);
+  const res = await migrateLegacyRoster(home, table({ '/r1': '/r1', '/r2': '/r2' }));
+  assert.equal(res.migrated, true);
+  assert.deepEqual(fs.readFileSync(existing), before);
+  assert.ok(fs.existsSync(repoRosterPath(home, '/r2')));
 });
