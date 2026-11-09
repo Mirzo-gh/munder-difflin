@@ -95,15 +95,19 @@ export function App() {
   // true (skip the picker) right after a hive SWITCH — changeHome relaunches and
   // leaves a one-shot localStorage flag so we don't bounce back onto the picker for
   // the hive we just chose. Also set true on onboarding completion (below).
+  // The initializer only READS the flag; the effect below consumes it. StrictMode
+  // (dev) mounts App twice with fresh state, so removing the flag inside the
+  // initializer let the second mount — the one React keeps — miss it and show
+  // the picker anyway.
   const [hiveOpened, setHiveOpened] = useState<boolean>(() => {
     try {
-      if (window.localStorage.getItem('cth.skipHivePickerOnce')) {
-        window.localStorage.removeItem('cth.skipHivePickerOnce');
-        return true;
-      }
+      return window.localStorage.getItem('cth.skipHivePickerOnce') !== null;
     } catch { /* localStorage unavailable — show the picker */ }
     return false;
   });
+  useEffect(() => {
+    try { window.localStorage.removeItem('cth.skipHivePickerOnce'); } catch { /* noop */ }
+  }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
   /** Which tab Settings opens on. Set by a `cth:open-settings` deep link, reset
    *  to undefined (→ General) whenever the modal is opened the normal way. */
@@ -274,17 +278,19 @@ export function App() {
     return <OnboardingWizard onComplete={(next) => { setConfig(next); setHiveOpened(true); }} />;
   }
 
-  // One window = one repo. A window not bound to a repo yet shows only the
-  // repo picker — no floor, no god boot. Choosing a repo reloads the window.
-  if (floorRepo === null) {
-    return <FloorRepoPicker />;
-  }
-
   // Launch-time hive picker: on reopen, let the user open their current hive,
   // switch to a recent one, or open/create another. Skipped right after onboarding
   // and right after a switch-relaunch (see hiveOpened init).
   if (!hiveOpened) {
     return <HivePicker config={config} onOpenCurrent={() => setHiveOpened(true)} />;
+  }
+
+  // One window = one repo, chosen AFTER the hive (the repo's roster lives in
+  // it). A window not bound to a repo yet shows only the repo picker — no
+  // floor, no god boot. Choosing a repo reloads the window, skipping the hive
+  // picker on the way back.
+  if (floorRepo === null) {
+    return <FloorRepoPicker />;
   }
 
   return (
