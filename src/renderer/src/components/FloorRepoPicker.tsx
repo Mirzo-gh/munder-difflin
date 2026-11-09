@@ -61,9 +61,13 @@ export function FloorRepoPicker() {
 
   const browse = async () => {
     setNotice(undefined);
-    const res = await window.cth.chooseFolder();
-    if (res.ok) void choose(res.path);
-    else if (res.error !== 'cancelled') setNotice(res.error);
+    try {
+      const res = await window.cth.chooseFolder();
+      if (res.ok) void choose(res.path);
+      else if (res.error !== 'cancelled') setNotice(res.error);
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : String(e));
+    }
   };
 
   return (
@@ -103,7 +107,12 @@ export function FloorRepoPicker() {
                       <div style={{
                         fontFamily: 'var(--cth-font-mono)', fontSize: 11, color: 'var(--cth-ink-500)',
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', direction: 'rtl', textAlign: 'left'
-                      }}>{r.repoRoot}</div>
+                      }}>
+                        {/* rtl keeps the END of a long path visible when it is
+                            truncated; <bdi> keeps the path itself left-to-right
+                            so its leading "/" stays in front. */}
+                        <bdi>{r.repoRoot}</bdi>
+                      </div>
                     </div>
                     {r.open && (
                       <span style={{

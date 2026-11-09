@@ -30,6 +30,7 @@ test('a populated roster file is used, whatever localStorage says', () => {
 test('a file holding only archived or only restorable entries still counts', () => {
   for (const slice of ['archived', 'restorable']) {
     const src = chooseRosterSource({
+      floorRepo: REPO,
       fileRoster: file({ [slice]: [someone] }),
       currentHome: HIVE_A,
       storedHome: HIVE_A
