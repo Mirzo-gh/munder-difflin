@@ -117,3 +117,15 @@ test('team:analyze pre-accepts the folder trust prompt before the hidden run', (
   assert.ok(trust < analyze.indexOf('runHiddenClaude('), 'before the hidden session');
   assert.match(analyze, /try \{ ensureClaudePermissionsAccepted\(repo\); \} catch/);
 });
+
+test('team:* handlers use the sender bound repo, never the renderer path', () => {
+  const source = main();
+  assert.match(source, /function teamRepoOf\(sender: Electron\.WebContents\)[\s\S]{0,80}floors\.repoOf\(sender\.id\)/);
+  for (const ch of ['team:analyze', 'team:cancel', 'team:prompt', 'team:write', 'team:openFolder']) {
+    const body = handlerBody(source, `ipcMain.handle('${ch}'`);
+    assert.match(body, /teamRepoOf\(evt\.sender\)/, `${ch} routes by sender`);
+    assert.doesNotMatch(body, /teamRepoFromInput|floorRepoFromInput/, `${ch} ignores the renderer path`);
+  }
+  assert.match(handlerBody(source, "ipcMain.handle('team:write'"), /manifests\.length > TEAM_INPUT_CAPS\.manifests/);
+  assert.match(source, /sanitizeTeamInput\(raw, repoRoot/);
+});

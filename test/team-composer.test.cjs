@@ -85,3 +85,33 @@ test('runHiddenClaude honours an abort signal', () => {
   assert.match(src, /error: 'cancelled'/);
   assert.match(src, /opts\.signal\?\.aborted/);
 });
+
+test('sanitizeTeamInput caps every renderer-supplied field', () => {
+  const { sanitizeTeamInput, TEAM_INPUT_CAPS: C } = loadTs('src/main/teamComposer.ts');
+  assert.deepEqual(C, { existingAgents: 50, answers: 3, answerChars: 2000, analysisChars: 6000, manifests: 12 });
+  const raw = {
+    repoRoot: '/evil',
+    round: 2,
+    analysis: 'a'.repeat(7000),
+    existingAgents: Array.from({ length: 60 }, (_, i) => ({ name: `n${i}`, description: 'd'.repeat(500) })),
+    answers: Array.from({ length: 5 }, () => ({ question: 'q'.repeat(3000), answer: 'r'.repeat(3000) })),
+  };
+  const out = sanitizeTeamInput(raw, '/bound', 'model-x');
+  assert.equal(out.repoRoot, '/bound', 'the bound repo wins over the renderer path');
+  assert.equal(out.round, 2);
+  assert.equal(out.defaultModel, 'model-x');
+  assert.equal(out.analysis.length, 6000);
+  assert.equal(out.existingAgents.length, 50);
+  assert.ok(out.existingAgents[0].description.length <= 200);
+  assert.equal(out.answers.length, 3);
+  for (const a of out.answers) {
+    assert.equal(a.answer.length, 2000);
+    assert.ok(a.question.length <= 2000);
+  }
+});
+
+test('sanitizeTeamInput rejects non-objects', () => {
+  const { sanitizeTeamInput } = loadTs('src/main/teamComposer.ts');
+  assert.equal(sanitizeTeamInput(null, '/r'), null);
+  assert.equal(sanitizeTeamInput('x', '/r'), null);
+});

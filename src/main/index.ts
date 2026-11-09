@@ -60,7 +60,7 @@ import { RosterStore, listRepoRosters, readAllRosterAgents } from './roster';
 import { migrateLegacyRoster } from './rosterMigration';
 import { FloorRegistry, normalizeFloorRepo } from './floors';
 import { runHiddenClaude } from './hiddenClaude';
-import { runTeamAnalysis, writeTeamHires, hiresDir } from './teamComposer';
+import { runTeamAnalysis, writeTeamHires, hiresDir, sanitizeTeamInput, TEAM_INPUT_CAPS } from './teamComposer';
 import { buildTeamPrompt, type TeamPromptInput } from '../shared/teamPrompt';
 import { buildWorkerLaunch } from './workerLaunch';
 import { ControlRegistry } from './control';
@@ -3563,37 +3563,19 @@ async function resolveAgentRepo(a: { cwd?: string; worktreePath?: string }): Pro
 ipcMain.on('floor:repoSync', (evt) => { evt.returnValue = floors.repoOf(evt.sender.id); });
 
 // ─── Compose the team: hidden analysis + hire manifests on disk ─────────────
-// One analysis per repo at a time; the renderer's repo/input is untrusted.
+// One analysis per repo at a time. The repo is always the SENDER's bound floor
+// (the renderer's path is ignored) and every input is capped.
 const teamAnalyses = new Map<string, AbortController>();
-async function teamRepoFromInput(repo: unknown): Promise<string | null> {
-  if (typeof repo !== 'string' || !repo.trim() || !isAbsolute(repo)) return null;
-  const root = await floorRepoFromInput(repo);
+function teamRepoOf(sender: Electron.WebContents): string | null {
+  const root = floors.repoOf(sender.id);
   return root && existsSync(root) ? root : null;
 }
 function teamInput(raw: unknown, repoRoot: string): TeamPromptInput | null {
-  if (typeof raw !== 'object' || raw === null) return null;
-  const o = raw as Partial<TeamPromptInput>;
-  const round = o.round === 2 ? 2 : 1;
-  const existingAgents = Array.isArray(o.existingAgents)
-    ? o.existingAgents
-        .filter((a): a is { name: string; description?: string } => !!a && typeof a.name === 'string')
-        .map((a) => ({ name: a.name, description: typeof a.description === 'string' ? a.description : undefined }))
-    : [];
-  const answers = Array.isArray(o.answers)
-    ? o.answers
-        .filter((a) => !!a && typeof a.question === 'string' && typeof a.answer === 'string')
-        .map((a) => ({ question: a.question, answer: a.answer }))
-    : undefined;
-  return {
-    repoRoot, existingAgents, round,
-    analysis: typeof o.analysis === 'string' ? o.analysis : undefined,
-    answers,
-    defaultModel: readConfig().defaultModel ?? undefined
-  };
+  return sanitizeTeamInput(raw, repoRoot, readConfig().defaultModel ?? undefined);
 }
-ipcMain.handle('team:analyze', async (_evt, raw: unknown) => {
-  const repo = await teamRepoFromInput((raw as { repoRoot?: unknown } | null)?.repoRoot);
-  if (!repo) return { kind: 'error', error: 'folder not found' };
+ipcMain.handle('team:analyze', async (evt, raw: unknown) => {
+  const repo = teamRepoOf(evt.sender);
+  if (!repo) return { kind: 'error', error: 'no floor repo' };
   const input = teamInput(raw, repo);
   if (!input) return { kind: 'error', error: 'invalid input' };
   if (teamAnalyses.has(repo)) return { kind: 'error', error: 'analysis already running' };
@@ -3615,24 +3597,25 @@ ipcMain.handle('team:analyze', async (_evt, raw: unknown) => {
     if (teamAnalyses.get(repo) === ctl) teamAnalyses.delete(repo);
   }
 });
-ipcMain.handle('team:cancel', async (_evt, repo: unknown) => {
-  const root = await teamRepoFromInput(repo);
+ipcMain.handle('team:cancel', async (evt) => {
+  const root = teamRepoOf(evt.sender);
   if (root) teamAnalyses.get(root)?.abort();
 });
-ipcMain.handle('team:prompt', async (_evt, raw: unknown) => {
-  const repo = await teamRepoFromInput((raw as { repoRoot?: unknown } | null)?.repoRoot);
+ipcMain.handle('team:prompt', async (evt, raw: unknown) => {
+  const repo = teamRepoOf(evt.sender);
   const input = repo ? teamInput(raw, repo) : null;
   return input ? buildTeamPrompt(input) : '';
 });
-ipcMain.handle('team:write', async (_evt, repo: unknown, manifests: unknown) => {
-  const root = await teamRepoFromInput(repo);
+ipcMain.handle('team:write', async (evt, _repo: unknown, manifests: unknown) => {
+  const root = teamRepoOf(evt.sender);
   const home = readConfig().harnessHome;
-  if (!root || !home) return { written: [], errors: ['folder not found'], manifests: [] };
+  if (!root || !home) return { written: [], errors: ['no floor repo'], manifests: [] };
   if (!Array.isArray(manifests)) return { written: [], errors: ['invalid manifests'], manifests: [] };
+  if (manifests.length > TEAM_INPUT_CAPS.manifests) return { written: [], errors: ['too many manifests'], manifests: [] };
   return writeTeamHires(home, root, manifests as HireManifest[]);
 });
-ipcMain.handle('team:openFolder', async (_evt, repo: unknown) => {
-  const root = await teamRepoFromInput(repo);
+ipcMain.handle('team:openFolder', async (evt) => {
+  const root = teamRepoOf(evt.sender);
   const home = readConfig().harnessHome;
   if (!root || !home) return;
   const dir = hiresDir(home, root);

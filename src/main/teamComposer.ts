@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildTeamPrompt, parseTeamResponse, type TeamPromptInput, type TeamResponse } from '../shared/teamPrompt';
-import { validateHireManifest, type HireManifest } from '../shared/hire';
+import { HIRE_LIMITS, validateHireManifest, type HireManifest } from '../shared/hire';
 import { repoSlug } from './roster';
 
 export type TeamRunner = (prompt: string) => Promise<{ ok: boolean; text?: string; error?: string }>;
@@ -25,6 +25,45 @@ export async function runTeamAnalysis(input: TeamPromptInput, run: TeamRunner): 
     last = parsed;
   }
   return last;
+}
+
+/** Caps on what the renderer may send to the team:* IPC handlers. */
+export const TEAM_INPUT_CAPS = {
+  existingAgents: 50,
+  answers: 3,
+  answerChars: 2000,
+  analysisChars: 6000,
+  manifests: 12
+} as const;
+
+/** Untrusted renderer input → a bounded TeamPromptInput for `repoRoot` (the
+ *  sender's bound floor repo, never the path the renderer sent). */
+export function sanitizeTeamInput(raw: unknown, repoRoot: string, defaultModel?: string): TeamPromptInput | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const C = TEAM_INPUT_CAPS;
+  const o = raw as Partial<TeamPromptInput>;
+  const round = o.round === 2 ? 2 : 1;
+  const existingAgents = Array.isArray(o.existingAgents)
+    ? o.existingAgents
+        .filter((a): a is { name: string; description?: string } => !!a && typeof a.name === 'string')
+        .slice(0, C.existingAgents)
+        .map((a) => ({
+          name: a.name.slice(0, 80),
+          description: typeof a.description === 'string' ? a.description.slice(0, HIRE_LIMITS.description) : undefined
+        }))
+    : [];
+  const answers = Array.isArray(o.answers)
+    ? o.answers
+        .filter((a) => !!a && typeof a.question === 'string' && typeof a.answer === 'string')
+        .slice(0, C.answers)
+        .map((a) => ({ question: a.question.slice(0, C.answerChars), answer: a.answer.slice(0, C.answerChars) }))
+    : undefined;
+  return {
+    repoRoot, existingAgents, round,
+    analysis: typeof o.analysis === 'string' ? o.analysis.slice(0, C.analysisChars) : undefined,
+    answers,
+    defaultModel
+  };
 }
 
 export function hiresDir(home: string, repoRoot: string): string {
