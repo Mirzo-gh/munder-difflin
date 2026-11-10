@@ -210,7 +210,12 @@
     "plusMention": "Mention an agent",
     "plusSearch": "Search…",
     "plusBack": "Back",
-    "plusNothing": "Nothing matches."
+    "plusNothing": "Nothing matches.",
+    "inboxTitle": "Hive mail",
+    "inboxNew": "New hive mail: the agent is reading its inbox.",
+    "inboxMissing": "Message {{id}} not found (deleted?)",
+    "inboxFromHuman": "you",
+    "inboxFromSystem": "harness"
   },
   "toolWaterfall": {
     "fresh": "fresh {{tokens}}t",

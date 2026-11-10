@@ -22,6 +22,8 @@ import { CliSpinner } from './CliSpinner';
 import { readTerminalScreen, sendTerminalKeys } from './terminalPool';
 import { useTerminalFontSize, setTerminalFontSize, getTerminalFontSize, DEFAULT_TERMINAL_FONT_SIZE } from './terminalFontSize';
 import { detectTerminalMenu, menuKeystrokes, type TerminalMenu } from '@shared/terminalMenu';
+import { parseInboxNudge } from '@shared/hiveNudge';
+import { AgentChip, InboxNudgeCard } from './InboxMail';
 
 const POLL_MS = 900;
 /** Within this many px of the bottom counts as "following" the conversation. */
@@ -173,10 +175,6 @@ function AgentMentions({ text, ids, selfId, arrow }: {
 }) {
   const agents = useStore((s) => s.agents) ?? EMPTY_AGENTS;
   const archived = useStore((s) => s.archivedAgents) ?? EMPTY_AGENTS;
-  const select = useStore((s) => s.select);
-  const setSidebarTab = useStore((s) => s.setSidebarTab);
-  const fullscreenAgentId = useStore((s) => s.fullscreenAgentId);
-  const setFullscreen = useStore((s) => s.setFullscreen);
   const all = [...agents, ...archived];
   const found = ids
     ? ids.map((id) => all.find((a) => a.id === id || a.name.toLowerCase() === id.toLowerCase()))
@@ -186,34 +184,7 @@ function AgentMentions({ text, ids, selfId, arrow }: {
   if (!unique.length) return null;
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: arrow ? 0 : 6 }}>
-      {unique.map((a) => (
-        <button
-          key={a.id}
-          type="button"
-          title={a.cwd}
-          onClick={() => {
-            if (fullscreenAgentId) setFullscreen(null);
-            select(a.id);
-            setSidebarTab('terminal');
-          }}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 8px 3px 4px',
-            borderRadius: 999, border: 'none', cursor: 'pointer', maxWidth: '100%',
-            background: 'var(--cth-cream-50)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
-            fontFamily: 'var(--cth-font-ui)', fontSize: '0.85em', color: 'var(--cth-ink-900)',
-            opacity: a.archived ? 0.6 : 1
-          }}
-        >
-          {arrow && <span style={{ color: 'var(--cth-ink-500)', paddingLeft: 4 }}>→</span>}
-          <span aria-hidden="true" style={{
-            width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: 'inline-flex',
-            alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700,
-            background: `var(--cth-${a.accent})`, color: 'var(--cth-on-accent)'
-          }}>{a.name.trim().slice(0, 1).toUpperCase()}</span>
-          <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
-          <PixelBadge status={a.archived ? 'ghost' : a.status} />
-        </button>
-      ))}
+      {unique.map((a) => <AgentChip key={a.id} agent={a} arrow={arrow} />)}
     </div>
   );
 }
@@ -305,7 +276,11 @@ const EntryView = memo(function EntryView({ entry, accent, cwd, selfId }: {
 }) {
   const { t } = useTranslation();
   switch (entry.kind) {
-    case 'user':
+    case 'user': {
+      // The hive's inbox-wake nudge (`📬 inbox: <ids>`): show who wrote and
+      // what about, not the raw message ids.
+      const nudgeIds = entry.images ? null : parseInboxNudge(entry.text);
+      if (nudgeIds) return <InboxNudgeCard agentId={selfId} ids={nudgeIds} />;
       return (
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <div style={{
@@ -323,6 +298,7 @@ const EntryView = memo(function EntryView({ entry, accent, cwd, selfId }: {
           </div>
         </div>
       );
+    }
     case 'assistant':
       return (
         <div style={{ color: 'var(--cth-ink-900)', fontSize: '1em', lineHeight: 1.5, overflowWrap: 'anywhere', minWidth: 0 }}>

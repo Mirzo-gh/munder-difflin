@@ -210,7 +210,12 @@
     "plusMention": "提及代理",
     "plusSearch": "搜索…",
     "plusBack": "返回",
-    "plusNothing": "没有匹配项。"
+    "plusNothing": "没有匹配项。",
+    "inboxTitle": "蜂巢邮件",
+    "inboxNew": "新的蜂巢邮件：代理正在读取收件箱。",
+    "inboxMissing": "找不到消息 {{id}}（已删除？）",
+    "inboxFromHuman": "你",
+    "inboxFromSystem": "系统"
   },
   "toolWaterfall": {
     "fresh": "新计 {{tokens}}t",
