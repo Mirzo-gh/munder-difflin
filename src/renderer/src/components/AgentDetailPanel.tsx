@@ -7,6 +7,7 @@ import { AgentMonogram } from './AgentMonogram';
 import { PtyTerminalView } from './PtyTerminalView';
 import { terminalInstanceKey } from './terminalRecovery';
 import { MessageQueueComposer } from './MessageQueueComposer';
+import { TerminalWithConversation } from './ConversationView';
 import { CommandCenterPanel } from './CommandCenterPanel';
 import { disposeTerminal } from './terminalPool';
 import { SidebarTabs } from './SidebarTabs';
@@ -236,7 +237,7 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
               </EmptyTab>
             ) : (
             <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+              <TerminalWithConversation agent={agent} raw={
                 <PtyTerminalView
                   key={terminalInstanceKey(agent.ptyId, agent.terminalGeneration)}
                   ptyId={agent.ptyId}
@@ -252,8 +253,7 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
                   fullscreen={false}
                   embedded
                 />
-              </div>
-              <MessageQueueComposer agent={agent} />
+              } composer={<MessageQueueComposer agent={agent} />} />
             </div>
             )
           ) : (

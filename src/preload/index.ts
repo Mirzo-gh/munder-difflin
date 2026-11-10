@@ -15,6 +15,7 @@ export type { HeroPayload } from '../shared/heroPayload';
 import type { ModelCatalog } from '../shared/modelCatalogPayload';
 export type { ModelCatalog, CatalogModel } from '../shared/modelCatalogPayload';
 import type { HookEvent } from '../shared/hookEvents';
+import type { RawConversationItem } from '../shared/conversation';
 export type { HookEvent } from '../shared/hookEvents';
 import type { LocalSkill, CatalogSkill } from '../main/skills';
 export type { LocalSkill, CatalogSkill } from '../main/skills';
@@ -945,6 +946,13 @@ const api = {
    *  have fired at least once (the transcript path is learned from them). */
   agentContext: (agentId: string): Promise<number | null> =>
     ipcRenderer.invoke('hive:agentContext', agentId),
+  /** Incremental read of an agent's Claude transcript for the conversation
+   *  view. Pass back the returned `offset` and `path`; null until a transcript
+   *  is known for the agent. */
+  agentConversation: (agentId: string, offset: number, knownPath: string | null): Promise<{
+    path: string; items: RawConversationItem[]; offset: number; reset: boolean; truncated: boolean;
+  } | null> =>
+    ipcRenderer.invoke('hive:agentConversation', agentId, offset, knownPath),
 
   // ─── Live telemetry (OTel collector — the usage-provider seam + spans) ──────
   /** Live cumulative usage for an agent (OTel-preferred, transcript fallback). */
