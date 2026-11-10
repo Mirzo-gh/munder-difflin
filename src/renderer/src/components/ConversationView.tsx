@@ -8,11 +8,11 @@
  * permission prompt, a picker) is answered in the raw view — the banner below
  * points there when the agent is blocked.
  */
-import { memo, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Agent } from '@/store/store';
 import { MarkdownPreview } from '@/markdown/MarkdownPreview';
-import { findAgentMentions, foldConversation, type ConversationEntry } from '@shared/conversation';
+import { derivePlan, findAgentMentions, foldConversation, type ConversationEntry, type PlanStep } from '@shared/conversation';
 import { useStore } from '@/store/store';
 import { PixelBadge } from './PixelBadge';
 import { AskMeTab } from './AskMeTab';
@@ -104,6 +104,8 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
   // proportional UI text reads smaller than the mono grid at the same size.
   const fontSize = useTerminalFontSize();
   const menu = useTerminalMenu(agent.ptyId);
+  const blocks = useMemo(() => groupEntries(state.entries), [state.entries]);
+  const plan = useMemo(() => derivePlan(state.entries), [state.entries]);
   const blocked = agent.status === 'blocked' && !menu;
 
   return (
@@ -132,8 +134,10 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
             <button type="button" onClick={onShowRaw} style={linkButton}>{t('conversation.showRaw')}</button>
           </div>
         )}
-        {state.entries.map((e) => (
-          <EntryView key={e.id} entry={e} accent={agent.accent} cwd={agent.worktreePath ?? agent.cwd} selfId={agent.id} />
+        {blocks.map((b, i) => b.type === 'tools' ? (
+          <ToolGroup key={b.id} items={b.items} selfId={agent.id} live={busy && i === blocks.length - 1} />
+        ) : (
+          <EntryView key={b.entry.id} entry={b.entry} accent={agent.accent} cwd={agent.worktreePath ?? agent.cwd} selfId={agent.id} />
         ))}
         {busy && (
           <div role="status" style={{
@@ -145,6 +149,7 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
           </div>
         )}
       </div>
+      {plan.length > 0 && <PlanPanel steps={plan} />}
       {menu && agent.ptyId && (
         <TerminalMenuCard key={menu.key} menu={menu} ptyId={agent.ptyId} accent={agent.accent} onShowRaw={onShowRaw} />
       )}
@@ -314,42 +319,236 @@ const EntryView = memo(function EntryView({ entry, accent, cwd, selfId }: {
           </div>
         </Collapsible>
       );
-    case 'tool': {
-      const pending = entry.result === undefined;
-      return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-        <Collapsible
-          label={
-            <>
-              <span style={{ fontWeight: 600 }}>{entry.name}</span>
-              {entry.summary && (
-                <span style={{
-                  color: 'var(--cth-ink-500)', overflow: 'hidden', textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap', minWidth: 0
-                }}> {entry.summary}</span>
-              )}
-              <span style={{ marginLeft: 'auto', flexShrink: 0, color: entry.isError ? 'var(--cth-danger)' : 'var(--cth-ink-500)' }}>
-                {pending ? '…' : entry.isError ? '✕' : '✓'}
-              </span>
-            </>
-          }
-          boxed
-        >
-          {entry.input && <pre style={preStyle}>{entry.input}</pre>}
-          {entry.result !== undefined && entry.result !== '' && (
-            <pre style={{ ...preStyle, color: entry.isError ? 'var(--cth-danger)' : 'var(--cth-ink-700)' }}>
-              {entry.result}
-            </pre>
-          )}
-        </Collapsible>
-        {entry.targets && <AgentMentions ids={entry.targets} selfId={selfId} arrow />}
-        </div>
-      );
-    }
+    case 'tool':
+      return <ToolRow entry={entry} />;
     case 'event':
       return <div style={eventStyle}>— {entry.text} —</div>;
   }
 });
+
+// ─── Grouped tool calls (Claude Code desktop style) ──────────────────────────
+
+type ToolLike = Extract<ConversationEntry, { kind: 'tool' } | { kind: 'thinking' }>;
+type Block =
+  | { type: 'entry'; entry: ConversationEntry }
+  | { type: 'tools'; id: string; items: ToolLike[] };
+
+/** Consecutive tool calls (and the thinking between them) become one block. */
+function groupEntries(entries: readonly ConversationEntry[]): Block[] {
+  const out: Block[] = [];
+  for (const e of entries) {
+    if (e.kind === 'tool' || e.kind === 'thinking') {
+      const last = out[out.length - 1];
+      if (last && last.type === 'tools') last.items.push(e);
+      else out.push({ type: 'tools', id: `g:${e.id}`, items: [e] });
+    } else {
+      out.push({ type: 'entry', entry: e });
+    }
+  }
+  return out;
+}
+
+type Verb = 'commands' | 'reads' | 'edits' | 'searches' | 'web' | 'agents' | 'plan' | 'messages' | 'tools';
+
+function verbFor(e: Extract<ConversationEntry, { kind: 'tool' }>): Verb {
+  if (e.targets?.length) return 'messages';
+  if (e.plan) return 'plan';
+  switch (e.name) {
+    case 'Bash': case 'BashOutput': case 'KillShell': case 'PowerShell': return 'commands';
+    case 'Read': case 'NotebookRead': return 'reads';
+    case 'Edit': case 'MultiEdit': case 'Write': case 'NotebookEdit': return 'edits';
+    case 'Grep': case 'Glob': case 'LS': return 'searches';
+    case 'WebFetch': case 'WebSearch': return 'web';
+    case 'Task': case 'Agent': return 'agents';
+    case 'TodoRead': case 'TaskList': case 'TaskGet': return 'plan';
+    default: return 'tools';
+  }
+}
+
+const VERB_ORDER: Verb[] = ['commands', 'reads', 'edits', 'searches', 'web', 'agents', 'messages', 'plan', 'tools'];
+
+function ToolGroup({ items, selfId, live }: { items: ToolLike[]; selfId: string; live: boolean }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const tools = items.filter((e): e is Extract<ConversationEntry, { kind: 'tool' }> => e.kind === 'tool');
+  const counts = new Map<Verb, number>();
+  for (const e of tools) counts.set(verbFor(e), (counts.get(verbFor(e)) ?? 0) + 1);
+  const parts = VERB_ORDER.filter((v) => counts.has(v)).map((v) => {
+    const n = counts.get(v)!;
+    return t(n === 1 ? `conversation.group.${v}One` : `conversation.group.${v}Many`, { count: n });
+  });
+  const joined = parts.join(', ');
+  const summary = joined ? joined.charAt(0).toUpperCase() + joined.slice(1) : t('conversation.thinking');
+  const pending = tools.some((e) => e.result === undefined);
+  const errors = tools.filter((e) => e.isError).length;
+  const targets = [...new Set(tools.flatMap((e) => e.targets ?? []))];
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="cth-conv-group"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6, width: 'fit-content', maxWidth: '100%', minWidth: 0,
+          background: 'none', border: 'none', padding: '2px 6px 2px 2px', borderRadius: 6, cursor: 'pointer',
+          textAlign: 'left', fontFamily: 'var(--cth-font-ui)', fontSize: '0.88em', color: 'var(--cth-ink-500)'
+        }}
+      >
+        {pending && live ? <CliSpinner /> : (
+          <span style={{ width: 14, textAlign: 'center', flexShrink: 0, color: errors ? 'var(--cth-danger)' : 'var(--cth-ink-300)' }}>
+            {errors ? '✕' : '✓'}
+          </span>
+        )}
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{summary}</span>
+        {errors > 0 && (
+          <span style={{ color: 'var(--cth-danger)', flexShrink: 0 }}>· {t('conversation.group.errors', { count: errors })}</span>
+        )}
+        <span style={{ display: 'inline-block', transform: open ? 'rotate(90deg)' : 'none', flexShrink: 0, fontSize: '0.85em' }}>›</span>
+      </button>
+      {open && (
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 2, marginLeft: 8, paddingLeft: 10,
+          boxShadow: 'inset 1px 0 0 var(--cth-ink-300)', minWidth: 0
+        }}>
+          {items.map((e) => e.kind === 'tool' ? <ToolRow key={e.id} entry={e} /> : (
+            <Collapsible key={e.id} label={t('conversation.thinking')} muted>
+              <div style={{ whiteSpace: 'pre-wrap', fontSize: '0.92em', color: 'var(--cth-ink-500)', fontStyle: 'italic', padding: '4px 0 4px 16px' }}>
+                {e.text}
+              </div>
+            </Collapsible>
+          ))}
+        </div>
+      )}
+      {targets.length > 0 && <AgentMentions ids={targets} selfId={selfId} arrow />}
+    </div>
+  );
+}
+
+/** One tool call: a muted line, opening onto its full input and result. */
+function ToolRow({ entry }: { entry: Extract<ConversationEntry, { kind: 'tool' }> }) {
+  const pending = entry.result === undefined;
+  return (
+    <Collapsible
+      muted
+      label={
+        <>
+          <span style={{ fontWeight: 600, color: 'var(--cth-ink-700)', flexShrink: 0 }}>{entry.name}</span>
+          {entry.summary && (
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{entry.summary}</span>
+          )}
+          <span style={{ marginLeft: 'auto', paddingLeft: 8, flexShrink: 0, color: entry.isError ? 'var(--cth-danger)' : 'var(--cth-ink-300)' }}>
+            {pending ? '…' : entry.isError ? '✕' : '✓'}
+          </span>
+        </>
+      }
+    >
+      <div style={{ paddingLeft: 16 }}>
+        {entry.input && <FullPre text={entry.input} />}
+        {entry.result !== undefined && entry.result !== '' && (
+          <FullPre text={entry.result} color={entry.isError ? 'var(--cth-danger)' : undefined} />
+        )}
+      </div>
+    </Collapsible>
+  );
+}
+
+/** A code block capped at 280px, with "show all" to lift the cap. */
+function FullPre({ text, color }: { text: string; color?: string }) {
+  const { t } = useTranslation();
+  const [full, setFull] = useState(false);
+  const long = text.split('\n').length > 16 || text.length > 1500;
+  return (
+    <div style={{ position: 'relative' }}>
+      <pre style={{ ...preStyle, ...(full ? { maxHeight: 'none' } : {}), ...(color ? { color } : {}) }}>{text}</pre>
+      {long && (
+        <button type="button" onClick={() => setFull((f) => !f)} style={{ ...linkButton, fontSize: '0.8em', color: 'var(--cth-ink-500)', marginTop: 2 }}>
+          {full ? t('conversation.showLess') : t('conversation.showAll')}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Plan (the agent's step list) ───────────────────────────────────────────
+
+const PLAN_KEY = 'cth.conversationPlanOpen';
+
+function PlanPanel({ steps }: { steps: PlanStep[] }) {
+  const { t } = useTranslation();
+  const [open, setOpenState] = useState<boolean>(() => {
+    try { return localStorage.getItem(PLAN_KEY) !== '0'; } catch { return true; }
+  });
+  const setOpen = (v: boolean) => {
+    setOpenState(v);
+    try { localStorage.setItem(PLAN_KEY, v ? '1' : '0'); } catch { /* storage unavailable */ }
+  };
+  const done = steps.filter((s) => s.status === 'completed').length;
+  const current = steps.find((s) => s.status === 'in_progress');
+  return (
+    <div style={{
+      flexShrink: 0, margin: '0 12px 6px', borderRadius: 10, background: 'var(--cth-cream-50)',
+      boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)', fontFamily: 'var(--cth-font-ui)', fontSize: '0.92em',
+      color: 'var(--cth-ink-900)', overflow: 'hidden'
+    }}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 10px',
+          border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left',
+          fontFamily: 'var(--cth-font-ui)', fontSize: '1em', color: 'var(--cth-ink-900)'
+        }}
+      >
+        <span style={{ fontWeight: 600 }}>{t('conversation.plan')}</span>
+        <span style={{ color: 'var(--cth-ink-500)' }}>{done}/{steps.length}</span>
+        {!open && current && (
+          <span style={{ color: 'var(--cth-ink-500)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+            · {current.activeForm ?? current.title}
+          </span>
+        )}
+        <span style={{ marginLeft: 'auto', color: 'var(--cth-ink-500)', transform: open ? 'rotate(90deg)' : 'none', flexShrink: 0 }}>›</span>
+      </button>
+      {open && (
+        <ol style={{ listStyle: 'none', margin: 0, padding: '0 10px 8px', display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 220, overflowY: 'auto' }}>
+          {steps.map((s) => (
+            <li key={s.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, minWidth: 0 }}>
+              <StepIcon status={s.status} />
+              <span style={{
+                minWidth: 0, overflowWrap: 'anywhere',
+                color: s.status === 'pending' ? 'var(--cth-ink-500)' : 'var(--cth-ink-900)',
+                textDecoration: s.status === 'completed' ? 'line-through' : 'none',
+                textDecorationColor: 'var(--cth-ink-300)',
+                fontWeight: s.status === 'in_progress' ? 600 : 400
+              }}>
+                {s.status === 'in_progress' ? (s.activeForm ?? s.title) : s.title}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+function StepIcon({ status }: { status: PlanStep['status'] }) {
+  const { t } = useTranslation();
+  const label = t(`conversation.step.${status}`);
+  if (status === 'in_progress') {
+    return <span title={label} style={{ flexShrink: 0, display: 'inline-flex', width: 16, justifyContent: 'center' }}><CliSpinner /></span>;
+  }
+  const done = status === 'completed';
+  return (
+    <span title={label} aria-label={label} style={{
+      flexShrink: 0, width: 14, height: 14, marginTop: 2, marginInline: 1, borderRadius: '50%',
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700,
+      background: done ? 'var(--cth-mint)' : 'transparent',
+      boxShadow: done ? 'none' : 'inset 0 0 0 1.5px var(--cth-ink-300)',
+      color: 'var(--cth-on-accent)'
+    }}>{done ? '✓' : ''}</span>
+  );
+}
 
 const preStyle: React.CSSProperties = {
   margin: '6px 0 0', padding: 8, maxHeight: 280, overflow: 'auto',

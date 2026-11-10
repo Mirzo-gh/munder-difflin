@@ -215,7 +215,36 @@
     "inboxNew": "New hive mail: the agent is reading its inbox.",
     "inboxMissing": "Message {{id}} not found (deleted?)",
     "inboxFromHuman": "you",
-    "inboxFromSystem": "harness"
+    "inboxFromSystem": "harness",
+    "plan": "Plan",
+    "showAll": "Show all",
+    "showLess": "Show less",
+    "step": {
+      "pending": "To do",
+      "in_progress": "In progress",
+      "completed": "Done"
+    },
+    "group": {
+      "commandsOne": "Ran a command",
+      "commandsMany": "Ran {{count}} commands",
+      "readsOne": "read a file",
+      "readsMany": "read {{count}} files",
+      "editsOne": "edited a file",
+      "editsMany": "edited {{count}} files",
+      "searchesOne": "searched once",
+      "searchesMany": "searched {{count}} times",
+      "webOne": "opened a web page",
+      "webMany": "opened {{count}} web pages",
+      "agentsOne": "ran a subagent",
+      "agentsMany": "ran {{count}} subagents",
+      "messagesOne": "sent a message",
+      "messagesMany": "sent {{count}} messages",
+      "planOne": "updated the plan",
+      "planMany": "updated the plan",
+      "toolsOne": "used a tool",
+      "toolsMany": "used {{count}} tools",
+      "errors": "{{count}} failed"
+    }
   },
   "toolWaterfall": {
     "fresh": "fresh {{tokens}}t",

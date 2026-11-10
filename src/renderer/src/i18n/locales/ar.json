@@ -215,7 +215,36 @@
     "inboxNew": "بريد جديد في الخلية: يقرأ الوكيل صندوق الوارد.",
     "inboxMissing": "لم يتم العثور على الرسالة {{id}} (محذوفة؟)",
     "inboxFromHuman": "أنت",
-    "inboxFromSystem": "النظام"
+    "inboxFromSystem": "النظام",
+    "plan": "الخطة",
+    "showAll": "عرض الكل",
+    "showLess": "عرض أقل",
+    "step": {
+      "pending": "قادم",
+      "in_progress": "قيد التنفيذ",
+      "completed": "منجز"
+    },
+    "group": {
+      "commandsOne": "نفّذ أمرًا",
+      "commandsMany": "نفّذ {{count}} أوامر",
+      "readsOne": "قرأ ملفًا",
+      "readsMany": "قرأ {{count}} ملفات",
+      "editsOne": "عدّل ملفًا",
+      "editsMany": "عدّل {{count}} ملفات",
+      "searchesOne": "بحث مرة",
+      "searchesMany": "بحث {{count}} مرات",
+      "webOne": "فتح صفحة ويب",
+      "webMany": "فتح {{count}} صفحات ويب",
+      "agentsOne": "شغّل وكيلًا فرعيًا",
+      "agentsMany": "شغّل {{count}} وكلاء فرعيين",
+      "messagesOne": "أرسل رسالة",
+      "messagesMany": "أرسل {{count}} رسائل",
+      "planOne": "حدّث الخطة",
+      "planMany": "حدّث الخطة",
+      "toolsOne": "استخدم أداة",
+      "toolsMany": "استخدم {{count}} أدوات",
+      "errors": "فشل {{count}}"
+    }
   },
   "toolWaterfall": {
     "fresh": "جديد {{tokens}}ر",
