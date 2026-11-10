@@ -1031,3 +1031,27 @@ function registerMarkdownLinkProvider(term: Terminal, ptyId: string): void {
     });
   } catch { /* proposed API unavailable — feature silently off */ }
 }
+
+/** The terminal's live screen (the bottom `rows` rows, not the scrolled
+ *  viewport) as plain text, one string per row. Empty when the pty has no
+ *  terminal yet. Used by the conversation view to mirror on-screen menus. */
+export function readTerminalScreen(ptyId: string): string[] {
+  const entry = pool.get(ptyId);
+  if (!entry) return [];
+  const buf = entry.term.buffer.active;
+  const out: string[] = [];
+  for (let y = buf.baseY; y < buf.baseY + entry.term.rows; y++) {
+    out.push(buf.getLine(y)?.translateToString(true) ?? '');
+  }
+  return out;
+}
+
+/** Send keystrokes to a pty one by one, spaced so a TUI handles each key. */
+export async function sendTerminalKeys(ptyId: string, keys: readonly string[], gapMs = 40): Promise<void> {
+  const entry = pool.get(ptyId);
+  if (!entry || entry.exited) return;
+  for (let i = 0; i < keys.length; i++) {
+    if (i) await new Promise((r) => setTimeout(r, gapMs));
+    await window.cth.writePty(ptyId, keys[i]);
+  }
+}

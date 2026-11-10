@@ -353,3 +353,12 @@ input, textarea, [contenteditable='true'] {
 .cth-md-card hr { margin: 0.8em 0; }
 .cth-md-card table { margin: 0.5em 0; }
 .cth-md-card th, .cth-md-card td { padding: 3px 7px; font-size: 0.9em; }
+
+/* Conversation view: the Questions sidebar's drag handle shows on hover. */
+.cth-conv-resize:hover, .cth-conv-resize:active { background: var(--cth-ink-300); }
+
+/* Conversation view composer: one rounded field, ring on focus. */
+.cth-chat-input { box-shadow: inset 0 0 0 1px var(--cth-ink-300); transition: box-shadow 120ms; }
+.cth-chat-input:focus-within { box-shadow: inset 0 0 0 1.5px var(--cth-ink-700); }
+.cth-chat-iconbtn:hover { background: var(--cth-cream-200) !important; }
+.cth-chat-menuitem:hover, .cth-chat-menuitem:focus-visible { background: var(--cth-cream-200) !important; outline: none; }
