@@ -6,6 +6,7 @@ import { PixelButton } from './PixelButton';
 import { PtyTerminalView } from './PtyTerminalView';
 import { terminalInstanceKey } from './terminalRecovery';
 import { MessageQueueComposer } from './MessageQueueComposer';
+import { TerminalWithConversation } from './ConversationView';
 import { AgentControlStrip } from './AgentControlStrip';
 import { CommandCenterPanel } from './CommandCenterPanel';
 import { EditAgentModal } from './EditAgentModal';
@@ -572,7 +573,7 @@ export function FullscreenTerminal({ config }: FullscreenTerminalProps) {
               <AgentControlStrip key={agent.id} agentId={agent.id} />
 
               <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+                <TerminalWithConversation agent={agent} raw={
                   <PtyTerminalView
                     key={terminalInstanceKey(agent.ptyId, agent.terminalGeneration)}
                     ptyId={agent.ptyId}
@@ -587,8 +588,7 @@ export function FullscreenTerminal({ config }: FullscreenTerminalProps) {
                     onToggleFullscreen={() => setFullscreen(null)}
                     fullscreen
                   />
-                </div>
-                <MessageQueueComposer agent={agent} />
+                } composer={<MessageQueueComposer agent={agent} />} />
               </div>
             </>
           )}
