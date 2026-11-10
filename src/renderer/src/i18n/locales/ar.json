@@ -206,7 +206,12 @@
     "plusMention": "الإشارة إلى وكيل",
     "plusSearch": "بحث…",
     "plusBack": "رجوع",
-    "plusNothing": "لا توجد نتائج."
+    "plusNothing": "لا توجد نتائج.",
+    "inboxTitle": "بريد الخلية",
+    "inboxNew": "بريد جديد في الخلية: يقرأ الوكيل صندوق الوارد.",
+    "inboxMissing": "لم يتم العثور على الرسالة {{id}} (محذوفة؟)",
+    "inboxFromHuman": "أنت",
+    "inboxFromSystem": "النظام"
   },
   "toolWaterfall": {
     "fresh": "جديد {{tokens}}ر",
