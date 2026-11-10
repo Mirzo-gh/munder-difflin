@@ -120,8 +120,30 @@ const TAG = (name: string, s: string): string | undefined => {
 
 /** Turn a user-typed string into a renderable item — or nothing, for the
  *  plumbing Claude Code writes as "user" text (command echoes, reminders). */
+/** Wrappers Claude Code (or an IDE / hook) puts INSIDE a user turn: dropped
+ *  whole, they are context for the model, not what the user typed. */
+const DROPPED_BLOCKS = [
+  'system-reminder', 'ide_selection', 'ide_opened_file', 'ide_diagnostics',
+  'user-prompt-submit-hook', 'local-command-caveat'
+];
+/** Wrappers around text the user DID provide (a paste): keep the inner text. */
+const UNWRAPPED_TAGS = ['pasted_content', 'pasted-content'];
+
+/** What the user actually wrote, with Claude Code's internal markup removed. */
+export function cleanUserText(raw: string): string {
+  let text = raw;
+  for (const tag of DROPPED_BLOCKS) {
+    text = text.replace(new RegExp(`<${tag}(?:\\s[^>]*)?>[\\s\\S]*?</${tag}(?:\\s[^>]*)?>`, 'g'), '');
+  }
+  for (const tag of UNWRAPPED_TAGS) {
+    text = text.replace(new RegExp(`</?${tag}(?:\\s[^>]*)?>[ \\t]*\\n?`, 'g'), '');
+  }
+  return text.replace(/\n{3,}/g, '\n\n').trim();
+}
+
 function userString(id: string, ts: string | undefined, raw: string): RawConversationItem | null {
-  const text = raw.trim();
+  const original = raw.trim();
+  const text = /^<(command-name|bash-input)>/.test(original) ? original : cleanUserText(original);
   if (!text) return null;
   const cmd = TAG('command-name', text);
   if (cmd) {

@@ -179,3 +179,17 @@ test('tool targets: hive outbox writes and MCP-style recipients', () => {
   ] } }) + '\n');
   assert.deepEqual(items[0].targets, ['qa']);
 });
+
+test('internal markup is removed from user bubbles, pasted text is kept', () => {
+  const items = conv.parseTranscriptChunk([
+    { type: 'user', uuid: 'p', message: { content: 'Réponse :\n<pasted_content id="e338">\nRecommandé partout.\nAttention aux objets stackables\n</pasted_content id="e338">' } },
+    { type: 'user', uuid: 'r', message: { content: '<system-reminder>ctx</system-reminder>\nVraie question ?' } },
+    { type: 'user', uuid: 'i', message: { content: [{ type: 'text', text: '<ide_selection>x</ide_selection>' }, { type: 'text', text: 'Explique ça' }] } },
+    { type: 'user', uuid: 'o', message: { content: '<local-command-stdout>ok</local-command-stdout>' } },
+  ].map((r) => JSON.stringify(r)).join('\n') + '\n');
+  assert.deepEqual(items.map((i) => i.text), [
+    'Réponse :\nRecommandé partout.\nAttention aux objets stackables',
+    'Vraie question ?',
+    'Explique ça',
+  ]);
+});
