@@ -8,7 +8,7 @@
  * permission prompt, a picker) is answered in the raw view — the banner below
  * points there when the agent is blocked.
  */
-import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Agent } from '@/store/store';
 import { MarkdownPreview } from '@/markdown/MarkdownPreview';
@@ -290,5 +290,57 @@ export function TerminalModeSwitch({ mode, onChange }: {
       {opt('conversation', t('conversation.modeConversation'))}
       {opt('raw', t('conversation.modeRaw'))}
     </div>
+  );
+}
+
+// ─── Shared mode (conversation / raw), synced across every terminal surface ────
+
+export type TerminalViewMode = 'conversation' | 'raw';
+const TERMINAL_MODE_KEY = 'cth.terminalViewMode';
+const modeListeners = new Set<() => void>();
+let currentMode: TerminalViewMode = (() => {
+  try { return localStorage.getItem(TERMINAL_MODE_KEY) === 'raw' ? 'raw' : 'conversation'; } catch { return 'conversation'; }
+})();
+
+export function setTerminalViewMode(m: TerminalViewMode): void {
+  currentMode = m;
+  try { localStorage.setItem(TERMINAL_MODE_KEY, m); } catch { /* storage unavailable */ }
+  modeListeners.forEach((l) => l());
+}
+
+export function useTerminalViewMode(): TerminalViewMode {
+  return useSyncExternalStore(
+    (l) => { modeListeners.add(l); return () => { modeListeners.delete(l); }; },
+    () => currentMode
+  );
+}
+
+/** Only Claude Code writes the transcript the conversation view reads. */
+export function supportsConversation(agent: Agent): boolean {
+  return (agent.provider ?? 'claude') === 'claude';
+}
+
+/** Wraps an agent's raw terminal with the Conversation / Raw switch. The raw
+ *  terminal stays MOUNTED (just hidden) in conversation mode: its stream feeds
+ *  the PTY parser that drives the agent's status, blocked detection and prompt
+ *  history. Non-Claude agents get the raw terminal unchanged. */
+export function TerminalWithConversation({ agent, raw }: { agent: Agent; raw: ReactNode }) {
+  const mode = useTerminalViewMode();
+  if (!supportsConversation(agent)) {
+    return <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>{raw}</div>;
+  }
+  const showConversation = mode === 'conversation';
+  return (
+    <>
+      <TerminalModeSwitch mode={mode} onChange={setTerminalViewMode} />
+      {showConversation && (
+        <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+          <ConversationView agent={agent} onShowRaw={() => setTerminalViewMode('raw')} />
+        </div>
+      )}
+      <div style={{ flex: 1, minHeight: 0, display: showConversation ? 'none' : 'flex' }}>
+        {raw}
+      </div>
+    </>
   );
 }

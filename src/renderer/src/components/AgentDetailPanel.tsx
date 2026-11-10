@@ -7,7 +7,7 @@ import { AgentMonogram } from './AgentMonogram';
 import { PtyTerminalView } from './PtyTerminalView';
 import { terminalInstanceKey } from './terminalRecovery';
 import { MessageQueueComposer } from './MessageQueueComposer';
-import { ConversationView, TerminalModeSwitch } from './ConversationView';
+import { TerminalWithConversation } from './ConversationView';
 import { CommandCenterPanel } from './CommandCenterPanel';
 import { disposeTerminal } from './terminalPool';
 import { SidebarTabs } from './SidebarTabs';
@@ -91,17 +91,6 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
   const isFullscreenedHere = fullscreenAgentId === agent.id;
 
   const onPtyStream = usePtyParser(agent.id);
-
-  // Terminal tab: chat-style conversation (read from the Claude transcript) or
-  // the raw CLI. Only Claude Code writes the transcript this view reads, so
-  // other harnesses always get the raw terminal.
-  const supportsConversation = (agent.provider ?? 'claude') === 'claude';
-  const [terminalMode, setTerminalModeState] = useState<'conversation' | 'raw'>(readTerminalMode);
-  const setTerminalMode = (m: 'conversation' | 'raw') => {
-    setTerminalModeState(m);
-    try { localStorage.setItem(TERMINAL_MODE_KEY, m); } catch { /* storage unavailable */ }
-  };
-  const showConversation = supportsConversation && terminalMode === 'conversation';
 
   // Michael gets the full command-center dashboard instead of the plain panel.
   if (agent.isGod) return <CommandCenterPanel agent={agent} />;
@@ -248,18 +237,7 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
               </EmptyTab>
             ) : (
             <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-              {supportsConversation && (
-                <TerminalModeSwitch mode={terminalMode} onChange={setTerminalMode} />
-              )}
-              {showConversation && (
-                <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-                  <ConversationView agent={agent} onShowRaw={() => setTerminalMode('raw')} />
-                </div>
-              )}
-              {/* The raw terminal stays MOUNTED (just hidden) in conversation
-                  mode: its stream feeds the PTY parser that drives the agent's
-                  status, blocked detection and prompt history. */}
-              <div style={{ flex: 1, minHeight: 0, display: showConversation ? 'none' : 'flex' }}>
+              <TerminalWithConversation agent={agent} raw={
                 <PtyTerminalView
                   key={terminalInstanceKey(agent.ptyId, agent.terminalGeneration)}
                   ptyId={agent.ptyId}
@@ -275,7 +253,7 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
                   fullscreen={false}
                   embedded
                 />
-              </div>
+              } />
               <MessageQueueComposer agent={agent} />
             </div>
             )
@@ -304,12 +282,6 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
       )}
     </PixelPanel>
   );
-}
-
-const TERMINAL_MODE_KEY = 'cth.terminalViewMode';
-
-function readTerminalMode(): 'conversation' | 'raw' {
-  try { return localStorage.getItem(TERMINAL_MODE_KEY) === 'raw' ? 'raw' : 'conversation'; } catch { return 'conversation'; }
 }
 
 function EmptyTab({ title, children }: { title: string; children: React.ReactNode }) {

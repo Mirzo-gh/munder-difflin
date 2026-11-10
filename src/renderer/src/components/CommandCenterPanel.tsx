@@ -6,6 +6,7 @@ import { PixelButton } from './PixelButton';
 import { AgentMonogram } from './AgentMonogram';
 import { PtyTerminalView } from './PtyTerminalView';
 import { MessageQueueComposer } from './MessageQueueComposer';
+import { TerminalWithConversation } from './ConversationView';
 import { TasksKanban } from './TasksKanban';
 import { AskMeTab } from './AskMeTab';
 import { TriggersTab } from './triggers/TriggersTab';
@@ -290,7 +291,7 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
             <Centered>{t('commandCenter.terminalFullscreen')}</Centered>
           ) : agent.ptyId ? (
             <>
-              <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+              <TerminalWithConversation agent={agent} raw={
                 <PtyTerminalView
                   key={terminalInstanceKey(agent.ptyId, agent.terminalGeneration)}
                   ptyId={agent.ptyId}
@@ -306,7 +307,7 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
                   fullscreen={fullscreen}
                   embedded={!fullscreen}
                 />
-              </div>
+              } />
               <MessageQueueComposer agent={agent} />
             </>
           ) : (
