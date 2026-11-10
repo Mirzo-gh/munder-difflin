@@ -136,7 +136,9 @@
     "editNote": "Edit private note",
     "addNote": "Add private note",
     "editNoteAria": "Edit note for {{name}}",
-    "noteAria": "Note for {{name}}"
+    "noteAria": "Note for {{name}}",
+    "sendingTo": "sent a message to {{to}}",
+    "toHuman": "you"
   },
   "askMe": {
     "emptyTitle": "Nothing needs you right now. 🌿",
@@ -170,7 +172,9 @@
     "restorable": "{{name}} — restorable from last session",
     "dismiss": "Dismiss {{name}} — remove permanently from the restore list",
     "dismissAria": "Dismiss {{name}}",
-    "restoreAll": "restore all ({{count}})"
+    "restoreAll": "restore all ({{count}})",
+    "collapse": "Collapse the agent sidebar",
+    "expand": "Expand the agent sidebar"
   },
   "sidebar": {
     "terminal": "terminal",
