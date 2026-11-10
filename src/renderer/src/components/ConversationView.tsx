@@ -563,7 +563,10 @@ export function supportsConversation(agent: Agent): boolean {
  *  terminal stays MOUNTED (just hidden) in conversation mode: its stream feeds
  *  the PTY parser that drives the agent's status, blocked detection and prompt
  *  history. Non-Claude agents get the raw terminal unchanged. */
-export function TerminalWithConversation({ agent, raw }: { agent: Agent; raw: ReactNode }) {
+/** `composer` is the message box: inside the conversation column in
+ *  Conversation mode (so it sits in the chat, not under the Questions sidebar),
+ *  below the terminal otherwise. */
+export function TerminalWithConversation({ agent, raw, composer }: { agent: Agent; raw: ReactNode; composer?: ReactNode }) {
   const mode = useTerminalViewMode();
   const { t } = useTranslation();
   const [questionsOpen, setQuestionsOpenState] = useState<boolean>(readQuestionsOpen);
@@ -616,7 +619,7 @@ export function TerminalWithConversation({ agent, raw }: { agent: Agent; raw: Re
     return () => ro.disconnect();
   }, [canConverse]);
   if (!canConverse) {
-    return <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>{raw}</div>;
+    return <><div style={{ flex: 1, minHeight: 0, display: 'flex' }}>{raw}</div>{composer}</>;
   }
   const showConversation = mode === 'conversation';
   const showQuestions = showConversation && questionsOpen;
@@ -654,8 +657,11 @@ export function TerminalWithConversation({ agent, raw }: { agent: Agent; raw: Re
         flex: 1, minHeight: 0, minWidth: 0, display: showConversation ? 'flex' : 'none', position: 'relative'
       }}>
         {showConversation && (
-          <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex' }}>
-            <ConversationView agent={agent} onShowRaw={() => setTerminalViewMode('raw')} />
+          <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+              <ConversationView agent={agent} onShowRaw={() => setTerminalViewMode('raw')} />
+            </div>
+            {composer}
           </div>
         )}
         {showQuestions && (
@@ -702,6 +708,7 @@ export function TerminalWithConversation({ agent, raw }: { agent: Agent; raw: Re
       <div style={{ flex: 1, minHeight: 0, display: showConversation ? 'none' : 'flex' }}>
         {raw}
       </div>
+      {!showConversation && composer}
     </>
   );
 }

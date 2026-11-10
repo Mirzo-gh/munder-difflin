@@ -588,8 +588,7 @@ export function FullscreenTerminal({ config }: FullscreenTerminalProps) {
                     onToggleFullscreen={() => setFullscreen(null)}
                     fullscreen
                   />
-                } />
-                <MessageQueueComposer agent={agent} />
+                } composer={<MessageQueueComposer agent={agent} />} />
               </div>
             </>
           )}

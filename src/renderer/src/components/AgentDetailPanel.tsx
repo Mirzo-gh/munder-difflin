@@ -253,8 +253,7 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
                   fullscreen={false}
                   embedded
                 />
-              } />
-              <MessageQueueComposer agent={agent} />
+              } composer={<MessageQueueComposer agent={agent} />} />
             </div>
             )
           ) : (

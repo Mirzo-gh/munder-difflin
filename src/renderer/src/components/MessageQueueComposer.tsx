@@ -8,6 +8,7 @@ import type { TerminalAutomationBlock } from './terminalAutomation';
 import { useTerminalFontSize } from './terminalFontSize';
 import { isComposingKey } from '@shared/imeGuard';
 import { useRtl } from '@/i18n/useDirection';
+import { supportsConversation, useTerminalViewMode } from './ConversationView';
 
 const EMPTY_QUEUE: QueuedMessage[] = [];
 
@@ -31,6 +32,10 @@ export interface MessageQueueComposerProps {
 export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
   const { t } = useTranslation();
   const rtl = useRtl();
+  // In the Conversation view the composer is part of the chat: same surface,
+  // a rounded input with attach (+) on the left and a send arrow on the right.
+  const viewMode = useTerminalViewMode();
+  const chat = supportsConversation(agent) && viewMode === 'conversation';
   const queue = useStore((s) => s.messageQueues[agent.id]) ?? EMPTY_QUEUE;
   const enqueueMessage = useStore((s) => s.enqueueMessage);
   const removeQueuedMessage = useStore((s) => s.removeQueuedMessage);
@@ -165,6 +170,181 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
     : deliveryPaused && !queue[0]?.manual
     ? t('queueComposer.heldFloor')
     : t('queueComposer.sendingOneByOne', { name: agent.name });
+
+  const pendingList = queue.length > 0 && (
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: 4,
+      maxHeight: 280, overflowY: 'auto'
+    }}>
+      {queue.map((m, i) => (
+        <QueuedMessageRow
+          key={m.id}
+          index={i}
+          message={m}
+          paused={deliveryPaused}
+          onSendNow={() => releaseQueuedMessage(agent.id, m.id)}
+          onRemove={() => removeQueuedMessage(agent.id, m.id)}
+        />
+      ))}
+    </div>
+  );
+
+  const attachmentChips = attachments.length > 0 && (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+      {attachments.map((a) => (
+        <span
+          key={a.path}
+          title={a.path}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            maxWidth: '100%',
+            padding: '2px 4px 2px 6px',
+            background: 'var(--cth-cream-200)',
+            boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)',
+            borderRadius: chat ? 6 : undefined,
+            fontFamily: 'var(--cth-font-mono)', fontSize: 12, lineHeight: '16px',
+            color: 'var(--cth-ink-900)'
+          }}
+        >
+          <Icon name="folder" />
+          <span style={{
+            overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', maxWidth: 180
+          }}>{a.name}</span>
+          <button
+            onClick={() => removeAttachment(a.path)}
+            title={t('queueComposer.removeAttachment')}
+            style={{
+              flexShrink: 0, border: 'none', background: 'transparent', cursor: 'pointer',
+              color: 'var(--cth-ink-500)', padding: 0,
+              display: 'inline-flex', alignItems: 'center'
+            }}
+          >
+            <Icon name="x" />
+          </button>
+        </span>
+      ))}
+    </div>
+  );
+
+  const holdAction = (block === 'draft' || block === 'picker') && agent.ptyId && (
+    <button
+      onClick={() => {
+        if (block === 'picker') { dismissTerminalPicker(agent.ptyId!); return; }
+        const discarded = clearTerminalDraft(agent.ptyId!);
+        if (discarded.trim()) setText(text ? `${text}\n${discarded}` : discarded);
+      }}
+      style={{
+        border: 'none', background: 'transparent', cursor: 'pointer', padding: 0,
+        fontFamily: 'var(--cth-font-ui)', fontSize: 12,
+        color: 'var(--cth-ink-900)', textDecoration: 'underline'
+      }}
+    >{block === 'picker' ? t('queueComposer.closePicker') : t('queueComposer.recoverPrompt')}</button>
+  );
+
+  if (chat) {
+    const chatFont = composerFontSize + 1;
+    const chatLine = Math.round(chatFont * 1.45);
+    return (
+      <div
+        onDragOver={(e) => { e.preventDefault(); if (!dragOver) setDragOver(true); }}
+        onDragLeave={(e) => {
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+          setDragOver(false);
+        }}
+        onDrop={onDrop}
+        style={{
+          flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6,
+          padding: '4px 12px 12px', background: 'var(--cth-paper-100)',
+          fontFamily: 'var(--cth-font-ui)'
+        }}
+      >
+        {queue.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--cth-ink-500)', minWidth: 0 }}>
+            <span title={statusHint ?? undefined} style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {statusHint}
+            </span>
+            {holdAction}
+            {queue.length > 1 && (
+              <button
+                onClick={() => clearQueue(agent.id)}
+                title={t('queueComposer.clearAllTitle')}
+                style={{
+                  flexShrink: 0, border: 'none', background: 'transparent', cursor: 'pointer',
+                  fontFamily: 'var(--cth-font-ui)', fontSize: 12, color: 'var(--cth-ink-500)'
+                }}
+              >{t('queueComposer.clearAll')}</button>
+            )}
+          </div>
+        )}
+        {pendingList}
+        <div
+          className="cth-chat-input"
+          style={{
+            display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 8px 6px 10px',
+            borderRadius: 14, background: 'var(--cth-cream-50)',
+            boxShadow: dragOver ? 'inset 0 0 0 2px var(--cth-lilac)' : undefined
+          }}
+        >
+          {dragOver && (
+            <span style={{ fontSize: 12, color: 'var(--cth-ink-700)', textAlign: 'center' }}>
+              {t('queueComposer.dropToAttach')}
+            </span>
+          )}
+          {attachmentChips}
+          <textarea
+            dir={rtl ? 'auto' : undefined}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={onKey}
+            onPaste={onPaste}
+            rows={2}
+            placeholder={idle ? t('queueComposer.messagePlaceholder', { name: agent.name }) : t('queueComposer.busyPlaceholder', { name: agent.name })}
+            style={{
+              width: '100%', resize: 'none', border: 'none', outline: 'none', padding: 0,
+              background: 'transparent', boxSizing: 'border-box',
+              minHeight: chatLine * 2, maxHeight: chatLine * 12, fieldSizing: 'content',
+              fontFamily: 'var(--cth-font-ui)', fontSize: chatFont, lineHeight: `${chatLine}px`,
+              color: 'var(--cth-ink-900)'
+            } as React.CSSProperties}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              type="button"
+              onClick={pickFiles}
+              title={t('queueComposer.files')}
+              aria-label={t('queueComposer.files')}
+              className="cth-chat-iconbtn"
+              style={{
+                width: 28, height: 28, borderRadius: 8, border: 'none', cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                background: 'transparent', color: 'var(--cth-ink-700)'
+              }}
+            >
+              <Icon name="plus" />
+            </button>
+            <span style={{ flex: 1 }} />
+            <button
+              type="button"
+              onClick={queueIt}
+              disabled={!canSend}
+              title={t('commandBar.send')}
+              aria-label={t('commandBar.send')}
+              style={{
+                width: 30, height: 30, borderRadius: 8, border: 'none',
+                cursor: canSend ? 'pointer' : 'default',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                background: canSend ? 'var(--cth-coral)' : 'var(--cth-cream-200)',
+                color: canSend ? 'var(--cth-on-accent)' : 'var(--cth-ink-300)',
+                transform: 'rotate(-90deg)', transition: 'background 120ms'
+              }}
+            >
+              <Icon name="arrow-right" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

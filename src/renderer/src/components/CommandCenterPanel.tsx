@@ -307,8 +307,7 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
                   fullscreen={fullscreen}
                   embedded={!fullscreen}
                 />
-              } />
-              <MessageQueueComposer agent={agent} />
+              } composer={<MessageQueueComposer agent={agent} />} />
             </>
           ) : (
             <Centered>{t('commandCenter.noTerminal', { name: agent.name })}</Centered>
