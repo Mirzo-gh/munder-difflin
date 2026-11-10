@@ -5,7 +5,7 @@ import { PixelPanel } from '@/components/PixelPanel';
 import { PixelButton } from '@/components/PixelButton';
 import { Icon } from '@/components/Icon';
 import { HIRE_LIMITS, HIRE_PROVIDERS, type HireManifest, type HireProvider } from '@shared/hire';
-import { parseTeamResponse, type TeamResponse } from '@shared/teamPrompt';
+import { parseTeamResponse, TEAM_SIZE, type TeamResponse } from '@shared/teamPrompt';
 import { effortFor, effortLevelsFor, type EffortLevel } from '@shared/effort';
 import { modelsForProvider } from '@/store/config';
 import type { AgentProvider } from '@shared/agentProvider';
@@ -148,7 +148,7 @@ export function ComposeTeamModal({ onClose }: { onClose: () => void }) {
     const { manifests, cardErrors } = prepareWrite(cards);
     setCards((cs) => cs.map((c, i) => ({ ...c, errors: cardErrors[i] })));
     const blocked = cards.some((c, i) => c.checked && !c.invalid && cardErrors[i].length > 0);
-    if (blocked || manifests.length === 0) return;
+    if (blocked || manifests.length === 0 || manifests.length > TEAM_SIZE.max) return;
     setWriting(true);
     try {
       setResult(await window.cth.teamWrite(repo, manifests));
@@ -181,6 +181,7 @@ export function ComposeTeamModal({ onClose }: { onClose: () => void }) {
   }, []);
 
   const checkedCount = cards.filter((c) => c.checked && !c.invalid).length;
+  const tooMany = checkedCount > TEAM_SIZE.max;
   const tabsLocked = step === 'analyzing' || step === 'proposal' || step === 'written';
 
   return (
@@ -321,9 +322,10 @@ export function ComposeTeamModal({ onClose }: { onClose: () => void }) {
                     onField={(k, v) => updateField(i, k, v)}
                   />
                 ))}
+                {tooMany && <p style={hintStyle}>{t('team.tooMany', { n: checkedCount, max: TEAM_SIZE.max })}</p>}
                 <Row>
                   <PixelButton variant="ghost" onClick={restart}>{t('team.restart')}</PixelButton>
-                  <PixelButton variant="primary" onClick={() => void write()} disabled={writing || checkedCount === 0}>
+                  <PixelButton variant="primary" onClick={() => void write()} disabled={writing || checkedCount === 0 || tooMany}>
                     {t('team.write')}
                   </PixelButton>
                 </Row>

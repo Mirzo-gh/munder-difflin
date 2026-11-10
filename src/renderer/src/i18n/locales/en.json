@@ -53,6 +53,7 @@
     "errorTitle": "Something went wrong",
     "restart": "Start over",
     "emptyProposal": "No agent was proposed.",
+    "tooMany": "{{n}} agents selected — a team is capped at {{max}}. Uncheck some to continue.",
     "invalidCard": "Rejected",
     "fieldName": "Name",
     "fieldDescription": "Description",

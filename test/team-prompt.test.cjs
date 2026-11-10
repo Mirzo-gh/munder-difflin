@@ -99,11 +99,13 @@ test('the team prompt sizes the team to the project, mandates a QA/Reviewer and 
   for (const round of [1, 2]) {
     const p = buildTeamPrompt({ ...base, round });
     assert.ok(!p.includes('2 à 5'), 'no more hard 2-5 cap');
-    assert.ok(p.includes(`de ${TEAM_SIZE.min} à ${TEAM_SIZE.max} agents`));
+    assert.ok(p.includes(`de ${TEAM_SIZE.min} à ${TEAM_SIZE.usual} agents en général`));
+    assert.ok(p.includes(`jusqu'à ${TEAM_SIZE.max} agents maximum UNIQUEMENT si le dépôt le justifie`));
     assert.match(p, /OBLIGATOIRE : l'équipe contient un agent QA \/ Reviewer/);
     assert.match(p, /Pas de rôle documentation par défaut/);
   }
-  assert.ok(TEAM_SIZE.max > 5);
+  assert.ok(TEAM_SIZE.usual > 5);
+  assert.equal(TEAM_SIZE.max, 12);
 });
 
 test('the agent draft prompt carries the request, the repo, existing agents and the spec', () => {

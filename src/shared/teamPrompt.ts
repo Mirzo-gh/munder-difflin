@@ -87,8 +87,13 @@ function pushExistingAgents(lines: string[], existing: { name: string; descripti
   lines.push('');
 }
 
-/** Team size asked of the analysis: sized to the project, not a fixed short list. */
-export const TEAM_SIZE = { min: 3, max: 8 } as const;
+/** Team size asked of the analysis: sized to the project, not a fixed short list.
+ *  `usual` is the normal ceiling; `max` is a hard cap reserved for repos that
+ *  really need it (monorepos, many independent modules) — also the most hires
+ *  one team:write batch accepts. */
+export const TEAM_SIZE = { min: 3, usual: 8, max: 12 } as const;
+
+const TEAM_SIZE_RULE = `de ${TEAM_SIZE.min} à ${TEAM_SIZE.usual} agents en général. Tu peux aller jusqu'à ${TEAM_SIZE.max} agents maximum UNIQUEMENT si le dépôt le justifie (monorepo, nombreux modules ou applications indépendants) : n'ajoute pas d'agents pour atteindre un chiffre, et ne dépasse jamais ${TEAM_SIZE.max}.`;
 
 export function buildTeamPrompt(input: TeamPromptInput): string {
   const lines: string[] = [];
@@ -101,7 +106,7 @@ export function buildTeamPrompt(input: TeamPromptInput): string {
     '',
     'COMPOSITION :',
     '- Pars de ce que tu as lu, pas d\'un modèle d\'équipe générique. Chaque agent doit couvrir un besoin réel et nommé du dépôt (un module, une couche, une intégration, un pipeline, une dette identifiée), et son `goal` doit citer les chemins ou composants concernés.',
-    `- Taille l'équipe au projet : de ${TEAM_SIZE.min} à ${TEAM_SIZE.max} agents. Un petit dépôt mérite une petite équipe, un dépôt riche (plusieurs couches, plusieurs langages, front + back, infra…) mérite davantage de spécialistes.`,
+    `- Taille l'équipe au projet : ${TEAM_SIZE_RULE} Un petit dépôt mérite une petite équipe, un dépôt riche (plusieurs couches, plusieurs langages, front + back, infra…) mérite davantage de spécialistes.`,
     '- OBLIGATOIRE : l\'équipe contient un agent QA / Reviewer, qui relit les changements des autres agents, vérifie les tests et les cas limites et signale les régressions avant qu\'un travail soit considéré fini. Sauf si un agent déjà présent tient exactement ce rôle.',
     '- Pas de rôle documentation par défaut : ne propose un agent dédié à la documentation que si le dépôt a une documentation conséquente qui se désynchronise visiblement du code.',
     '- Évite les rôles génériques interchangeables (« généraliste », « assistant ») : préfère des spécialistes du dépôt.',
@@ -116,7 +121,7 @@ export function buildTeamPrompt(input: TeamPromptInput): string {
       'FORMAT DE SORTIE : réponds UNIQUEMENT par un objet JSON strict (pas de texte autour), de l\'une de ces deux formes :',
       `1. Si des questions à l'utilisateur sont vraiment utiles (0 à ${MAX_QUESTIONS} maximum) : {"analysis": "<résumé de ton analyse du projet, ≤ ${MAX_ANALYSIS} caractères>", "questions": ["...", "..."]}`,
       '2. Sinon, directement : {"agents": [ { manifeste hire@1 + "why" }, ... ]}',
-      `Propose de ${TEAM_SIZE.min} à ${TEAM_SIZE.max} agents, dont un QA / Reviewer.`
+      `Propose ${TEAM_SIZE_RULE} L'équipe inclut un QA / Reviewer.`
     );
   } else {
     lines.push(
@@ -131,7 +136,7 @@ export function buildTeamPrompt(input: TeamPromptInput): string {
     lines.push(
       '',
       'FORMAT DE SORTIE : réponds UNIQUEMENT par un objet JSON strict (pas de texte autour) : {"agents": [ { manifeste hire@1 + "why" }, ... ]}. Ne pose plus de questions.',
-      `Propose de ${TEAM_SIZE.min} à ${TEAM_SIZE.max} agents, dont un QA / Reviewer.`
+      `Propose ${TEAM_SIZE_RULE} L'équipe inclut un QA / Reviewer.`
     );
   }
   return lines.join('\n');

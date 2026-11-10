@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  buildAgentDraftPrompt, buildTeamPrompt, parseTeamResponse, MAX_AGENT_REQUEST,
+  buildAgentDraftPrompt, buildTeamPrompt, parseTeamResponse, MAX_AGENT_REQUEST, TEAM_SIZE,
   type AgentDraftInput, type TeamPromptInput, type TeamResponse
 } from '../shared/teamPrompt';
 import { HIRE_LIMITS, HIRE_PROVIDERS, validateHireManifest, type HireManifest } from '../shared/hire';
@@ -54,7 +54,7 @@ export const TEAM_INPUT_CAPS = {
   answers: 3,
   answerChars: 2000,
   analysisChars: 6000,
-  manifests: 12
+  manifests: TEAM_SIZE.max
 } as const;
 
 /** Untrusted renderer input → a bounded TeamPromptInput for `repoRoot` (the

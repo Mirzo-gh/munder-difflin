@@ -53,6 +53,7 @@
     "errorTitle": "出错了",
     "restart": "重新开始",
     "emptyProposal": "没有提出任何智能体。",
+    "tooMany": "已选择 {{n}} 个智能体——团队上限为 {{max}} 个。请取消勾选部分以继续。",
     "invalidCard": "已拒绝",
     "fieldName": "名称",
     "fieldDescription": "描述",

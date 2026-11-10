@@ -53,6 +53,7 @@
     "errorTitle": "حدث خطأ ما",
     "restart": "البدء من جديد",
     "emptyProposal": "لم يُقترح أي وكيل.",
+    "tooMany": "تم اختيار {{n}} وكيلًا — الحد الأقصى للفريق {{max}}. ألغِ تحديد بعضهم للمتابعة.",
     "invalidCard": "مرفوض",
     "fieldName": "الاسم",
     "fieldDescription": "الوصف",
