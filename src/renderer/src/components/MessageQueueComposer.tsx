@@ -254,7 +254,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
         onDrop={onDrop}
         style={{
           flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6,
-          padding: '4px 12px 12px', background: 'var(--cth-paper-100)',
+          padding: '8px 12px 12px', background: 'var(--cth-paper-100)',
           fontFamily: 'var(--cth-font-ui)'
         }}
       >

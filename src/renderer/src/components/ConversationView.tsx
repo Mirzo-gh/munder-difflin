@@ -113,7 +113,7 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
         onScroll={onScroll}
         style={{
           flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden',
-          padding: '12px 12px 4px', display: 'flex', flexDirection: 'column', gap: 10
+          padding: '12px 12px 20px', display: 'flex', flexDirection: 'column', gap: 10
         }}
       >
         {state.truncated && (
