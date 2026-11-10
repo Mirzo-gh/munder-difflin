@@ -195,7 +195,10 @@
     "thinkingNow": "Thinking…",
     "zoomIn": "Larger text (Ctrl +)",
     "zoomOut": "Smaller text (Ctrl −)",
-    "zoomReset": "Reset text size (Ctrl 0)"
+    "zoomReset": "Reset text size (Ctrl 0)",
+    "questions": "Questions",
+    "questionsToggle": "Show or hide the questions waiting for you",
+    "questionsClose": "Close questions"
   },
   "toolWaterfall": {
     "fresh": "fresh {{tokens}}t",

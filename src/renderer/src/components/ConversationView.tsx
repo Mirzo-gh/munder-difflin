@@ -15,6 +15,8 @@ import { MarkdownPreview } from '@/markdown/MarkdownPreview';
 import { findAgentMentions, foldConversation, type ConversationEntry } from '@shared/conversation';
 import { useStore } from '@/store/store';
 import { PixelBadge } from './PixelBadge';
+import { AskMeTab } from './AskMeTab';
+import { waitsOnHuman, type HiveTask } from './TasksKanban';
 import { Icon } from './Icon';
 import { readTerminalScreen, sendTerminalKeys } from './terminalPool';
 import { useTerminalFontSize, setTerminalFontSize, getTerminalFontSize, DEFAULT_TERMINAL_FONT_SIZE } from './terminalFontSize';
@@ -453,8 +455,8 @@ function ZoomControls() {
 }
 
 /** Two-way switch shown above the Terminal tab body. */
-export function TerminalModeSwitch({ mode, onChange }: {
-  mode: 'conversation' | 'raw'; onChange: (m: 'conversation' | 'raw') => void;
+export function TerminalModeSwitch({ mode, onChange, extra }: {
+  mode: 'conversation' | 'raw'; onChange: (m: 'conversation' | 'raw') => void; extra?: ReactNode;
 }) {
   const { t } = useTranslation();
   const opt = (m: 'conversation' | 'raw', label: string) => (
@@ -480,8 +482,42 @@ export function TerminalModeSwitch({ mode, onChange }: {
       {opt('conversation', t('conversation.modeConversation'))}
       {opt('raw', t('conversation.modeRaw'))}
       {mode === 'conversation' && <ZoomControls />}
+      {extra}
     </div>
   );
+}
+
+// ─── Questions sidebar (the ASK ME board beside the conversation) ─────────────
+
+const QUESTIONS_KEY = 'cth.conversationQuestions';
+const QUESTIONS_WIDTH = 340;
+/** Below this body width the sidebar floats over the conversation instead of
+ *  squeezing it. */
+const NARROW_PX = 720;
+
+function readQuestionsOpen(): boolean {
+  try { return localStorage.getItem(QUESTIONS_KEY) !== '0'; } catch { return true; }
+}
+
+/** Number of tasks waiting on the human (same predicate as the ASK ME board). */
+function useOpenQuestionCount(enabled: boolean): number {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!enabled) return;
+    let alive = true;
+    const refresh = async () => {
+      try {
+        const raw = await window.cth.hiveTasks();
+        const list = (raw && typeof raw === 'object' && Array.isArray((raw as { tasks?: unknown }).tasks))
+          ? (raw as { tasks: HiveTask[] }).tasks : [];
+        if (alive) setCount(list.filter((t) => !!t && typeof t === 'object' && waitsOnHuman(t)).length);
+      } catch { /* keep last count */ }
+    };
+    void refresh();
+    const timer = setInterval(refresh, 5000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [enabled]);
+  return count;
 }
 
 // ─── Shared mode (conversation / raw), synced across every terminal surface ────
@@ -517,18 +553,94 @@ export function supportsConversation(agent: Agent): boolean {
  *  history. Non-Claude agents get the raw terminal unchanged. */
 export function TerminalWithConversation({ agent, raw }: { agent: Agent; raw: ReactNode }) {
   const mode = useTerminalViewMode();
-  if (!supportsConversation(agent)) {
+  const { t } = useTranslation();
+  const [questionsOpen, setQuestionsOpenState] = useState<boolean>(readQuestionsOpen);
+  const setQuestionsOpen = (v: boolean) => {
+    setQuestionsOpenState(v);
+    try { localStorage.setItem(QUESTIONS_KEY, v ? '1' : '0'); } catch { /* storage unavailable */ }
+  };
+  const canConverse = supportsConversation(agent);
+  const questionCount = useOpenQuestionCount(canConverse && mode === 'conversation');
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width ?? 0;
+      if (w > 0) setNarrow(w < NARROW_PX);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [canConverse]);
+  if (!canConverse) {
     return <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>{raw}</div>;
   }
   const showConversation = mode === 'conversation';
+  const showQuestions = showConversation && questionsOpen;
   return (
     <>
-      <TerminalModeSwitch mode={mode} onChange={setTerminalViewMode} />
-      {showConversation && (
-        <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-          <ConversationView agent={agent} onShowRaw={() => setTerminalViewMode('raw')} />
-        </div>
-      )}
+      <TerminalModeSwitch
+        mode={mode}
+        onChange={setTerminalViewMode}
+        extra={showConversation ? (
+          <button
+            type="button"
+            onClick={() => setQuestionsOpen(!questionsOpen)}
+            aria-pressed={questionsOpen}
+            title={t('conversation.questionsToggle')}
+            style={{
+              marginLeft: 8, border: 'none', cursor: 'pointer', padding: '2px 8px', borderRadius: 6,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              fontFamily: 'var(--cth-font-ui)', fontSize: 11, color: 'var(--cth-ink-900)',
+              background: questionsOpen ? 'var(--cth-paper-100)' : 'transparent',
+              boxShadow: questionsOpen ? 'inset 0 0 0 1px var(--cth-ink-900)' : 'inset 0 0 0 1px var(--cth-ink-300)'
+            }}
+          >
+            {t('conversation.questions')}
+            {questionCount > 0 && (
+              <span style={{
+                minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8, fontSize: 10, fontWeight: 700,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                background: 'var(--cth-coral)', color: 'var(--cth-on-accent)'
+              }}>{questionCount}</span>
+            )}
+          </button>
+        ) : null}
+      />
+      <div ref={bodyRef} style={{
+        flex: 1, minHeight: 0, minWidth: 0, display: showConversation ? 'flex' : 'none', position: 'relative'
+      }}>
+        {showConversation && (
+          <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex' }}>
+            <ConversationView agent={agent} onShowRaw={() => setTerminalViewMode('raw')} />
+          </div>
+        )}
+        {showQuestions && (
+          <aside
+            aria-label={t('conversation.questions')}
+            style={{
+              width: narrow ? 'min(340px, 92%)' : QUESTIONS_WIDTH, flexShrink: 0, minHeight: 0,
+              display: 'flex', flexDirection: 'column',
+              background: 'var(--cth-paper-200)', boxShadow: 'inset 1px 0 0 var(--cth-ink-300)',
+              ...(narrow ? { position: 'absolute', top: 0, right: 0, bottom: 0, zIndex: 5, boxShadow: '-6px 0 16px rgba(0,0,0,0.18), inset 1px 0 0 var(--cth-ink-300)' } : {})
+            }}
+          >
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', flexShrink: 0,
+              boxShadow: 'inset 0 -1px 0 var(--cth-ink-300)', fontSize: 12, fontWeight: 600,
+              color: 'var(--cth-ink-900)', fontFamily: 'var(--cth-font-ui)'
+            }}>
+              <span style={{ flex: 1 }}>{t('conversation.questions')}</span>
+              <button type="button" onClick={() => setQuestionsOpen(false)} aria-label={t('conversation.questionsClose')}
+                style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--cth-ink-500)', fontSize: 14, lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+              <AskMeTab />
+            </div>
+          </aside>
+        )}
+      </div>
       <div style={{ flex: 1, minHeight: 0, display: showConversation ? 'none' : 'flex' }}>
         {raw}
       </div>

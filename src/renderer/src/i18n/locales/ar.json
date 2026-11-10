@@ -195,7 +195,10 @@
     "thinkingNow": "يفكر…",
     "zoomIn": "تكبير النص (Ctrl +)",
     "zoomOut": "تصغير النص (Ctrl −)",
-    "zoomReset": "إعادة حجم النص (Ctrl 0)"
+    "zoomReset": "إعادة حجم النص (Ctrl 0)",
+    "questions": "الأسئلة",
+    "questionsToggle": "إظهار أو إخفاء الأسئلة التي تنتظرك",
+    "questionsClose": "إغلاق الأسئلة"
   },
   "toolWaterfall": {
     "fresh": "جديد {{tokens}}ر",
