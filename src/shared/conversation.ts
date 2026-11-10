@@ -161,6 +161,10 @@ function formatToolInput(name: string, input: unknown): string {
       return `${mark} ${String(td.content ?? '')}`;
     }).join('\n'));
   }
+  if (name === 'Write' && typeof o.file_path === 'string' && typeof o.content === 'string'
+    && !/[\\/]outbox[\\/]/.test(o.file_path)) {
+    return clip(`${o.file_path}\n${o.content}`);
+  }
   if ((name === 'Edit' || name === 'MultiEdit') && typeof o.file_path === 'string') {
     const parts: string[] = [String(o.file_path)];
     const edits = Array.isArray(o.edits) ? o.edits : [o];

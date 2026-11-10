@@ -16,6 +16,7 @@ import { derivePlan, findAgentMentions, foldConversation, type ConversationEntry
 import { useStore } from '@/store/store';
 import { PixelBadge } from './PixelBadge';
 import { AskMeTab } from './AskMeTab';
+import { HighlightedText, type CodeKind } from './CodeHighlight';
 import { waitsOnHuman, type HiveTask } from './TasksKanban';
 import { Icon } from './Icon';
 import { CliSpinner } from './CliSpinner';
@@ -428,6 +429,7 @@ function ToolGroup({ items, selfId, live }: { items: ToolLike[]; selfId: string;
 /** One tool call: a muted line, opening onto its full input and result. */
 function ToolRow({ entry }: { entry: Extract<ConversationEntry, { kind: 'tool' }> }) {
   const pending = entry.result === undefined;
+  const view = toolView(entry);
   return (
     <Collapsible
       muted
@@ -444,23 +446,46 @@ function ToolRow({ entry }: { entry: Extract<ConversationEntry, { kind: 'tool' }
       }
     >
       <div style={{ paddingLeft: 16 }}>
-        {entry.input && <FullPre text={entry.input} />}
+        {entry.input && <FullPre text={view.inputText} kind={view.inputKind} path={view.path} language={view.inputLanguage} />}
         {entry.result !== undefined && entry.result !== '' && (
-          <FullPre text={entry.result} color={entry.isError ? 'var(--cth-danger)' : undefined} />
+          <FullPre text={entry.result} kind="output" path={view.resultPath} color={entry.isError && !entry.result.includes('\x1b[') ? 'var(--cth-danger)' : undefined} />
         )}
       </div>
     </Collapsible>
   );
 }
 
+/** How a tool's input and result are coloured. */
+function toolView(entry: Extract<ConversationEntry, { kind: 'tool' }>): {
+  inputText: string; inputKind: CodeKind; inputLanguage?: string; path?: string; resultPath?: string;
+} {
+  const fileTool = ['Read', 'Edit', 'MultiEdit', 'Write', 'NotebookEdit'].includes(entry.name);
+  const path = fileTool && entry.summary && !entry.summary.includes(' ') ? entry.summary : undefined;
+  if (entry.name === 'Bash' || entry.name === 'PowerShell') {
+    return { inputText: entry.input.replace(/^\$ /, ''), inputKind: 'code', inputLanguage: entry.name === 'Bash' ? 'shell' : 'powershell' };
+  }
+  if ((entry.name === 'Edit' || entry.name === 'MultiEdit') && path) {
+    return { inputText: entry.input.split('\n').slice(1).join('\n'), inputKind: 'diff', path, resultPath: undefined };
+  }
+  if (entry.name === 'Write' && path && entry.input.startsWith(path + '\n')) {
+    return { inputText: entry.input.slice(path.length + 1), inputKind: 'code', path };
+  }
+  if (entry.name === 'Read') return { inputText: entry.input, inputKind: 'code', inputLanguage: 'json', resultPath: path };
+  return { inputText: entry.input, inputKind: 'code', inputLanguage: entry.input.trimStart().startsWith('{') ? 'json' : undefined };
+}
+
 /** A code block capped at 280px, with "show all" to lift the cap. */
-function FullPre({ text, color }: { text: string; color?: string }) {
+function FullPre({ text, color, kind, path, language }: {
+  text: string; color?: string; kind: CodeKind; path?: string; language?: string;
+}) {
   const { t } = useTranslation();
   const [full, setFull] = useState(false);
   const long = text.split('\n').length > 16 || text.length > 1500;
   return (
     <div style={{ position: 'relative' }}>
-      <pre style={{ ...preStyle, ...(full ? { maxHeight: 'none' } : {}), ...(color ? { color } : {}) }}>{text}</pre>
+      <pre style={{ ...preStyle, padding: '8px 0', ...(full ? { maxHeight: 'none' } : {}), ...(color ? { color } : {}) }}>
+        <HighlightedText text={text} kind={kind} path={path} language={language} />
+      </pre>
       {long && (
         <button type="button" onClick={() => setFull((f) => !f)} style={{ ...linkButton, fontSize: '0.8em', color: 'var(--cth-ink-500)', marginTop: 2 }}>
           {full ? t('conversation.showLess') : t('conversation.showAll')}
