@@ -1972,6 +1972,47 @@ export class HiveManager {
   inbox(id: string): HiveMessage[] {
     return this.listMessages(join(this.agentDir(id), 'inbox'));
   }
+  /**
+   * Look up messages of an agent's inbox by id, pending or already handled.
+   *
+   * Backs the readable rendering of the inbox-wake nudge (`📬 inbox: id1, id2`)
+   * in the Conversation view: by the time the human scrolls past it, the agent
+   * has usually filed that mail under inbox/.done, so the pending inbox alone
+   * would come up empty. Files are named `<id>.json` by deliver(); a scan of
+   * the folders by `id` field covers a file an agent renamed while filing it.
+   * Ids that are not plain file-name tokens are ignored (no path traversal).
+   */
+  inboxMessagesById(agentId: string, ids: string[]): HiveMessage[] {
+    const wanted = [...new Set(ids)].filter((x) => /^[\w.:-]{1,200}$/.test(x)).slice(0, 50);
+    if (!wanted.length) return [];
+    const inbox = join(this.agentDir(agentId), 'inbox');
+    const dirs = [inbox, join(inbox, '.done')];
+    const found = new Map<string, HiveMessage>();
+    const read = (fp: string): HiveMessage | null => {
+      try { return JSON.parse(readFileSync(fp, 'utf8')) as HiveMessage; } catch { return null; }
+    };
+    for (const id of wanted) {
+      for (const d of dirs) {
+        const fp = join(d, `${id}.json`);
+        if (!existsSync(fp)) continue;
+        const m = read(fp);
+        if (m) { found.set(id, { ...m, id: m.id ?? id }); break; }
+      }
+    }
+    if (found.size < wanted.length) {
+      const missing = new Set(wanted.filter((x) => !found.has(x)));
+      for (const d of dirs) {
+        if (!missing.size) break;
+        let files: string[] = [];
+        try { files = readdirSync(d).filter((f) => f.endsWith('.json')); } catch { continue; }
+        for (const f of files.slice(-500)) {
+          const m = read(join(d, f));
+          if (m?.id && missing.has(m.id)) { found.set(m.id, m); missing.delete(m.id); }
+        }
+      }
+    }
+    return wanted.filter((x) => found.has(x)).map((x) => found.get(x)!);
+  }
   /** Read an agent's OUTBOX (messages it has authored/sent). Symmetric with
    *  inbox(); the router drains live outbox files into recipients' inboxes and
    *  archives the original under outbox/.sent, so a sent message survives there. */

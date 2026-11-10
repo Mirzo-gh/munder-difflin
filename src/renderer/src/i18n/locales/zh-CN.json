@@ -136,7 +136,9 @@
     "editNote": "编辑私人笔记",
     "addNote": "添加私人笔记",
     "editNoteAria": "编辑 {{name}} 的笔记",
-    "noteAria": "{{name}} 的笔记"
+    "noteAria": "{{name}} 的笔记",
+    "sendingTo": "已向 {{to}} 发送消息",
+    "toHuman": "你"
   },
   "askMe": {
     "emptyTitle": "现在没有需要你的事。🌿",
@@ -170,7 +172,9 @@
     "restorable": "{{name}}——可从上次会话恢复",
     "dismiss": "忽略 {{name}}——从恢复列表中永久移除",
     "dismissAria": "忽略 {{name}}",
-    "restoreAll": "全部恢复（{{count}}）"
+    "restoreAll": "全部恢复（{{count}}）",
+    "collapse": "收起智能体侧栏",
+    "expand": "展开智能体侧栏"
   },
   "sidebar": {
     "terminal": "终端",
@@ -206,7 +210,12 @@
     "plusMention": "提及代理",
     "plusSearch": "搜索…",
     "plusBack": "返回",
-    "plusNothing": "没有匹配项。"
+    "plusNothing": "没有匹配项。",
+    "inboxTitle": "蜂巢邮件",
+    "inboxNew": "新的蜂巢邮件：代理正在读取收件箱。",
+    "inboxMissing": "找不到消息 {{id}}（已删除？）",
+    "inboxFromHuman": "你",
+    "inboxFromSystem": "系统"
   },
   "toolWaterfall": {
     "fresh": "新计 {{tokens}}t",

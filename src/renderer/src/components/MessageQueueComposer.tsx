@@ -10,6 +10,8 @@ import { isComposingKey } from '@shared/imeGuard';
 import { useRtl } from '@/i18n/useDirection';
 import { supportsConversation, useTerminalViewMode } from './ConversationView';
 import { ChatPlusMenu } from './ChatPlusMenu';
+import { parseInboxNudge } from '@shared/hiveNudge';
+import { InboxNudgeSummary } from './InboxMail';
 
 const EMPTY_QUEUE: QueuedMessage[] = [];
 
@@ -183,6 +185,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
           key={m.id}
           index={i}
           message={m}
+          agentId={agent.id}
           paused={deliveryPaused}
           onSendNow={() => releaseQueuedMessage(agent.id, m.id)}
           onRemove={() => removeQueuedMessage(agent.id, m.id)}
@@ -457,6 +460,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
               key={m.id}
               index={i}
               message={m}
+              agentId={agent.id}
               paused={deliveryPaused}
               onSendNow={() => releaseQueuedMessage(agent.id, m.id)}
               onRemove={() => removeQueuedMessage(agent.id, m.id)}
@@ -599,9 +603,10 @@ function useDeliveryPaused(agentId: string, active: boolean): boolean {
  * toggle only renders when the text actually clips, so short messages stay tidy.
  */
 function QueuedMessageRow(
-  { index, message, paused, onSendNow, onRemove }: {
+  { index, message, agentId, paused, onSendNow, onRemove }: {
     index: number;
     message: QueuedMessage;
+    agentId: string;
     /** Floor-wide auto-delivery is paused — offer the per-message override. */
     paused: boolean;
     onSendNow: () => void;
@@ -613,6 +618,7 @@ function QueuedMessageRow(
   const [expanded, setExpanded] = useState(false);
   const [clipped, setClipped] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const nudgeIds = parseInboxNudge(message.text);
 
   // Measure against the CLAMPED box, so the toggle survives being expanded (the
   // expanded box never overflows and would otherwise report clipped = false).
@@ -645,7 +651,7 @@ function QueuedMessageRow(
         <div
           ref={bodyRef}
           dir={rtl ? 'auto' : undefined}
-          title={expanded ? undefined : message.text}
+          title={expanded || nudgeIds ? undefined : message.text}
           style={{
             fontSize: 12, lineHeight: '18px',
             color: 'var(--cth-ink-900)',
@@ -659,7 +665,7 @@ function QueuedMessageRow(
                   overflow: 'hidden'
                 })
           }}
-        >{message.text}</div>
+        >{nudgeIds ? <InboxNudgeSummary agentId={agentId} ids={nudgeIds} /> : message.text}</div>
         {(clipped || expanded || paused) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {(clipped || expanded) && (
