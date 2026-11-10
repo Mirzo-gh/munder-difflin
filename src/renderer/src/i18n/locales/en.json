@@ -244,7 +244,16 @@
       "toolsOne": "used a tool",
       "toolsMany": "used {{count}} tools",
       "errors": "{{count}} failed"
-    }
+    },
+    "compacted": "Context compacted",
+    "sending": "Sending…",
+    "queued": "Queued, sent when the agent is free",
+    "sendNow": "Send now",
+    "removeQueued": "Remove",
+    "ackSeen": "Received by the agent",
+    "ackDone": "Handled by the agent",
+    "addReaction": "Add a reaction",
+    "removeReaction": "Remove this reaction"
   },
   "toolWaterfall": {
     "fresh": "fresh {{tokens}}t",

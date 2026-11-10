@@ -187,8 +187,8 @@ export function InboxNudgeCard({ agentId, ids }: { agentId: string; ids: string[
             <div key={id} title={id} style={{ ...rowStyle, ...bubbleStyle(), padding: '6px 10px', color: 'var(--cth-ink-500)' }}>
               <ReceiveBadge />
               <span>{t('conversation.inboxFromUnknown')}</span>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, fontFamily: 'var(--cth-font-mono)', fontSize: '0.88em' }}>
-                {loading ? '…' : id}
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, ...(idTime(id) ? {} : { fontFamily: 'var(--cth-font-mono)', fontSize: '0.88em' }) }}>
+                {loading ? '…' : idTime(id) ?? id}
               </span>
             </div>
           );
@@ -197,6 +197,19 @@ export function InboxNudgeCard({ agentId, ids }: { agentId: string; ids: string[
       })}
     </div>
   );
+}
+
+/** Hive message ids start with their ISO timestamp (`2026-11-10T17-01-30-026Z-…`):
+ *  show that as a local time rather than the raw id. */
+function idTime(id: string): string | null {
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/.exec(id);
+  if (!m) return null;
+  const d = new Date(`${m[1]}T${m[2]}:${m[3]}:${m[4]}.${m[5]}Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  const sameDay = d.toDateString() === new Date().toDateString();
+  return sameDay
+    ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 /** A mail bubble: the sender's accent (tinted fill, accent outline), grey otherwise. */

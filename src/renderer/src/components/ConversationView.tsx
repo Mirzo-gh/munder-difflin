@@ -25,6 +25,7 @@ import { useTerminalFontSize, setTerminalFontSize, getTerminalFontSize, DEFAULT_
 import { detectTerminalMenu, menuKeystrokes, type TerminalMenu } from '@shared/terminalMenu';
 import { parseInboxNudge } from '@shared/hiveNudge';
 import { AgentChip, InboxNudgeCard } from './InboxMail';
+import { PendingStatus, Reactable, useDeliveryPaused, usePendingBubbles, type Ack, type PendingBubble } from './ConversationExtras';
 
 const POLL_MS = 900;
 /** Within this many px of the bottom counts as "following" the conversation. */
@@ -108,6 +109,29 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
   const blocks = useMemo(() => groupEntries(state.entries), [state.entries]);
   const plan = useMemo(() => derivePlan(state.entries), [state.entries]);
   const blocked = agent.status === 'blocked' && !menu;
+  // What you sent shows at once, even while it waits in the queue.
+  const pending = usePendingBubbles(agent.id, state.entries);
+  const sending = pending.filter((p) => p.state === 'sending');
+  const queued = pending.filter((p) => p.state === 'queued');
+  const paused = useDeliveryPaused(agent.id, queued.length > 0);
+  // The agent's acknowledgement on your latest message: 👀 while it works on
+  // it, ✅ once it answered and went idle.
+  const ack = useMemo((): { id: string; ack: Ack } | null => {
+    const es = state.entries;
+    for (let i = es.length - 1; i >= 0; i--) {
+      const e = es[i];
+      if (e.kind !== 'user' || (!e.images && parseInboxNudge(e.text))) continue;
+      const replied = es.slice(i + 1).some((x) => x.kind === 'assistant');
+      return { id: e.id, ack: busy || !replied ? 'seen' : 'done' };
+    }
+    return null;
+  }, [state.entries, busy]);
+
+  // Follow along when you send something.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (el && pending.length) { followRef.current = true; el.scrollTop = el.scrollHeight; }
+  }, [pending.length]);
 
   return (
     <div style={{
@@ -135,10 +159,16 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
             <button type="button" onClick={onShowRaw} style={linkButton}>{t('conversation.showRaw')}</button>
           </div>
         )}
-        {blocks.map((b, i) => b.type === 'tools' ? (
+        {blocks.map((b, i) => b.type === 'compact' ? (
+          <CompactLine key={b.id} instructions={b.instructions} />
+        ) : b.type === 'tools' ? (
           <ToolGroup key={b.id} items={b.items} selfId={agent.id} live={busy && i === blocks.length - 1} />
         ) : (
-          <EntryView key={b.entry.id} entry={b.entry} accent={agent.accent} cwd={agent.worktreePath ?? agent.cwd} selfId={agent.id} />
+          <EntryView key={b.entry.id} entry={b.entry} accent={agent.accent} cwd={agent.worktreePath ?? agent.cwd} selfId={agent.id}
+            ack={ack?.id === b.entry.id ? ack.ack : null} />
+        ))}
+        {sending.map((p) => (
+          <PendingBubbleView key={p.id} agentId={agent.id} bubble={p} accent={agent.accent} paused={paused} />
         ))}
         {busy && (
           <div role="status" style={{
@@ -149,6 +179,9 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
             {agent.status === 'thinking' ? t('conversation.thinkingNow') : t('conversation.working')}
           </div>
         )}
+        {queued.map((p) => (
+          <PendingBubbleView key={p.id} agentId={agent.id} bubble={p} accent={agent.accent} paused={paused} />
+        ))}
       </div>
       {plan.length > 0 && <PlanPanel steps={plan} />}
       {menu && agent.ptyId && (
@@ -277,8 +310,40 @@ const linkButton: React.CSSProperties = {
   fontFamily: 'var(--cth-font-ui)'
 };
 
-const EntryView = memo(function EntryView({ entry, accent, cwd, selfId }: {
-  entry: ConversationEntry; accent: Agent['accent']; cwd?: string; selfId: string;
+/** Your message, as a bubble on the right. */
+function UserBubble({ text, images, accent, dim }: { text: string; images?: number; accent: Agent['accent']; dim?: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <div style={{
+      maxWidth: '100%', padding: '8px 12px', borderRadius: 12,
+      background: `var(--cth-${accent}-light)`, boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
+      color: 'var(--cth-ink-900)', fontSize: '1em', lineHeight: 1.45,
+      whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', opacity: dim ? 0.7 : undefined
+    }}>
+      {text}
+      {images ? (
+        <div style={{ marginTop: text ? 4 : 0, fontSize: '0.85em', color: 'var(--cth-ink-500)' }}>
+          {t('conversation.images', { count: images })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** A message you sent that the transcript does not have yet. */
+function PendingBubbleView({ agentId, bubble, accent, paused }: {
+  agentId: string; bubble: PendingBubble; accent: Agent['accent']; paused: boolean;
+}) {
+  return (
+    <div style={{ alignSelf: 'flex-end', maxWidth: '85%', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+      <UserBubble text={bubble.text} accent={accent} dim={bubble.state === 'queued'} />
+      <PendingStatus agentId={agentId} bubble={bubble} paused={paused} />
+    </div>
+  );
+}
+
+const EntryView = memo(function EntryView({ entry, accent, cwd, selfId, ack }: {
+  entry: ConversationEntry; accent: Agent['accent']; cwd?: string; selfId: string; ack?: Ack | null;
 }) {
   const { t } = useTranslation();
   switch (entry.kind) {
@@ -288,29 +353,19 @@ const EntryView = memo(function EntryView({ entry, accent, cwd, selfId }: {
       const nudgeIds = entry.images ? null : parseInboxNudge(entry.text);
       if (nudgeIds) return <InboxNudgeCard agentId={selfId} ids={nudgeIds} />;
       return (
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <div style={{
-            maxWidth: '85%', padding: '8px 12px', borderRadius: 12,
-            background: `var(--cth-${accent}-light)`, boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
-            color: 'var(--cth-ink-900)', fontSize: '1em', lineHeight: 1.45,
-            whiteSpace: 'pre-wrap', overflowWrap: 'anywhere'
-          }}>
-            {entry.text}
-            {entry.images ? (
-              <div style={{ marginTop: entry.text ? 4 : 0, fontSize: '0.85em', color: 'var(--cth-ink-500)' }}>
-                {t('conversation.images', { count: entry.images })}
-              </div>
-            ) : null}
-          </div>
-        </div>
+        <Reactable reactKey={`${selfId}:${entry.id}`} align="end" ack={ack}>
+          <UserBubble text={entry.text} images={entry.images} accent={accent} />
+        </Reactable>
       );
     }
     case 'assistant':
       return (
-        <div style={{ color: 'var(--cth-ink-900)', fontSize: '1em', lineHeight: 1.5, overflowWrap: 'anywhere', minWidth: 0 }}>
-          <MarkdownPreview source={entry.text} variant="card" root={cwd} />
-          <AgentMentions text={entry.text} selfId={selfId} />
-        </div>
+        <Reactable reactKey={`${selfId}:${entry.id}`} align="start">
+          <div style={{ color: 'var(--cth-ink-900)', fontSize: '1em', lineHeight: 1.5, overflowWrap: 'anywhere', minWidth: 0 }}>
+            <MarkdownPreview source={entry.text} variant="card" root={cwd} />
+            <AgentMentions text={entry.text} selfId={selfId} />
+          </div>
+        </Reactable>
       );
     case 'thinking':
       return (
@@ -327,17 +382,49 @@ const EntryView = memo(function EntryView({ entry, accent, cwd, selfId }: {
   }
 });
 
+/** One quiet line per compaction; the /compact instructions on hover. */
+function CompactLine({ instructions }: { instructions?: string }) {
+  const { t } = useTranslation();
+  return (
+    <div title={instructions} style={{
+      ...eventStyle, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0
+    }}>
+      <span style={{ flex: 1, height: 1, background: 'var(--cth-ink-100)' }} />
+      <span style={{ whiteSpace: 'nowrap' }}>{t('conversation.compacted')}</span>
+      <span style={{ flex: 1, height: 1, background: 'var(--cth-ink-100)' }} />
+    </div>
+  );
+}
+
 // ─── Grouped tool calls (Claude Code desktop style) ──────────────────────────
 
 type ToolLike = Extract<ConversationEntry, { kind: 'tool' } | { kind: 'thinking' }>;
 type Block =
   | { type: 'entry'; entry: ConversationEntry }
-  | { type: 'tools'; id: string; items: ToolLike[] };
+  | { type: 'tools'; id: string; items: ToolLike[] }
+  | { type: 'compact'; id: string; instructions?: string };
 
-/** Consecutive tool calls (and the thinking between them) become one block. */
+/** A `/compact` command, or one of the markers a compaction writes. */
+function compactPart(e: ConversationEntry): { instructions?: string } | null {
+  if (e.kind !== 'event') return null;
+  if (e.text === 'Context compacted') return {};
+  const m = /^\/compact(?:\s+([\s\S]*))?$/.exec(e.text.trim());
+  return m ? { instructions: m[1]?.trim() || undefined } : null;
+}
+
+/** Consecutive tool calls (and the thinking between them) become one block.
+ *  A compaction (its `/compact` command, boundary and summary markers, often
+ *  repeated) becomes ONE discreet line. */
 function groupEntries(entries: readonly ConversationEntry[]): Block[] {
   const out: Block[] = [];
   for (const e of entries) {
+    const compact = compactPart(e);
+    if (compact) {
+      const last = out[out.length - 1];
+      if (last && last.type === 'compact') last.instructions = compact.instructions ?? last.instructions;
+      else out.push({ type: 'compact', id: `c:${e.id}`, instructions: compact.instructions });
+      continue;
+    }
     if (e.kind === 'tool' || e.kind === 'thinking') {
       const last = out[out.length - 1];
       if (last && last.type === 'tools') last.items.push(e);

@@ -244,7 +244,16 @@
       "toolsOne": "使用了 1 个工具",
       "toolsMany": "使用了 {{count}} 个工具",
       "errors": "{{count}} 个失败"
-    }
+    },
+    "compacted": "上下文已压缩",
+    "sending": "发送中…",
+    "queued": "排队中，代理空闲时发送",
+    "sendNow": "立即发送",
+    "removeQueued": "移除",
+    "ackSeen": "代理已收到",
+    "ackDone": "代理已处理",
+    "addReaction": "添加表情回应",
+    "removeReaction": "移除此回应"
   },
   "toolWaterfall": {
     "fresh": "新计 {{tokens}}t",

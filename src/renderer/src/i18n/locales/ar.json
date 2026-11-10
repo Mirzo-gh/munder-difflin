@@ -244,7 +244,16 @@
       "toolsOne": "استخدم أداة",
       "toolsMany": "استخدم {{count}} أدوات",
       "errors": "فشل {{count}}"
-    }
+    },
+    "compacted": "تم ضغط السياق",
+    "sending": "جارٍ الإرسال…",
+    "queued": "في الانتظار، يُرسل عندما يتفرغ الوكيل",
+    "sendNow": "أرسل الآن",
+    "removeQueued": "إزالة",
+    "ackSeen": "استلمها الوكيل",
+    "ackDone": "عالجها الوكيل",
+    "addReaction": "أضف تفاعلًا",
+    "removeReaction": "أزل هذا التفاعل"
   },
   "toolWaterfall": {
     "fresh": "جديد {{tokens}}ر",

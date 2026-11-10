@@ -2030,6 +2030,13 @@ export class HiveManager {
       search(subdirs(join(root, 'agents')).map((a) => join(a, 'outbox', '.sent')).filter((d) => existsSync(d)));
     }
     if (missing().length) {
+      // Mail an agent wrote straight into a peer's inbox, or filed in another
+      // agent's tree (cc, misrouted, not yet routed out of an outbox).
+      const agents = subdirs(join(root, 'agents'));
+      const ib = agents.map((a) => join(a, 'inbox'));
+      search([...ib, ...ib.flatMap(subdirs), ...agents.map((a) => join(a, 'outbox'))].filter((d) => existsSync(d)));
+    }
+    if (missing().length) {
       const left = new Set(missing());
       try {
         const lines = readFileSync(join(root, 'log.jsonl'), 'utf8').split('\n');
