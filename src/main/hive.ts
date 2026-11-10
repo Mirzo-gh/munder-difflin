@@ -233,37 +233,56 @@ function ensureMineIgnore(agentDir: string): void {
 
 // ─── HiveManager ────────────────────────────────────────────────────────────
 
+/** The kinds of lexical damage repairJsonStrings knows how to undo. */
+export type OutboxRepair = 'literal-line-break' | 'invalid-escape';
+
+const JSON_SIMPLE_ESCAPES = new Set(['"', '\\', '/', 'b', 'f', 'n', 'r', 't']);
+
 /**
- * Repair only literal CR/LF characters that occur inside JSON strings.
+ * Repair two narrow, unambiguous lexical faults inside JSON strings.
  *
  * Agents normally publish outbox messages through JSON.stringify, but a manual
- * shell write can put real line-break bytes in a multi-line body. JSON rejects
- * those bytes inside a string even though the intended value is unambiguous.
- * Keep this lexical and deliberately narrow: JSON.parse remains the acceptance
+ * shell write can leave:
+ *  - real CR/LF bytes in a multi-line body (JSON rejects them inside a string);
+ *  - a lone backslash that is not a JSON escape. On Windows this is every path
+ *    an agent pastes into its message: `"Rapport : C:\Users\damien\..."`
+ *    (single backslashes) makes `\U`, `\d`, `\s` invalid escapes and the whole
+ *    message used to be quarantined — a worker's `done` never reached the
+ *    orchestrator and the floor silently stalled. Such a backslash can only
+ *    have meant a literal backslash, so it is doubled. `\u` without four hex
+ *    digits after it (`C:\users`) is the same case.
+ * Valid escapes are left exactly as written. JSON.parse remains the acceptance
  * gate, and every other malformed shape is left for quarantine.
  */
-function repairLiteralLineBreaksInJsonStrings(raw: string): { text: string; changed: boolean } {
+export function repairJsonStrings(raw: string): { text: string; changed: boolean; repairs: OutboxRepair[] } {
   let text = '';
   let inString = false;
-  let escaped = false;
-  let changed = false;
+  const repairs = new Set<OutboxRepair>();
+  const chars = Array.from(raw);
 
-  for (const ch of raw) {
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
     if (!inString) {
       text += ch;
       if (ch === '"') inString = true;
       continue;
     }
 
-    if (escaped) {
-      text += ch;
-      escaped = false;
-      continue;
-    }
-
     if (ch === '\\') {
-      text += ch;
-      escaped = true;
+      const next = chars[i + 1];
+      if (next !== undefined && JSON_SIMPLE_ESCAPES.has(next)) {
+        text += ch + next;
+        i++;
+        continue;
+      }
+      if (next === 'u' && /^[0-9a-fA-F]{4}$/.test(chars.slice(i + 2, i + 6).join(''))) {
+        text += ch + next;
+        i++;
+        continue;
+      }
+      // Not a JSON escape: the writer meant a literal backslash.
+      text += '\\\\';
+      repairs.add('invalid-escape');
       continue;
     }
 
@@ -275,20 +294,20 @@ function repairLiteralLineBreaksInJsonStrings(raw: string): { text: string; chan
 
     if (ch === '\n') {
       text += '\\n';
-      changed = true;
+      repairs.add('literal-line-break');
       continue;
     }
 
     if (ch === '\r') {
       text += '\\r';
-      changed = true;
+      repairs.add('literal-line-break');
       continue;
     }
 
     text += ch;
   }
 
-  return { text, changed };
+  return { text, changed: repairs.size > 0, repairs: Array.from(repairs) };
 }
 
 /** Keep the crash directory bounded.
@@ -1799,24 +1818,23 @@ export class HiveManager {
           try {
             partial = JSON.parse(raw) as Partial<HiveMessage>;
           } catch {
-            const repaired = repairLiteralLineBreaksInJsonStrings(raw);
-            if (!repaired.changed) {
+            const repaired = repairJsonStrings(raw);
+            let parsed: Partial<HiveMessage> | null = null;
+            if (repaired.changed) {
+              try { parsed = JSON.parse(repaired.text) as Partial<HiveMessage>; } catch { parsed = null; }
+            }
+            if (!parsed) {
               this.appendLog({ kind: 'drop', reason: 'malformed-json', from: id, file: f });
               try { renameSync(full, join(outbox, '.sent', `bad-${f}`)); } catch { /* noop */ }
+              this.notifyUndeliverable(id, f);
               continue;
             }
-            try {
-              partial = JSON.parse(repaired.text) as Partial<HiveMessage>;
-            } catch {
-              this.appendLog({ kind: 'drop', reason: 'malformed-json', from: id, file: f });
-              try { renameSync(full, join(outbox, '.sent', `bad-${f}`)); } catch { /* noop */ }
-              continue;
-            }
+            partial = parsed;
             this.appendLog({
               kind: 'outbox-repair',
               from: id,
               file: f,
-              repair: 'literal-line-break'
+              repair: repaired.repairs.join('+')
             });
           }
           const msg = this.normalize(partial, id);
@@ -1832,6 +1850,30 @@ export class HiveManager {
     }
     if (routed > 0) this.commit(`hive: routed ${routed} message(s)`);
     return routed;
+  }
+
+  /** Tell an agent that one of its outbox files was quarantined. Without this
+   *  the sender believes it delivered (typically its `done` to the
+   *  orchestrator), the recipient never hears of it, and the floor stalls with
+   *  everyone idle. The notice lands in the sender's own inbox, so the usual
+   *  wake path (Stop hook / idle nudge) makes it rewrite the message. */
+  private notifyUndeliverable(agentId: string, file: string): void {
+    try {
+      if (!this.registry().agents[agentId]) return;
+      this.routeMessage(this.normalize({
+        to: agentId,
+        act: 'inform',
+        subject: `Message NOT delivered: outbox/${file} is not valid JSON`,
+        body: [
+          `Your outbox file \`${file}\` could not be parsed as JSON, so it was NOT delivered to anyone.`,
+          `It was moved to \`outbox/.sent/bad-${file}\`.`,
+          'Write the message again as a NEW file in your outbox. Generate it with a JSON serializer',
+          '(e.g. `node -e "fs.writeFileSync(p, JSON.stringify(msg))"` or `ConvertTo-Json`) rather than by hand,',
+          'and write file paths with forward slashes (C:/Users/...) or doubled backslashes.'
+        ].join('\n'),
+        requires_reply: false
+      }, 'system'));
+    } catch { /* best-effort: never break the router */ }
   }
 
   // — read helpers (for IPC / UI) —
@@ -2848,6 +2890,11 @@ Write one JSON file into \`outbox/\` (any filename ending in \`.json\`):
 \`\`\`
 
 The harness fills in \`id\`, \`from\`, \`hops\`, and timestamps.
+
+The file must be valid JSON: generate it with a JSON serializer rather than by hand, and
+write file paths with forward slashes (\`C:/Users/...\`) or doubled backslashes — a lone
+\`\\\` is not valid inside a JSON string. If a file can't be parsed you get a "Message NOT
+delivered" notice in your inbox; send it again.
 
 ## Rules of the road
 - Only \`request\`, \`query\`, and \`propose\` expect a reply. \`inform\` and \`done\` are terminal —
