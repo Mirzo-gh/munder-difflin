@@ -231,7 +231,7 @@ function TerminalMenuCard({ menu, ptyId, accent, onShowRaw }: {
     finally { setTimeout(() => setSending(false), 1500); }
   };
   return (
-    <div style={{
+    <div className="cth-attn-card" style={{
       flexShrink: 0, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6,
       background: 'var(--cth-lemon-light)', boxShadow: 'inset 0 1px 0 var(--cth-ink-900)',
       color: 'var(--cth-ink-900)', fontSize: '1em'
@@ -691,7 +691,7 @@ function readQuestionsOpen(): boolean {
 }
 
 /** Number of tasks waiting on the human (same predicate as the ASK ME board). */
-function useOpenQuestionCount(enabled: boolean): number {
+export function useOpenQuestionCount(enabled: boolean): number {
   const [count, setCount] = useState(0);
   useEffect(() => {
     if (!enabled) return;
@@ -823,7 +823,7 @@ export function TerminalWithConversation({ agent, raw, composer }: { agent: Agen
           >
             {t('conversation.questions')}
             {questionCount > 0 && (
-              <span style={{
+              <span className="cth-attn-badge" style={{
                 minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8, fontSize: 10, fontWeight: 700,
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 background: 'var(--cth-coral)', color: 'var(--cth-on-accent)'

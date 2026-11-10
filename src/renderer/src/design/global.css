@@ -391,3 +391,19 @@ input, textarea, [contenteditable='true'] {
 .cth-chat-iconbtn:hover { background: var(--cth-cream-200) !important; }
 .cth-chat-menuitem:hover, .cth-chat-menuitem:focus-visible { background: var(--cth-cream-200) !important; outline: none; }
 .cth-conv-group:hover { background: var(--cth-cream-100) !important; color: var(--cth-ink-700) !important; }
+
+/* "Needs you" attention pulse: a ring that swells out of the badge, and a
+ * soft glow around a choice menu waiting in the conversation. */
+@keyframes cth-attn-ring {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--cth-coral) 70%, transparent); transform: scale(1); }
+  15%  { transform: scale(1.18); }
+  30%  { transform: scale(1); }
+  70%  { box-shadow: 0 0 0 7px color-mix(in srgb, var(--cth-coral) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.cth-attn-badge { animation: cth-attn-ring 1.6s ease-out infinite; }
+@keyframes cth-attn-glow {
+  0%, 100% { box-shadow: inset 0 1px 0 var(--cth-ink-900), inset 4px 0 0 var(--cth-coral); }
+  50%      { box-shadow: inset 0 1px 0 var(--cth-ink-900), inset 4px 0 0 color-mix(in srgb, var(--cth-coral) 25%, transparent); }
+}
+.cth-attn-card { animation: cth-attn-glow 1.4s ease-in-out infinite; }
