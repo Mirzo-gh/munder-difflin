@@ -126,12 +126,10 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
         ))}
         {busy && (
           <div role="status" style={{
-            display: 'flex', alignItems: 'center', gap: 8, fontSize: 12,
+            display: 'flex', alignItems: 'center', gap: 6, fontSize: 12,
             color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-ui)'
           }}>
-            <span className="cth-conv-dots" aria-hidden="true" style={{ color: `var(--cth-${agent.accent})` }}>
-              <span /><span /><span />
-            </span>
+            <CliSpinner />
             {agent.status === 'thinking' ? t('conversation.thinkingNow') : t('conversation.working')}
           </div>
         )}
@@ -154,6 +152,28 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
         </div>
       )}
     </div>
+  );
+}
+
+/** The glyph cycle of the Claude Code CLI's spinner (✻ Working…), forward then back. */
+const SPINNER_FRAMES = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢'];
+
+function CliSpinner() {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    const reduced = typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) return;
+    const timer = setInterval(() => setFrame((f) => (f + 1) % SPINNER_FRAMES.length), 120);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <span aria-hidden="true" style={{
+      display: 'inline-block', width: 14, textAlign: 'center', fontSize: 14,
+      color: 'var(--cth-coral)', fontFamily: 'var(--cth-font-mono)'
+    }}>
+      {SPINNER_FRAMES[frame]}
+    </span>
   );
 }
 
