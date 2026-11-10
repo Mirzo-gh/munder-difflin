@@ -198,7 +198,8 @@
     "zoomReset": "Reset text size (Ctrl 0)",
     "questions": "Questions",
     "questionsToggle": "Show or hide the questions waiting for you",
-    "questionsClose": "Close questions"
+    "questionsClose": "Close questions",
+    "questionsResize": "Drag to resize (double-click to reset)"
   },
   "toolWaterfall": {
     "fresh": "fresh {{tokens}}t",

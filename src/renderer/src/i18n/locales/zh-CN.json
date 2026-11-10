@@ -198,7 +198,8 @@
     "zoomReset": "重置文字大小 (Ctrl 0)",
     "questions": "问题",
     "questionsToggle": "显示或隐藏等待你回答的问题",
-    "questionsClose": "关闭问题"
+    "questionsClose": "关闭问题",
+    "questionsResize": "拖动以调整宽度（双击重置）"
   },
   "toolWaterfall": {
     "fresh": "新计 {{tokens}}t",

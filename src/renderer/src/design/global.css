@@ -353,3 +353,6 @@ input, textarea, [contenteditable='true'] {
 .cth-md-card hr { margin: 0.8em 0; }
 .cth-md-card table { margin: 0.5em 0; }
 .cth-md-card th, .cth-md-card td { padding: 3px 7px; font-size: 0.9em; }
+
+/* Conversation view: the Questions sidebar's drag handle shows on hover. */
+.cth-conv-resize:hover, .cth-conv-resize:active { background: var(--cth-ink-300); }

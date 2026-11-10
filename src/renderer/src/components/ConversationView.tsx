@@ -490,7 +490,19 @@ export function TerminalModeSwitch({ mode, onChange, extra }: {
 // ─── Questions sidebar (the ASK ME board beside the conversation) ─────────────
 
 const QUESTIONS_KEY = 'cth.conversationQuestions';
+const QUESTIONS_WIDTH_KEY = 'cth.conversationQuestionsWidth';
 const QUESTIONS_WIDTH = 340;
+const QUESTIONS_MIN = 240;
+const QUESTIONS_MAX = 900;
+/** The conversation keeps at least this much room beside a docked sidebar. */
+const CONVERSATION_MIN = 320;
+
+function readQuestionsWidth(): number {
+  try {
+    const n = Number(localStorage.getItem(QUESTIONS_WIDTH_KEY));
+    return Number.isFinite(n) && n >= QUESTIONS_MIN ? Math.min(n, QUESTIONS_MAX) : QUESTIONS_WIDTH;
+  } catch { return QUESTIONS_WIDTH; }
+}
 /** Below this body width the sidebar floats over the conversation instead of
  *  squeezing it. */
 const NARROW_PX = 720;
@@ -563,12 +575,42 @@ export function TerminalWithConversation({ agent, raw }: { agent: Agent; raw: Re
   const questionCount = useOpenQuestionCount(canConverse && mode === 'conversation');
   const bodyRef = useRef<HTMLDivElement>(null);
   const [narrow, setNarrow] = useState(false);
+  const [bodyWidth, setBodyWidth] = useState(0);
+  const [qWidth, setQWidth] = useState<number>(readQuestionsWidth);
+  const qWidthRef = useRef(qWidth);
+  qWidthRef.current = qWidth;
+  /** Drag the sidebar's left edge: width = distance from pointer to the body's right edge. */
+  const startResize = (e: React.PointerEvent<HTMLDivElement>) => {
+    const body = bodyRef.current;
+    if (!body || e.button !== 0) return;
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    const right = body.getBoundingClientRect().right;
+    const max = () => Math.max(QUESTIONS_MIN, Math.min(QUESTIONS_MAX, body.clientWidth - (narrow ? 40 : CONVERSATION_MIN)));
+    const move = (ev: PointerEvent) => setQWidth(Math.round(Math.min(max(), Math.max(QUESTIONS_MIN, right - ev.clientX))));
+    const up = () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+      handle.removeEventListener('pointercancel', up);
+      document.body.style.cursor = '';
+      try { localStorage.setItem(QUESTIONS_WIDTH_KEY, String(qWidthRef.current)); } catch { /* storage unavailable */ }
+    };
+    document.body.style.cursor = 'col-resize';
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+    handle.addEventListener('pointercancel', up);
+  };
+  const resetWidth = () => {
+    setQWidth(QUESTIONS_WIDTH);
+    try { localStorage.removeItem(QUESTIONS_WIDTH_KEY); } catch { /* storage unavailable */ }
+  };
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
     const ro = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect.width ?? 0;
-      if (w > 0) setNarrow(w < NARROW_PX);
+      if (w > 0) { setNarrow(w < NARROW_PX); setBodyWidth(w); }
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -620,12 +662,28 @@ export function TerminalWithConversation({ agent, raw }: { agent: Agent; raw: Re
           <aside
             aria-label={t('conversation.questions')}
             style={{
-              width: narrow ? 'min(340px, 92%)' : QUESTIONS_WIDTH, flexShrink: 0, minHeight: 0,
+              width: narrow
+                ? `min(${qWidth}px, 92%)`
+                : Math.max(QUESTIONS_MIN, Math.min(qWidth, bodyWidth ? bodyWidth - CONVERSATION_MIN : qWidth)),
+              flexShrink: 0, minHeight: 0, position: narrow ? 'absolute' : 'relative',
               display: 'flex', flexDirection: 'column',
               background: 'var(--cth-paper-200)', boxShadow: 'inset 1px 0 0 var(--cth-ink-300)',
               ...(narrow ? { position: 'absolute', top: 0, right: 0, bottom: 0, zIndex: 5, boxShadow: '-6px 0 16px rgba(0,0,0,0.18), inset 1px 0 0 var(--cth-ink-300)' } : {})
             }}
           >
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label={t('conversation.questionsResize')}
+              title={t('conversation.questionsResize')}
+              onPointerDown={startResize}
+              onDoubleClick={resetWidth}
+              className="cth-conv-resize"
+              style={{
+                position: 'absolute', top: 0, bottom: 0, left: -3, width: 7, zIndex: 6,
+                cursor: 'col-resize', touchAction: 'none'
+              }}
+            />
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', flexShrink: 0,
               boxShadow: 'inset 0 -1px 0 var(--cth-ink-300)', fontSize: 12, fontWeight: 600,

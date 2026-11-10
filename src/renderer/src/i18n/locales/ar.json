@@ -198,7 +198,8 @@
     "zoomReset": "إعادة حجم النص (Ctrl 0)",
     "questions": "الأسئلة",
     "questionsToggle": "إظهار أو إخفاء الأسئلة التي تنتظرك",
-    "questionsClose": "إغلاق الأسئلة"
+    "questionsClose": "إغلاق الأسئلة",
+    "questionsResize": "اسحب لتغيير الحجم (انقر مرتين لإعادة الضبط)"
   },
   "toolWaterfall": {
     "fresh": "جديد {{tokens}}ر",
