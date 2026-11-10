@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { useStore, type Agent } from '@/store/store';
 import { MarkdownPreview } from '@/markdown/MarkdownPreview';
 import { PixelBadge } from './PixelBadge';
+import { AgentMonogram } from './AgentMonogram';
 
 type HiveMessage = Awaited<ReturnType<Window['cth']['hiveInboxMessages']>>[number];
 
@@ -134,44 +135,56 @@ function Sender({ from, compact }: { from: string; compact?: boolean }) {
 }
 
 /**
- * The incoming-mail badge: the send animation's ↗ badge (agent sidebar),
- * turned to ↙ for mail coming in, in the sender's accent colour.
+ * The incoming-mail mark: the sender's portrait (its sidebar monogram, small)
+ * with the send animation's badge turned to ↙ on its corner, in the sender's
+ * accent. A sender that is not an agent gets the grey ↙ badge alone.
  */
 function ReceiveBadge({ from }: { from?: string }) {
   const agent = useFloorAgent(from ?? '');
-  return (
+  const arrow = (style: React.CSSProperties) => (
     <span aria-hidden="true" style={{
-      width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+      borderRadius: '50%', flexShrink: 0,
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      background: agent ? `var(--cth-${agent.accent})` : 'var(--cth-ink-500)',
-      color: 'var(--cth-monogram-bg)', fontSize: 10.5, fontWeight: 700, lineHeight: 1
+      color: 'var(--cth-monogram-bg)', fontWeight: 700, lineHeight: 1, ...style
     }}>↙</span>
+  );
+  if (!agent) return arrow({ width: 16, height: 16, fontSize: 10.5, background: 'var(--cth-ink-500)' });
+  return (
+    <span style={{ position: 'relative', flexShrink: 0, width: 22, height: 22, display: 'inline-block', marginRight: 4 }}>
+      <AgentMonogram name={agent.name} accent={agent.accent} size={22} />
+      {arrow({
+        position: 'absolute', right: -5, bottom: -4, width: 12, height: 12, fontSize: 8,
+        background: `var(--cth-${agent.accent})`, boxShadow: '0 0 0 1.5px var(--cth-paper-100)'
+      })}
+    </span>
   );
 }
 
-/** The nudge in the Conversation view: one "↙ Message from <sender> · subject" per mail. */
+/**
+ * The nudge in the Conversation view: one compact bubble per mail, "↙ Message
+ * from <sender>" over its subject, sized to its content (not the full width)
+ * and tinted with the sender's accent, grey when the sender is not an agent.
+ */
 export function InboxNudgeCard({ agentId, ids }: { agentId: string; ids: string[] }) {
   const { t } = useTranslation();
   const { messages, loading } = useInboxMessages(agentId, ids);
   return (
     <div style={{
-      alignSelf: 'stretch', borderRadius: 10, padding: '4px 10px',
-      background: 'var(--cth-cream-50)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
-      display: 'flex', flexDirection: 'column', minWidth: 0
+      alignSelf: 'flex-start', maxWidth: '85%', minWidth: 0,
+      display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6
     }}>
       {ids.length === 0 && (
-        <div style={rowStyle}>
+        <div style={{ ...rowStyle, ...bubbleStyle(), padding: '6px 10px' }}>
           <ReceiveBadge />
           <span style={{ color: 'var(--cth-ink-700)' }}>{t('conversation.inboxNew')}</span>
         </div>
       )}
-      {ids.map((id, i) => {
+      {ids.map((id) => {
         const m = messages.get(id);
-        const divider = i > 0 ? { borderTop: '1px solid var(--cth-ink-100)' } : {};
         if (!m) {
           // Not on disk any more and never logged: say so plainly, keep the id.
           return (
-            <div key={id} title={id} style={{ ...rowStyle, ...divider, color: 'var(--cth-ink-500)' }}>
+            <div key={id} title={id} style={{ ...rowStyle, ...bubbleStyle(), padding: '6px 10px', color: 'var(--cth-ink-500)' }}>
               <ReceiveBadge />
               <span>{t('conversation.inboxFromUnknown')}</span>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, fontFamily: 'var(--cth-font-mono)', fontSize: '0.88em' }}>
@@ -180,10 +193,19 @@ export function InboxNudgeCard({ agentId, ids }: { agentId: string; ids: string[
             </div>
           );
         }
-        return <MailRow key={id} message={m} style={divider} />;
+        return <MailRow key={id} message={m} />;
       })}
     </div>
   );
+}
+
+/** A mail bubble: the sender's accent (tinted fill, accent outline), grey otherwise. */
+function bubbleStyle(accent?: string): React.CSSProperties {
+  return {
+    maxWidth: '100%', minWidth: 0, borderRadius: 10, padding: '4px 10px',
+    background: accent ? `var(--cth-${accent}-light)` : 'var(--cth-cream-50)',
+    boxShadow: `inset 0 0 0 1px ${accent ? `var(--cth-${accent})` : 'var(--cth-ink-300)'}`
+  };
 }
 
 const rowStyle: React.CSSProperties = {
@@ -191,14 +213,17 @@ const rowStyle: React.CSSProperties = {
   padding: '5px 0', fontSize: '0.95em', color: 'var(--cth-ink-900)'
 };
 
-function MailRow({ message, style }: { message: HiveMessage; style?: React.CSSProperties }) {
+function MailRow({ message }: { message: HiveMessage }) {
   const { t } = useTranslation();
+  const sender = useFloorAgent(message.from);
+  // Line the subject and body up under the text, past the portrait or the bare badge.
+  const indent = sender ? 32 : 22;
   const [open, setOpen] = useState(false);
   const subject = message.subject?.trim() || message.body?.trim().split('\n')[0] || message.id;
   const hasBody = !!message.body?.trim();
   const toggle = () => { if (hasBody) setOpen((o) => !o); };
   return (
-    <div style={{ minWidth: 0, ...style }}>
+    <div style={bubbleStyle(sender?.accent)}>
       <div
         role={hasBody ? 'button' : undefined}
         tabIndex={hasBody ? 0 : undefined}
@@ -212,7 +237,7 @@ function MailRow({ message, style }: { message: HiveMessage; style?: React.CSSPr
           <ReceiveBadge from={message.from} />
           <span style={{ color: 'var(--cth-ink-500)', flexShrink: 0 }}>{t('conversation.inboxFrom')}</span>
           <Sender from={message.from} />
-          <span style={{ flex: 1 }} />
+          <span style={{ flex: 1, minWidth: 8 }} />
           {message.act && (
             <span style={{
               flexShrink: 0, fontSize: '0.8em', color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-mono)'
@@ -223,14 +248,14 @@ function MailRow({ message, style }: { message: HiveMessage; style?: React.CSSPr
           )}
         </div>
         <div style={{
-          paddingLeft: 22, marginTop: 2, fontWeight: 600, color: 'var(--cth-ink-900)',
+          paddingLeft: indent, marginTop: 2, fontWeight: 600, color: 'var(--cth-ink-900)',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0
         }}>
           {subject}
         </div>
       </div>
       {open && hasBody && (
-        <div style={{ padding: '0 0 6px 22px', fontSize: '0.95em', overflowWrap: 'anywhere', minWidth: 0 }}>
+        <div style={{ padding: `0 0 6px ${indent}px`, fontSize: '0.95em', overflowWrap: 'anywhere', minWidth: 0 }}>
           <MarkdownPreview source={message.body} variant="card" />
         </div>
       )}
