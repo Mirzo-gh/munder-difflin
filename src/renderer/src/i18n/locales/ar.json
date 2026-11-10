@@ -189,7 +189,9 @@
     "needsInput": "الوكيل ينتظر إجابتك.",
     "answerInTerminal": "أجب في الطرفية",
     "thinking": "تفكير",
-    "images": "{{count}} صورة مرفقة"
+    "images": "{{count}} صورة مرفقة",
+    "menuTitle": "الوكيل يطلب منك الاختيار",
+    "menuEscape": "إلغاء (Esc)"
   },
   "toolWaterfall": {
     "fresh": "جديد {{tokens}}ر",

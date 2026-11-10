@@ -13,7 +13,7 @@ const root = path.join(__dirname, '..');
 const out = fs.mkdtempSync(path.join(os.tmpdir(), 'conv-'));
 fs.mkdirSync(path.join(out, 'shared'));
 fs.mkdirSync(path.join(out, 'main'));
-for (const rel of ['shared/conversation', 'main/conversation']) {
+for (const rel of ['shared/conversation', 'main/conversation', 'shared/terminalMenu']) {
   const js = ts.transpileModule(fs.readFileSync(path.join(root, 'src', `${rel}.ts`), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true }
   }).outputText;
@@ -21,6 +21,7 @@ for (const rel of ['shared/conversation', 'main/conversation']) {
 }
 const conv = require(path.join(out, 'shared/conversation.js'));
 const { readConversation } = require(path.join(out, 'main/conversation.js'));
+const { detectTerminalMenu, menuKeystrokes } = require(path.join(out, 'shared/terminalMenu.js'));
 
 const user = (uuid, content, extra = {}) => ({ type: 'user', uuid, message: { role: 'user', content }, ...extra });
 const asst = (uuid, content) => ({ type: 'assistant', uuid, message: { role: 'assistant', content } });
@@ -108,4 +109,48 @@ test('entries are capped', () => {
   const entries = conv.foldConversation([], items);
   assert.equal(entries.length, conv.MAX_ENTRIES);
   assert.equal(entries[0].id, 'u5');
+});
+
+test('a boxed permission menu at the bottom of the screen is detected', () => {
+  const screen = [
+    '● Bash(rm -rf build)',
+    '',
+    '╭──────────────────────────────────────────────╮',
+    '│ Bash command                                 │',
+    '│                                              │',
+    '│ Do you want to proceed?                      │',
+    '│ ❯ 1. Yes                                     │',
+    "│   2. Yes, and don't ask again for rm         │",
+    '│   3. No, and tell Claude what to do (esc)    │',
+    '╰──────────────────────────────────────────────╯',
+    '',
+  ];
+  const m = detectTerminalMenu(screen);
+  assert.ok(m);
+  assert.equal(m.question, 'Do you want to proceed?');
+  assert.deepEqual(m.options.map((o) => o.label), ['Yes', "Yes, and don't ask again for rm", 'No, and tell Claude what to do (esc)']);
+  assert.equal(m.selected, 0);
+  assert.deepEqual(menuKeystrokes(m, 2), ['\x1b[B', '\x1b[B', '\r']);
+  assert.deepEqual(menuKeystrokes(m, 0), ['\r']);
+});
+
+test('an unboxed menu with the cursor further down, and a footer', () => {
+  const m = detectTerminalMenu([
+    'Resume the previous Remote Control session?',
+    '  1. Yes, resume',
+    '❯ 2. No, start fresh',
+    '',
+    'Enter to confirm · Esc to cancel',
+  ]);
+  assert.ok(m);
+  assert.equal(m.question, 'Resume the previous Remote Control session?');
+  assert.equal(m.selected, 1);
+  assert.deepEqual(menuKeystrokes(m, 0), ['\x1b[A', '\r']);
+});
+
+test('no menu: plain numbered lists without a cursor, or menus scrolled far up', () => {
+  assert.equal(detectTerminalMenu(['Steps:', '1. build', '2. test', '> ']), null);
+  const old = ['Q?', '❯ 1. A', '  2. B', ...Array.from({ length: 12 }, (_, i) => `line ${i}`)];
+  assert.equal(detectTerminalMenu(old), null);
+  assert.equal(detectTerminalMenu([]), null);
 });

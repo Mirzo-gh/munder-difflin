@@ -189,7 +189,9 @@
     "needsInput": "代理正在等待你的回答。",
     "answerInTerminal": "在终端中回答",
     "thinking": "思考",
-    "images": "已附加 {{count}} 张图片"
+    "images": "已附加 {{count}} 张图片",
+    "menuTitle": "代理请你做出选择",
+    "menuEscape": "取消 (Esc)"
   },
   "toolWaterfall": {
     "fresh": "新计 {{tokens}}t",

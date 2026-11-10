@@ -14,6 +14,8 @@ import type { Agent } from '@/store/store';
 import { MarkdownPreview } from '@/markdown/MarkdownPreview';
 import { foldConversation, type ConversationEntry } from '@shared/conversation';
 import { Icon } from './Icon';
+import { readTerminalScreen, sendTerminalKeys } from './terminalPool';
+import { detectTerminalMenu, menuKeystrokes, type TerminalMenu } from '@shared/terminalMenu';
 
 const POLL_MS = 900;
 /** Within this many px of the bottom counts as "following" the conversation. */
@@ -90,7 +92,8 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
   };
 
   const busy = agent.status === 'working' || agent.status === 'thinking';
-  const blocked = agent.status === 'blocked';
+  const menu = useTerminalMenu(agent.ptyId);
+  const blocked = agent.status === 'blocked' && !menu;
 
   return (
     <div style={{
@@ -127,6 +130,9 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
           </div>
         )}
       </div>
+      {menu && agent.ptyId && (
+        <TerminalMenuCard key={menu.key} menu={menu} ptyId={agent.ptyId} accent={agent.accent} onShowRaw={onShowRaw} />
+      )}
       {blocked && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
@@ -141,6 +147,77 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+const MENU_POLL_MS = 400;
+
+/** The selection menu currently on the agent's live terminal screen, if any. */
+function useTerminalMenu(ptyId: string | undefined): TerminalMenu | null {
+  const [menu, setMenu] = useState<TerminalMenu | null>(null);
+  useEffect(() => {
+    if (!ptyId) { setMenu(null); return; }
+    const check = () => {
+      const next = detectTerminalMenu(readTerminalScreen(ptyId));
+      setMenu((cur) => {
+        if (!next) return null;
+        if (cur && cur.key === next.key && cur.selected === next.selected) return cur;
+        return next;
+      });
+    };
+    check();
+    const timer = setInterval(check, MENU_POLL_MS);
+    return () => clearInterval(timer);
+  }, [ptyId]);
+  return menu;
+}
+
+/** A menu the CLI is showing, mirrored as buttons. Clicking moves the TUI's
+ *  cursor to that option with arrow keys and presses Enter. */
+function TerminalMenuCard({ menu, ptyId, accent, onShowRaw }: {
+  menu: TerminalMenu; ptyId: string; accent: Agent['accent']; onShowRaw: () => void;
+}) {
+  const { t } = useTranslation();
+  const [sending, setSending] = useState(false);
+  const choose = async (index: number) => {
+    if (sending) return;
+    setSending(true);
+    try { await sendTerminalKeys(ptyId, menuKeystrokes(menu, index)); }
+    finally { setTimeout(() => setSending(false), 1500); }
+  };
+  return (
+    <div style={{
+      flexShrink: 0, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6,
+      background: 'var(--cth-lemon-light)', boxShadow: 'inset 0 1px 0 var(--cth-ink-900)',
+      color: 'var(--cth-ink-900)', fontSize: 13
+    }}>
+      <div style={{ fontWeight: 600, overflowWrap: 'anywhere' }}>
+        {menu.question || t('conversation.menuTitle')}
+      </div>
+      {menu.options.map((o) => (
+        <button
+          key={o.index}
+          type="button"
+          disabled={sending}
+          onClick={() => void choose(o.index)}
+          style={{
+            textAlign: 'left', padding: '6px 10px', borderRadius: 6, cursor: sending ? 'default' : 'pointer',
+            border: 'none', fontFamily: 'var(--cth-font-ui)', fontSize: 13, color: 'var(--cth-ink-900)',
+            background: o.index === menu.selected ? `var(--cth-${accent}-light)` : 'var(--cth-paper-100)',
+            boxShadow: o.index === menu.selected ? 'inset 0 0 0 1px var(--cth-ink-900)' : 'inset 0 0 0 1px var(--cth-ink-300)',
+            opacity: sending ? 0.6 : 1, overflowWrap: 'anywhere'
+          }}
+        >
+          {o.number !== undefined ? `${o.number}. ` : ''}{o.label}
+        </button>
+      ))}
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+        <button type="button" disabled={sending} onClick={() => void sendTerminalKeys(ptyId, ['\x1b'])} style={linkButton}>
+          {t('conversation.menuEscape')}
+        </button>
+        <button type="button" onClick={onShowRaw} style={linkButton}>{t('conversation.showRaw')}</button>
+      </div>
     </div>
   );
 }

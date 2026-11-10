@@ -189,7 +189,9 @@
     "needsInput": "The agent is waiting for your answer.",
     "answerInTerminal": "Answer in terminal",
     "thinking": "Thinking",
-    "images": "{{count}} image(s) attached"
+    "images": "{{count}} image(s) attached",
+    "menuTitle": "The agent is asking you to choose",
+    "menuEscape": "Cancel (Esc)"
   },
   "toolWaterfall": {
     "fresh": "fresh {{tokens}}t",
