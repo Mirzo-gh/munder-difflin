@@ -191,7 +191,8 @@
     "thinking": "Thinking",
     "images": "{{count}} image(s) attached",
     "menuTitle": "The agent is asking you to choose",
-    "menuEscape": "Cancel (Esc)"
+    "menuEscape": "Cancel (Esc)",
+    "thinkingNow": "Thinking…"
   },
   "toolWaterfall": {
     "fresh": "fresh {{tokens}}t",

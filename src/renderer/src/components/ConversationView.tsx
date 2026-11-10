@@ -124,9 +124,15 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
         {state.entries.map((e) => (
           <EntryView key={e.id} entry={e} accent={agent.accent} cwd={agent.worktreePath ?? agent.cwd} />
         ))}
-        {busy && state.entries.length > 0 && (
-          <div style={{ ...eventStyle, textAlign: 'left' }}>
-            {t('conversation.working')}
+        {busy && (
+          <div role="status" style={{
+            display: 'flex', alignItems: 'center', gap: 8, fontSize: 12,
+            color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-ui)'
+          }}>
+            <span className="cth-conv-dots" aria-hidden="true" style={{ color: `var(--cth-${agent.accent})` }}>
+              <span /><span /><span />
+            </span>
+            {agent.status === 'thinking' ? t('conversation.thinkingNow') : t('conversation.working')}
           </div>
         )}
       </div>

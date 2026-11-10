@@ -191,7 +191,8 @@
     "thinking": "تفكير",
     "images": "{{count}} صورة مرفقة",
     "menuTitle": "الوكيل يطلب منك الاختيار",
-    "menuEscape": "إلغاء (Esc)"
+    "menuEscape": "إلغاء (Esc)",
+    "thinkingNow": "يفكر…"
   },
   "toolWaterfall": {
     "fresh": "جديد {{tokens}}ر",

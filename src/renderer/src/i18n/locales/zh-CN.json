@@ -191,7 +191,8 @@
     "thinking": "思考",
     "images": "已附加 {{count}} 张图片",
     "menuTitle": "代理请你做出选择",
-    "menuEscape": "取消 (Esc)"
+    "menuEscape": "取消 (Esc)",
+    "thinkingNow": "思考中…"
   },
   "toolWaterfall": {
     "fresh": "新计 {{tokens}}t",
