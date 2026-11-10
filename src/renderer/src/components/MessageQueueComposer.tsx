@@ -12,6 +12,7 @@ import { supportsConversation, useTerminalViewMode } from './ConversationView';
 import { ChatPlusMenu } from './ChatPlusMenu';
 import { parseInboxNudge } from '@shared/hiveNudge';
 import { InboxNudgeSummary } from './InboxMail';
+import { markQueuedDismissed, useDeliveryPaused } from './ConversationExtras';
 
 const EMPTY_QUEUE: QueuedMessage[] = [];
 
@@ -175,25 +176,6 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
     ? t('queueComposer.heldFloor')
     : t('queueComposer.sendingOneByOne', { name: agent.name });
 
-  const pendingList = queue.length > 0 && (
-    <div style={{
-      display: 'flex', flexDirection: 'column', gap: 4,
-      maxHeight: 280, overflowY: 'auto'
-    }}>
-      {queue.map((m, i) => (
-        <QueuedMessageRow
-          key={m.id}
-          index={i}
-          message={m}
-          agentId={agent.id}
-          paused={deliveryPaused}
-          onSendNow={() => releaseQueuedMessage(agent.id, m.id)}
-          onRemove={() => removeQueuedMessage(agent.id, m.id)}
-        />
-      ))}
-    </div>
-  );
-
   const attachmentChips = attachments.length > 0 && (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
       {attachments.map((a) => (
@@ -271,7 +253,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
             {holdAction}
             {queue.length > 1 && (
               <button
-                onClick={() => clearQueue(agent.id)}
+                onClick={() => { markQueuedDismissed(queue.map((m) => m.id)); clearQueue(agent.id); }}
                 title={t('queueComposer.clearAllTitle')}
                 style={{
                   flexShrink: 0, border: 'none', background: 'transparent', cursor: 'pointer',
@@ -281,7 +263,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
             )}
           </div>
         )}
-        {pendingList}
+        {/* Queued messages show in the thread itself (ConversationView). */}
         <div
           className="cth-chat-input"
           style={{
@@ -437,7 +419,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
         )}
         {queue.length > 1 && (
           <button
-            onClick={() => clearQueue(agent.id)}
+            onClick={() => { markQueuedDismissed(queue.map((m) => m.id)); clearQueue(agent.id); }}
             title={t('queueComposer.clearAllTitle')}
             style={{
               marginLeft: 'auto', flexShrink: 0, whiteSpace: 'nowrap',
@@ -463,7 +445,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
               agentId={agent.id}
               paused={deliveryPaused}
               onSendNow={() => releaseQueuedMessage(agent.id, m.id)}
-              onRemove={() => removeQueuedMessage(agent.id, m.id)}
+              onRemove={() => { markQueuedDismissed([m.id]); removeQueuedMessage(agent.id, m.id); }}
             />
           ))}
         </div>
@@ -575,26 +557,6 @@ function useTerminalBlock(ptyId: string | undefined, active: boolean): TerminalA
   }, [ptyId, active]);
   // 'settling' is a sub-second gap between writes — not worth telling anyone.
   return block === 'settling' ? null : block;
-}
-
-/** Poll the floor-wide auto-delivery pause (main-process control state) while
- * this agent has messages waiting. 2s is plenty — the pause flips on human
- * timescales, and the drain re-reads the live snapshot before every send. */
-function useDeliveryPaused(agentId: string, active: boolean): boolean {
-  const [paused, setPaused] = useState(false);
-  useEffect(() => {
-    if (!active) { setPaused(false); return; }
-    let alive = true;
-    const read = () => {
-      window.cth.controlSnapshot(agentId)
-        .then((s) => { if (alive) setPaused(!!s?.autoDeliveryPaused); })
-        .catch(() => { /* main not ready — assume not paused */ });
-    };
-    read();
-    const iv = setInterval(read, 2000);
-    return () => { alive = false; clearInterval(iv); };
-  }, [agentId, active]);
-  return paused;
 }
 
 /**

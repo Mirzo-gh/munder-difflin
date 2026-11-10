@@ -49,3 +49,23 @@ test('ignores ids that are not plain file names', async (t) => {
   const { hive } = await freshHive(t);
   assert.deepEqual(hive.inboxMessagesById('a1', ['../../registry', 'a/b']), []);
 });
+
+test('finds mail filed in another sub-folder of the inbox', async (t) => {
+  const { hive, inbox } = await freshHive(t);
+  fs.mkdirSync(path.join(inbox, 'processed'));
+  fs.writeFileSync(path.join(inbox, 'processed', 'L3c-fix-head.json'), JSON.stringify(msg('L3c-fix-head')));
+  assert.equal(hive.inboxMessagesById('a1', ['L3c-fix-head'])[0]?.subject, 'subject L3c-fix-head');
+});
+
+test('falls back to the sender outbox archive, then to the hive log', async (t) => {
+  const { hive, inbox } = await freshHive(t);
+  const home = path.resolve(inbox, '..', '..', '..', '..');
+  const hiveRoot = path.join(home, 'hive');
+  const sent = path.join(hiveRoot, 'agents', 'b2', 'outbox', '.sent');
+  fs.mkdirSync(sent, { recursive: true });
+  fs.writeFileSync(path.join(sent, 'whatever.json'), JSON.stringify(msg('s1', { from: 'b2', body: 'full body' })));
+  fs.appendFileSync(path.join(hiveRoot, 'log.jsonl'),
+    JSON.stringify({ ts: 1, kind: 'message', from: 'god', to: 'a1', act: 'inform', subject: 'only in log', id: 'gone' }) + '\n');
+  const got = hive.inboxMessagesById('a1', ['s1', 'gone']);
+  assert.deepEqual(got.map((m) => [m.id, m.from, m.subject, m.body]), [['s1', 'b2', 'subject s1', 'full body'], ['gone', 'god', 'only in log', '']]);
+});
