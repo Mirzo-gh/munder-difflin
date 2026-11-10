@@ -136,7 +136,9 @@
     "editNote": "编辑私人笔记",
     "addNote": "添加私人笔记",
     "editNoteAria": "编辑 {{name}} 的笔记",
-    "noteAria": "{{name}} 的笔记"
+    "noteAria": "{{name}} 的笔记",
+    "sendingTo": "已向 {{to}} 发送消息",
+    "toHuman": "你"
   },
   "askMe": {
     "emptyTitle": "现在没有需要你的事。🌿",
@@ -170,7 +172,9 @@
     "restorable": "{{name}}——可从上次会话恢复",
     "dismiss": "忽略 {{name}}——从恢复列表中永久移除",
     "dismissAria": "忽略 {{name}}",
-    "restoreAll": "全部恢复（{{count}}）"
+    "restoreAll": "全部恢复（{{count}}）",
+    "collapse": "收起智能体侧栏",
+    "expand": "展开智能体侧栏"
   },
   "sidebar": {
     "terminal": "终端",

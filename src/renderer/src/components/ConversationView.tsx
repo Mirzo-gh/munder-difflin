@@ -18,6 +18,7 @@ import { PixelBadge } from './PixelBadge';
 import { AskMeTab } from './AskMeTab';
 import { waitsOnHuman, type HiveTask } from './TasksKanban';
 import { Icon } from './Icon';
+import { CliSpinner } from './CliSpinner';
 import { readTerminalScreen, sendTerminalKeys } from './terminalPool';
 import { useTerminalFontSize, setTerminalFontSize, getTerminalFontSize, DEFAULT_TERMINAL_FONT_SIZE } from './terminalFontSize';
 import { detectTerminalMenu, menuKeystrokes, type TerminalMenu } from '@shared/terminalMenu';
@@ -160,28 +161,6 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
         </div>
       )}
     </div>
-  );
-}
-
-/** The glyph cycle of the Claude Code CLI's spinner (✻ Working…), forward then back. */
-const SPINNER_FRAMES = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢'];
-
-function CliSpinner() {
-  const [frame, setFrame] = useState(0);
-  useEffect(() => {
-    const reduced = typeof window.matchMedia === 'function'
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduced) return;
-    const timer = setInterval(() => setFrame((f) => (f + 1) % SPINNER_FRAMES.length), 120);
-    return () => clearInterval(timer);
-  }, []);
-  return (
-    <span aria-hidden="true" style={{
-      display: 'inline-block', width: 14, textAlign: 'center', fontSize: '1.15em',
-      color: 'var(--cth-coral)', fontFamily: 'var(--cth-font-mono)'
-    }}>
-      {SPINNER_FRAMES[frame]}
-    </span>
   );
 }
 
