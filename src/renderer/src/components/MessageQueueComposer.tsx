@@ -9,6 +9,7 @@ import { useTerminalFontSize } from './terminalFontSize';
 import { isComposingKey } from '@shared/imeGuard';
 import { useRtl } from '@/i18n/useDirection';
 import { supportsConversation, useTerminalViewMode } from './ConversationView';
+import { ChatPlusMenu } from './ChatPlusMenu';
 
 const EMPTY_QUEUE: QueuedMessage[] = [];
 
@@ -36,6 +37,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
   // a rounded input with attach (+) on the left and a send arrow on the right.
   const viewMode = useTerminalViewMode();
   const chat = supportsConversation(agent) && viewMode === 'conversation';
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const queue = useStore((s) => s.messageQueues[agent.id]) ?? EMPTY_QUEUE;
   const enqueueMessage = useStore((s) => s.enqueueMessage);
   const removeQueuedMessage = useStore((s) => s.removeQueuedMessage);
@@ -292,6 +294,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
           )}
           {attachmentChips}
           <textarea
+            ref={chatInputRef}
             dir={rtl ? 'auto' : undefined}
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -308,20 +311,27 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
             } as React.CSSProperties}
           />
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <button
-              type="button"
-              onClick={pickFiles}
-              title={t('queueComposer.files')}
-              aria-label={t('queueComposer.files')}
-              className="cth-chat-iconbtn"
-              style={{
-                width: 28, height: 28, borderRadius: 8, border: 'none', cursor: 'pointer',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                background: 'transparent', color: 'var(--cth-ink-700)'
+            <ChatPlusMenu
+              selfId={agent.id}
+              onFiles={() => void pickFiles()}
+              onInsert={(snippet) => {
+                const el = chatInputRef.current;
+                // A slash command only works at the start of the message.
+                if (snippet.startsWith('/')) {
+                  setText(`${snippet}${text.replace(/^\s+/, '')}`);
+                  requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(snippet.length, snippet.length); });
+                  return;
+                }
+                const at = el ? el.selectionStart : text.length;
+                const end = el ? el.selectionEnd : text.length;
+                const before = text.slice(0, at);
+                const pad = before && !/\s$/.test(before) ? ' ' : '';
+                const next = `${before}${pad}${snippet}${text.slice(end)}`;
+                setText(next);
+                const caret = before.length + pad.length + snippet.length;
+                requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(caret, caret); });
               }}
-            >
-              <Icon name="plus" />
-            </button>
+            />
             <span style={{ flex: 1 }} />
             <button
               type="button"

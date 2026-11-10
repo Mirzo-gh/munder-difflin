@@ -199,7 +199,14 @@
     "questions": "问题",
     "questionsToggle": "显示或隐藏等待你回答的问题",
     "questionsClose": "关闭问题",
-    "questionsResize": "拖动以调整宽度（双击重置）"
+    "questionsResize": "拖动以调整宽度（双击重置）",
+    "plusMenu": "添加…",
+    "plusFiles": "文件和图片",
+    "plusCommands": "斜杠命令",
+    "plusMention": "提及代理",
+    "plusSearch": "搜索…",
+    "plusBack": "返回",
+    "plusNothing": "没有匹配项。"
   },
   "toolWaterfall": {
     "fresh": "新计 {{tokens}}t",

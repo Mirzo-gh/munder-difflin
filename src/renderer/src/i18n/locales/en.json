@@ -199,7 +199,14 @@
     "questions": "Questions",
     "questionsToggle": "Show or hide the questions waiting for you",
     "questionsClose": "Close questions",
-    "questionsResize": "Drag to resize (double-click to reset)"
+    "questionsResize": "Drag to resize (double-click to reset)",
+    "plusMenu": "Add…",
+    "plusFiles": "Files and images",
+    "plusCommands": "Slash command",
+    "plusMention": "Mention an agent",
+    "plusSearch": "Search…",
+    "plusBack": "Back",
+    "plusNothing": "Nothing matches."
   },
   "toolWaterfall": {
     "fresh": "fresh {{tokens}}t",

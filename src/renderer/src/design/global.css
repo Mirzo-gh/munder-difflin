@@ -361,3 +361,4 @@ input, textarea, [contenteditable='true'] {
 .cth-chat-input { box-shadow: inset 0 0 0 1px var(--cth-ink-300); transition: box-shadow 120ms; }
 .cth-chat-input:focus-within { box-shadow: inset 0 0 0 1.5px var(--cth-ink-700); }
 .cth-chat-iconbtn:hover { background: var(--cth-cream-200) !important; }
+.cth-chat-menuitem:hover, .cth-chat-menuitem:focus-visible { background: var(--cth-cream-200) !important; outline: none; }

@@ -199,7 +199,14 @@
     "questions": "الأسئلة",
     "questionsToggle": "إظهار أو إخفاء الأسئلة التي تنتظرك",
     "questionsClose": "إغلاق الأسئلة",
-    "questionsResize": "اسحب لتغيير الحجم (انقر مرتين لإعادة الضبط)"
+    "questionsResize": "اسحب لتغيير الحجم (انقر مرتين لإعادة الضبط)",
+    "plusMenu": "إضافة…",
+    "plusFiles": "ملفات وصور",
+    "plusCommands": "أمر بشرطة مائلة",
+    "plusMention": "الإشارة إلى وكيل",
+    "plusSearch": "بحث…",
+    "plusBack": "رجوع",
+    "plusNothing": "لا توجد نتائج."
   },
   "toolWaterfall": {
     "fresh": "جديد {{tokens}}ر",
