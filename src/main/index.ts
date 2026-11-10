@@ -34,7 +34,8 @@ import { MemoryManager } from './memory';
 import { KnowledgeManager } from './knowledge';
 import { MemoryReflector, type ReflectSettings } from './reflect';
 import { PersistStore } from './db';
-import { readAgentUsage, readContextTokens, seedSessionTranscript, resolveSessionCwd } from './transcript';
+import { readAgentUsage, readContextTokens, seedSessionTranscript, resolveSessionCwd, projectDir } from './transcript';
+import { readConversation } from './conversation';
 import { listIssues, listCIRuns } from './github';
 import { SlackWebhookServer, SlackReplyServer, postSlackReply, type SlackEventFile } from './slack';
 import {
@@ -4300,6 +4301,25 @@ ipcMain.handle('hive:agentContext', (_evt, agentId: unknown) => {
   const tp = hookServer.transcriptPath(agentId);
   if (!tp) return null;
   return readContextTokens(tp) ?? 0;
+});
+
+// Conversation view of an agent's Claude session (the chat-style Terminal tab).
+// The transcript is the one the agent's hooks reported; before any hook has
+// fired (e.g. right after an app restart) fall back to the last recorded session
+// id in the agent's cwd. The renderer polls with the offset it was handed, and
+// starts over whenever `path` changes (a /clear or a respawn opens a new file).
+ipcMain.handle('hive:agentConversation', (_evt, agentId: unknown, offset: unknown, knownPath: unknown) => {
+  if (typeof agentId !== 'string') return null;
+  let tp = hookServer.transcriptPath(agentId);
+  if (!tp) {
+    const sid = hive.lastSession(agentId);
+    const cwd = hive.registry().agents[agentId]?.cwd;
+    if (sid && cwd && /^[A-Za-z0-9_-]+$/.test(sid)) tp = join(projectDir(cwd), `${sid}.jsonl`);
+  }
+  if (!tp) return null;
+  const from = typeof offset === 'number' && Number.isFinite(offset) && knownPath === tp ? offset : -1;
+  const chunk = readConversation(tp, from);
+  return chunk ? { path: tp, ...chunk } : null;
 });
 
 // ─── IPC: live telemetry (the OTel collector — the locked usage-provider seam) ─

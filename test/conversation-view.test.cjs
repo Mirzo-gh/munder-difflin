@@ -1,0 +1,111 @@
+'use strict';
+// Conversation view of the Terminal tab: transcript parsing (shared/conversation)
+// and the incremental tail reader (main/conversation).
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const ts = require('typescript');
+
+const root = path.join(__dirname, '..');
+const out = fs.mkdtempSync(path.join(os.tmpdir(), 'conv-'));
+fs.mkdirSync(path.join(out, 'shared'));
+fs.mkdirSync(path.join(out, 'main'));
+for (const rel of ['shared/conversation', 'main/conversation']) {
+  const js = ts.transpileModule(fs.readFileSync(path.join(root, 'src', `${rel}.ts`), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true }
+  }).outputText;
+  fs.writeFileSync(path.join(out, `${rel}.js`), js, 'utf8');
+}
+const conv = require(path.join(out, 'shared/conversation.js'));
+const { readConversation } = require(path.join(out, 'main/conversation.js'));
+
+const user = (uuid, content, extra = {}) => ({ type: 'user', uuid, message: { role: 'user', content }, ...extra });
+const asst = (uuid, content) => ({ type: 'assistant', uuid, message: { role: 'assistant', content } });
+const jsonl = (...recs) => recs.map((r) => JSON.stringify(r)).join('\n') + '\n';
+
+test('user, assistant text and tool calls become entries; results fold into their call', () => {
+  const items = conv.parseTranscriptChunk(jsonl(
+    user('u1', 'Fix the tests'),
+    asst('a1', [{ type: 'text', text: 'Looking.' }, { type: 'tool_use', id: 'tu1', name: 'Bash', input: { command: 'npm test' } }]),
+    user('u2', [{ type: 'tool_result', tool_use_id: 'tu1', content: 'all good' }])
+  ));
+  const entries = conv.foldConversation([], items);
+  assert.deepEqual(entries.map((e) => e.kind), ['user', 'assistant', 'tool']);
+  assert.equal(entries[2].name, 'Bash');
+  assert.equal(entries[2].summary, 'npm test');
+  assert.equal(entries[2].result, 'all good');
+  assert.equal(entries[2].isError, false);
+});
+
+test('a tool result arriving in a later chunk attaches to the earlier call', () => {
+  const first = conv.foldConversation([], conv.parseTranscriptChunk(jsonl(
+    asst('a1', [{ type: 'tool_use', id: 'tu9', name: 'Read', input: { file_path: '/x/y.ts' } }])
+  )));
+  assert.equal(first[0].result, undefined);
+  const next = conv.foldConversation(first, conv.parseTranscriptChunk(jsonl(
+    user('u3', [{ type: 'tool_result', tool_use_id: 'tu9', content: [{ type: 'text', text: 'boom' }], is_error: true }])
+  )));
+  assert.equal(next.length, 1);
+  assert.equal(next[0].result, 'boom');
+  assert.equal(next[0].isError, true);
+  assert.equal(next[0].summary, '/x/y.ts');
+});
+
+test('plumbing is hidden: meta, sidechain, reminders, command stdout', () => {
+  const items = conv.parseTranscriptChunk(jsonl(
+    user('m', 'caveat', { isMeta: true }),
+    user('s', 'subagent prompt', { isSidechain: true }),
+    user('r', '<system-reminder>x</system-reminder>'),
+    user('o', '<local-command-stdout>done</local-command-stdout>'),
+    user('c', '<command-name>/clear</command-name>\n<command-message>clear</command-message>\n<command-args></command-args>'),
+    { type: 'summary', summary: 'x' },
+    'not an object'
+  ) + '{torn');
+  assert.deepEqual(items, [{ kind: 'event', id: 'c', ts: undefined, text: '/clear' }]);
+});
+
+test('thinking blocks and images are surfaced', () => {
+  const items = conv.parseTranscriptChunk(jsonl(
+    user('u', [{ type: 'text', text: 'look' }, { type: 'image', source: {} }]),
+    asst('a', [{ type: 'thinking', thinking: 'hmm' }])
+  ));
+  assert.equal(items[0].kind, 'user');
+  assert.equal(items[0].images, 1);
+  assert.equal(items[1].kind, 'thinking');
+});
+
+test('readConversation reads incrementally and holds back a torn line', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'conv-file-'));
+  const file = path.join(dir, 's.jsonl');
+  assert.equal(readConversation(file, -1), null, 'missing file → null');
+  fs.writeFileSync(file, jsonl(user('u1', 'hello')));
+  const a = readConversation(file, -1);
+  assert.equal(a.reset, true);
+  assert.equal(a.truncated, false);
+  assert.equal(a.items.length, 1);
+  const torn = JSON.stringify(user('u2', 'world'));
+  fs.appendFileSync(file, torn.slice(0, 10));
+  const b = readConversation(file, a.offset);
+  assert.equal(b.items.length, 0);
+  assert.equal(b.offset, a.offset);
+  fs.appendFileSync(file, torn.slice(10) + '\n');
+  const c = readConversation(file, b.offset);
+  assert.equal(c.items.length, 1);
+  assert.equal(c.items[0].text, 'world');
+  assert.equal(c.reset, false);
+  // File rewritten smaller → reset.
+  fs.writeFileSync(file, jsonl(user('u3', 'new')));
+  const d = readConversation(file, c.offset);
+  assert.equal(d.reset, true);
+  assert.equal(d.items[0].text, 'new');
+});
+
+test('entries are capped', () => {
+  const items = Array.from({ length: conv.MAX_ENTRIES + 5 }, (_, i) => ({ kind: 'user', id: `u${i}`, text: 'x' }));
+  const entries = conv.foldConversation([], items);
+  assert.equal(entries.length, conv.MAX_ENTRIES);
+  assert.equal(entries[0].id, 'u5');
+});

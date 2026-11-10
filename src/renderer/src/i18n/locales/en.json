@@ -178,6 +178,19 @@
     "messages": "messages",
     "traces": "traces"
   },
+  "conversation": {
+    "modeConversation": "Conversation",
+    "modeRaw": "Raw terminal",
+    "empty": "No messages yet. Send one below to start.",
+    "noTranscript": "No conversation transcript yet for this agent. It appears once the session starts.",
+    "showRaw": "Show raw terminal",
+    "olderHidden": "Older messages are hidden. The raw terminal has the full history.",
+    "working": "Working…",
+    "needsInput": "The agent is waiting for your answer.",
+    "answerInTerminal": "Answer in terminal",
+    "thinking": "Thinking",
+    "images": "{{count}} image(s) attached"
+  },
   "toolWaterfall": {
     "fresh": "fresh {{tokens}}t",
     "cache": "cache {{tokens}}t ({{pct}}%)",

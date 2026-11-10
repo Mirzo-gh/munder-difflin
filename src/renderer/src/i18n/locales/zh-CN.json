@@ -178,6 +178,19 @@
     "messages": "消息",
     "traces": "追踪"
   },
+  "conversation": {
+    "modeConversation": "对话",
+    "modeRaw": "原始终端",
+    "empty": "暂无消息。在下方发送一条消息开始。",
+    "noTranscript": "该代理还没有对话记录。会话开始后将显示。",
+    "showRaw": "显示原始终端",
+    "olderHidden": "较早的消息已隐藏。原始终端中有完整历史。",
+    "working": "工作中…",
+    "needsInput": "代理正在等待你的回答。",
+    "answerInTerminal": "在终端中回答",
+    "thinking": "思考",
+    "images": "已附加 {{count}} 张图片"
+  },
   "toolWaterfall": {
     "fresh": "新计 {{tokens}}t",
     "cache": "缓存 {{tokens}}t（{{pct}}%）",

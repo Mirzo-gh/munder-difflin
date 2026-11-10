@@ -178,6 +178,19 @@
     "messages": "الرسائل",
     "traces": "التتبّع"
   },
+  "conversation": {
+    "modeConversation": "المحادثة",
+    "modeRaw": "الطرفية الخام",
+    "empty": "لا توجد رسائل بعد. أرسل رسالة أدناه للبدء.",
+    "noTranscript": "لا يوجد سجل محادثة لهذا الوكيل بعد. سيظهر عند بدء الجلسة.",
+    "showRaw": "عرض الطرفية الخام",
+    "olderHidden": "الرسائل الأقدم مخفية. الطرفية الخام تحتوي على السجل الكامل.",
+    "working": "يعمل…",
+    "needsInput": "الوكيل ينتظر إجابتك.",
+    "answerInTerminal": "أجب في الطرفية",
+    "thinking": "تفكير",
+    "images": "{{count}} صورة مرفقة"
+  },
   "toolWaterfall": {
     "fresh": "جديد {{tokens}}ر",
     "cache": "مخبّأ {{tokens}}ر ({{pct}}%)",
