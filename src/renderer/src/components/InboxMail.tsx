@@ -118,82 +118,119 @@ export function AgentChip({ agent, arrow, compact }: { agent: Agent; arrow?: boo
   );
 }
 
+/** How a non-agent sender reads: the human, the harness, or the raw id. */
+function senderLabel(from: string, t: (k: string) => string): string {
+  if (from === 'human' || from === 'user') return t('conversation.inboxFromHuman');
+  if (from === 'system' || from === 'harness' || !from) return t('conversation.inboxFromSystem');
+  return from;
+}
+
 /** The sender of a hive message: an agent chip, or a plain label for the human / harness. */
 function Sender({ from, compact }: { from: string; compact?: boolean }) {
   const { t } = useTranslation();
   const agent = useFloorAgent(from);
   if (agent) return <AgentChip agent={agent} compact={compact} />;
-  const label = from === 'human' ? t('conversation.inboxFromHuman')
-    : from === 'system' ? t('conversation.inboxFromSystem')
-    : from;
-  return <span style={{ fontWeight: 600, flexShrink: 0, color: 'var(--cth-ink-700)' }}>{label}</span>;
+  return <span style={{ fontWeight: 600, flexShrink: 0, color: 'var(--cth-ink-700)' }}>{senderLabel(from, t)}</span>;
 }
 
-/** The nudge as a mail card in the Conversation view. */
+/**
+ * The incoming-mail badge: the send animation's ↗ badge (agent sidebar),
+ * turned to ↙ for mail coming in, in the sender's accent colour.
+ */
+function ReceiveBadge({ from }: { from?: string }) {
+  const agent = useFloorAgent(from ?? '');
+  return (
+    <span aria-hidden="true" style={{
+      width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      background: agent ? `var(--cth-${agent.accent})` : 'var(--cth-ink-500)',
+      color: 'var(--cth-monogram-bg)', fontSize: 10.5, fontWeight: 700, lineHeight: 1
+    }}>↙</span>
+  );
+}
+
+/** The nudge in the Conversation view: one "↙ Message from <sender> · subject" per mail. */
 export function InboxNudgeCard({ agentId, ids }: { agentId: string; ids: string[] }) {
   const { t } = useTranslation();
   const { messages, loading } = useInboxMessages(agentId, ids);
   return (
     <div style={{
-      alignSelf: 'stretch', borderRadius: 10, padding: '6px 10px',
+      alignSelf: 'stretch', borderRadius: 10, padding: '4px 10px',
       background: 'var(--cth-cream-50)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
-      display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0
+      display: 'flex', flexDirection: 'column', minWidth: 0
     }}>
-      <div style={{ fontSize: '0.8em', color: 'var(--cth-ink-500)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-        📬 {t('conversation.inboxTitle')}
-      </div>
       {ids.length === 0 && (
-        <div style={{ fontSize: '0.92em', color: 'var(--cth-ink-700)' }}>{t('conversation.inboxNew')}</div>
+        <div style={rowStyle}>
+          <ReceiveBadge />
+          <span style={{ color: 'var(--cth-ink-700)' }}>{t('conversation.inboxNew')}</span>
+        </div>
       )}
-      {ids.map((id) => {
+      {ids.map((id, i) => {
         const m = messages.get(id);
+        const divider = i > 0 ? { borderTop: '1px solid var(--cth-ink-100)' } : {};
         if (!m) {
+          // Not on disk any more and never logged: say so plainly, keep the id.
           return (
-            <div key={id} title={id} style={{
-              fontSize: '0.85em', color: 'var(--cth-ink-500)', overflow: 'hidden',
-              textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-            }}>
-              {loading ? '…' : t('conversation.inboxMissing', { id })}
+            <div key={id} title={id} style={{ ...rowStyle, ...divider, color: 'var(--cth-ink-500)' }}>
+              <ReceiveBadge />
+              <span>{t('conversation.inboxFromUnknown')}</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, fontFamily: 'var(--cth-font-mono)', fontSize: '0.88em' }}>
+                {loading ? '…' : id}
+              </span>
             </div>
           );
         }
-        return <MailRow key={id} message={m} />;
+        return <MailRow key={id} message={m} style={divider} />;
       })}
     </div>
   );
 }
 
-function MailRow({ message }: { message: HiveMessage }) {
+const rowStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 6, minWidth: 0,
+  padding: '5px 0', fontSize: '0.95em', color: 'var(--cth-ink-900)'
+};
+
+function MailRow({ message, style }: { message: HiveMessage; style?: React.CSSProperties }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const subject = message.subject?.trim() || message.body?.trim().split('\n')[0] || message.id;
+  const hasBody = !!message.body?.trim();
+  const toggle = () => { if (hasBody) setOpen((o) => !o); };
   return (
-    <div style={{ minWidth: 0, borderTop: '1px solid var(--cth-ink-100)' }}>
+    <div style={{ minWidth: 0, ...style }}>
       <div
-        role="button"
-        tabIndex={0}
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen((o) => !o); } }}
+        role={hasBody ? 'button' : undefined}
+        tabIndex={hasBody ? 0 : undefined}
+        aria-expanded={hasBody ? open : undefined}
+        onClick={toggle}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }}
         title={message.id}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, cursor: 'pointer',
-          padding: '3px 0', fontSize: '0.95em', color: 'var(--cth-ink-900)'
-        }}
+        style={{ cursor: hasBody ? 'pointer' : 'default', padding: '5px 0', minWidth: 0 }}
       >
-        <span aria-hidden="true" style={{ color: 'var(--cth-ink-500)', width: 10, flexShrink: 0 }}>{open ? '▾' : '▸'}</span>
-        <Sender from={message.from} />
-        <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: '0.95em' }}>
+          <ReceiveBadge from={message.from} />
+          <span style={{ color: 'var(--cth-ink-500)', flexShrink: 0 }}>{t('conversation.inboxFrom')}</span>
+          <Sender from={message.from} />
+          <span style={{ flex: 1 }} />
+          {message.act && (
+            <span style={{
+              flexShrink: 0, fontSize: '0.8em', color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-mono)'
+            }}>{message.act}{message.needs_human ? ' · ⚑' : ''}</span>
+          )}
+          {hasBody && (
+            <span aria-hidden="true" style={{ color: 'var(--cth-ink-500)', width: 10, flexShrink: 0 }}>{open ? '▾' : '▸'}</span>
+          )}
+        </div>
+        <div style={{
+          paddingLeft: 22, marginTop: 2, fontWeight: 600, color: 'var(--cth-ink-900)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0
+        }}>
           {subject}
-        </span>
-        {message.act && (
-          <span style={{
-            marginLeft: 'auto', flexShrink: 0, fontSize: '0.78em', color: 'var(--cth-ink-500)',
-            fontFamily: 'var(--cth-font-mono)'
-          }}>{message.act}{message.needs_human ? ' · ⚑' : ''}</span>
-        )}
+        </div>
       </div>
-      {open && message.body && (
-        <div style={{ padding: '2px 0 6px 18px', fontSize: '0.95em', overflowWrap: 'anywhere', minWidth: 0 }}>
+      {open && hasBody && (
+        <div style={{ padding: '0 0 6px 22px', fontSize: '0.95em', overflowWrap: 'anywhere', minWidth: 0 }}>
           <MarkdownPreview source={message.body} variant="card" />
         </div>
       )}
@@ -201,18 +238,18 @@ function MailRow({ message }: { message: HiveMessage }) {
   );
 }
 
-/** The nudge as a compact line in the message queue: "📬 sender · subject". */
+/** The nudge as a compact line in the message queue: "↙ sender · subject". */
 export function InboxNudgeSummary({ agentId, ids }: { agentId: string; ids: string[] }) {
   const { t } = useTranslation();
   const { messages } = useInboxMessages(agentId, ids);
-  if (!ids.length) return <span>📬 {t('conversation.inboxNew')}</span>;
+  if (!ids.length) return <span>↙ {t('conversation.inboxNew')}</span>;
   return (
     <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
       {ids.map((id) => {
         const m = messages.get(id);
         return (
           <span key={id} title={id} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-            <span aria-hidden="true">📬</span>
+            <span aria-hidden="true" style={{ color: 'var(--cth-ink-500)' }}>↙</span>
             {m ? (
               <>
                 <Sender from={m.from} compact />
@@ -222,7 +259,7 @@ export function InboxNudgeSummary({ agentId, ids }: { agentId: string; ids: stri
               </>
             ) : (
               <span style={{ color: 'var(--cth-ink-500)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {t('conversation.inboxTitle')}
+                {t('conversation.inboxFromUnknown')}
               </span>
             )}
           </span>

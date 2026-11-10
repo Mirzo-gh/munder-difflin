@@ -1976,40 +1976,78 @@ export class HiveManager {
    * Look up messages of an agent's inbox by id, pending or already handled.
    *
    * Backs the readable rendering of the inbox-wake nudge (`📬 inbox: id1, id2`)
-   * in the Conversation view: by the time the human scrolls past it, the agent
-   * has usually filed that mail under inbox/.done, so the pending inbox alone
-   * would come up empty. Files are named `<id>.json` by deliver(); a scan of
-   * the folders by `id` field covers a file an agent renamed while filing it.
+   * in the Conversation view. By the time the human scrolls past it the agent
+   * has usually dealt with that mail, and agents do not all file it the same
+   * way: inbox/.done as asked, another sub-folder of inbox/, a new file name, or
+   * plain deletion. So the lookup widens step by step until every id is found:
+   *   1. the agent's inbox/ and every sub-folder of it (by `<id>.json`, then by
+   *      the `id` field of each file);
+   *   2. every agent's outbox/.sent, where the router archives what it sent;
+   *   3. the hive log, which records sender, recipient and subject of every
+   *      routed message (no body), so even a deleted message keeps a title.
    * Ids that are not plain file-name tokens are ignored (no path traversal).
    */
   inboxMessagesById(agentId: string, ids: string[]): HiveMessage[] {
     const wanted = [...new Set(ids)].filter((x) => /^[\w.:-]{1,200}$/.test(x)).slice(0, 50);
-    if (!wanted.length) return [];
-    const inbox = join(this.agentDir(agentId), 'inbox');
-    const dirs = [inbox, join(inbox, '.done')];
+    const root = this.root();
+    if (!wanted.length || !root) return [];
     const found = new Map<string, HiveMessage>();
-    const read = (fp: string): HiveMessage | null => {
-      try { return JSON.parse(readFileSync(fp, 'utf8')) as HiveMessage; } catch { return null; }
+    const missing = () => wanted.filter((x) => !found.has(x));
+    const read = (fp: string): Partial<HiveMessage> | null => {
+      try { return JSON.parse(readFileSync(fp, 'utf8')) as Partial<HiveMessage>; } catch { return null; }
     };
-    for (const id of wanted) {
-      for (const d of dirs) {
-        const fp = join(d, `${id}.json`);
-        if (!existsSync(fp)) continue;
-        const m = read(fp);
-        if (m) { found.set(id, { ...m, id: m.id ?? id }); break; }
-      }
-    }
-    if (found.size < wanted.length) {
-      const missing = new Set(wanted.filter((x) => !found.has(x)));
-      for (const d of dirs) {
-        if (!missing.size) break;
-        let files: string[] = [];
-        try { files = readdirSync(d).filter((f) => f.endsWith('.json')); } catch { continue; }
-        for (const f of files.slice(-500)) {
-          const m = read(join(d, f));
-          if (m?.id && missing.has(m.id)) { found.set(m.id, m); missing.delete(m.id); }
+    const keep = (m: Partial<HiveMessage> | null, id: string) => {
+      if (m && !found.has(id)) found.set(id, { ...(m as HiveMessage), id });
+    };
+    const subdirs = (dir: string): string[] => {
+      try {
+        return readdirSync(dir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => join(dir, d.name));
+      } catch { return []; }
+    };
+    /** Find the missing ids in these folders: by file name first, then by content. */
+    const search = (dirs: string[]) => {
+      for (const id of missing()) {
+        for (const d of dirs) {
+          const fp = join(d, `${id}.json`);
+          if (existsSync(fp)) { keep(read(fp), id); if (found.has(id)) break; }
         }
       }
+      for (const d of dirs) {
+        const left = new Set(missing());
+        if (!left.size) return;
+        let files: string[] = [];
+        try { files = readdirSync(d).filter((f) => f.endsWith('.json')).sort(); } catch { continue; }
+        for (const f of files.slice(-1000)) {
+          const m = read(join(d, f));
+          if (m?.id && left.has(m.id)) { keep(m, m.id); left.delete(m.id); if (!left.size) break; }
+        }
+      }
+    };
+
+    const inbox = join(this.agentDir(agentId), 'inbox');
+    search([inbox, ...subdirs(inbox)]);
+    if (missing().length) {
+      search(subdirs(join(root, 'agents')).map((a) => join(a, 'outbox', '.sent')).filter((d) => existsSync(d)));
+    }
+    if (missing().length) {
+      const left = new Set(missing());
+      try {
+        const lines = readFileSync(join(root, 'log.jsonl'), 'utf8').split('\n');
+        for (let i = lines.length - 1; i >= 0 && left.size; i--) {
+          const line = lines[i];
+          if (!line || !line.includes('"message"')) continue;
+          let ev: Record<string, unknown>;
+          try { ev = JSON.parse(line) as Record<string, unknown>; } catch { continue; }
+          const id = typeof ev.id === 'string' ? ev.id : '';
+          if (ev.kind !== 'message' || !left.has(id)) continue;
+          left.delete(id);
+          keep({
+            id, from: String(ev.from ?? ''), to: String(ev.to ?? ''),
+            act: ev.act as HiveMessage['act'], subject: String(ev.subject ?? ''), body: '',
+            created_at: typeof ev.ts === 'number' ? new Date(ev.ts).toISOString() : ''
+          }, id);
+        }
+      } catch { /* no log yet */ }
     }
     return wanted.filter((x) => found.has(x)).map((x) => found.get(x)!);
   }
