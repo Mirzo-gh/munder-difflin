@@ -12,7 +12,9 @@ import { memo, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStor
 import { useTranslation } from 'react-i18next';
 import type { Agent } from '@/store/store';
 import { MarkdownPreview } from '@/markdown/MarkdownPreview';
-import { foldConversation, type ConversationEntry } from '@shared/conversation';
+import { findAgentMentions, foldConversation, type ConversationEntry } from '@shared/conversation';
+import { useStore } from '@/store/store';
+import { PixelBadge } from './PixelBadge';
 import { Icon } from './Icon';
 import { readTerminalScreen, sendTerminalKeys } from './terminalPool';
 import { useTerminalFontSize, setTerminalFontSize, getTerminalFontSize, DEFAULT_TERMINAL_FONT_SIZE } from './terminalFontSize';
@@ -126,7 +128,7 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
           </div>
         )}
         {state.entries.map((e) => (
-          <EntryView key={e.id} entry={e} accent={agent.accent} cwd={agent.worktreePath ?? agent.cwd} />
+          <EntryView key={e.id} entry={e} accent={agent.accent} cwd={agent.worktreePath ?? agent.cwd} selfId={agent.id} />
         ))}
         {busy && (
           <div role="status" style={{
@@ -178,6 +180,60 @@ function CliSpinner() {
     }}>
       {SPINNER_FRAMES[frame]}
     </span>
+  );
+}
+
+const EMPTY_AGENTS: Agent[] = [];
+
+/** Live chips for the floor agents a message talks about (or a tool call is
+ *  addressed to): name + current status, click to open that agent. */
+function AgentMentions({ text, ids, selfId, arrow }: {
+  text?: string; ids?: string[]; selfId: string; arrow?: boolean;
+}) {
+  const agents = useStore((s) => s.agents) ?? EMPTY_AGENTS;
+  const archived = useStore((s) => s.archivedAgents) ?? EMPTY_AGENTS;
+  const select = useStore((s) => s.select);
+  const setSidebarTab = useStore((s) => s.setSidebarTab);
+  const fullscreenAgentId = useStore((s) => s.fullscreenAgentId);
+  const setFullscreen = useStore((s) => s.setFullscreen);
+  const all = [...agents, ...archived];
+  const found = ids
+    ? ids.map((id) => all.find((a) => a.id === id || a.name.toLowerCase() === id.toLowerCase()))
+        .filter((a): a is Agent => !!a && a.id !== selfId)
+    : findAgentMentions(text ?? '', all, selfId);
+  const unique = found.filter((a, i) => found.findIndex((b) => b.id === a.id) === i);
+  if (!unique.length) return null;
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: arrow ? 0 : 6 }}>
+      {unique.map((a) => (
+        <button
+          key={a.id}
+          type="button"
+          title={a.cwd}
+          onClick={() => {
+            if (fullscreenAgentId) setFullscreen(null);
+            select(a.id);
+            setSidebarTab('terminal');
+          }}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 8px 3px 4px',
+            borderRadius: 999, border: 'none', cursor: 'pointer', maxWidth: '100%',
+            background: 'var(--cth-cream-50)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
+            fontFamily: 'var(--cth-font-ui)', fontSize: '0.85em', color: 'var(--cth-ink-900)',
+            opacity: a.archived ? 0.6 : 1
+          }}
+        >
+          {arrow && <span style={{ color: 'var(--cth-ink-500)', paddingLeft: 4 }}>→</span>}
+          <span aria-hidden="true" style={{
+            width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: 'inline-flex',
+            alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700,
+            background: `var(--cth-${a.accent})`, color: 'var(--cth-on-accent)'
+          }}>{a.name.trim().slice(0, 1).toUpperCase()}</span>
+          <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
+          <PixelBadge status={a.archived ? 'ghost' : a.status} />
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -263,8 +319,8 @@ const linkButton: React.CSSProperties = {
   fontFamily: 'var(--cth-font-ui)'
 };
 
-const EntryView = memo(function EntryView({ entry, accent, cwd }: {
-  entry: ConversationEntry; accent: Agent['accent']; cwd?: string;
+const EntryView = memo(function EntryView({ entry, accent, cwd, selfId }: {
+  entry: ConversationEntry; accent: Agent['accent']; cwd?: string; selfId: string;
 }) {
   const { t } = useTranslation();
   switch (entry.kind) {
@@ -290,6 +346,7 @@ const EntryView = memo(function EntryView({ entry, accent, cwd }: {
       return (
         <div style={{ color: 'var(--cth-ink-900)', fontSize: '1em', lineHeight: 1.5, overflowWrap: 'anywhere', minWidth: 0 }}>
           <MarkdownPreview source={entry.text} variant="card" root={cwd} />
+          <AgentMentions text={entry.text} selfId={selfId} />
         </div>
       );
     case 'thinking':
@@ -303,6 +360,7 @@ const EntryView = memo(function EntryView({ entry, accent, cwd }: {
     case 'tool': {
       const pending = entry.result === undefined;
       return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
         <Collapsible
           label={
             <>
@@ -327,6 +385,8 @@ const EntryView = memo(function EntryView({ entry, accent, cwd }: {
             </pre>
           )}
         </Collapsible>
+        {entry.targets && <AgentMentions ids={entry.targets} selfId={selfId} arrow />}
+        </div>
       );
     }
     case 'event':

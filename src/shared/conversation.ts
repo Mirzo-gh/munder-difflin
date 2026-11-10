@@ -19,7 +19,7 @@ export type RawConversationItem =
   | { kind: 'user'; id: string; ts?: string; text: string; images?: number }
   | { kind: 'assistant'; id: string; ts?: string; text: string }
   | { kind: 'thinking'; id: string; ts?: string; text: string }
-  | { kind: 'tool'; id: string; ts?: string; name: string; summary: string; input: string }
+  | { kind: 'tool'; id: string; ts?: string; name: string; summary: string; input: string; targets?: string[] }
   | { kind: 'toolResult'; toolUseId: string; text: string; isError: boolean }
   | { kind: 'event'; id: string; ts?: string; text: string };
 
@@ -28,7 +28,7 @@ export type ConversationEntry =
   | Exclude<RawConversationItem, { kind: 'tool' } | { kind: 'toolResult' }>
   | {
       kind: 'tool'; id: string; ts?: string; name: string; summary: string; input: string;
-      result?: string; isError?: boolean;
+      targets?: string[]; result?: string; isError?: boolean;
     };
 
 /** Long tool inputs/outputs are clipped: the view is for following along, the
@@ -56,6 +56,24 @@ export function summarizeToolInput(name: string, input: unknown): string {
   const fallback = pick ?? Object.values(o).find((v): v is string => typeof v === 'string' && !!v) ?? '';
   const oneLine = fallback.replace(/\s+/g, ' ').trim();
   return oneLine.length > 160 ? `${oneLine.slice(0, 159)}…` : oneLine;
+}
+
+/** Agents a tool call is addressed to. Hive agents message each other by writing
+ *  a message JSON (`{ "to": "<agent id>", … }`) into their `outbox/`; MCP-style
+ *  tools carry `to` / `agent_id` / `recipient` directly in their input. */
+export function toolTargets(name: string, input: unknown): string[] {
+  const o = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
+  const collect = (v: unknown): string[] =>
+    typeof v === 'string' && v ? [v] : Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && !!x) : [];
+  const path = str(o.file_path) ?? '';
+  if (name === 'Write' && /[\\/]outbox[\\/]/.test(path) && typeof o.content === 'string') {
+    try {
+      const msg = JSON.parse(o.content) as Record<string, unknown>;
+      return collect(msg.to);
+    } catch { return []; }
+  }
+  if (name.startsWith('mcp__')) return [...collect(o.to), ...collect(o.agent_id), ...collect(o.recipient)];
+  return [];
 }
 
 /** A readable rendering of a tool's input for the expanded card. */
@@ -173,9 +191,11 @@ export function parseTranscriptRecord(rec: unknown): RawConversationItem[] {
       } else if (blk.type === 'thinking' && typeof blk.thinking === 'string' && blk.thinking.trim()) {
         out.push({ kind: 'thinking', id: bid, ts, text: clip(blk.thinking) });
       } else if (blk.type === 'tool_use' && typeof blk.name === 'string') {
+        const targets = toolTargets(blk.name, blk.input);
         out.push({
           kind: 'tool', id: str(blk.id) ?? bid, ts, name: blk.name,
-          summary: summarizeToolInput(blk.name, blk.input), input: formatToolInput(blk.name, blk.input)
+          summary: summarizeToolInput(blk.name, blk.input), input: formatToolInput(blk.name, blk.input),
+          ...(targets.length ? { targets } : {})
         });
       }
     });
@@ -220,4 +240,26 @@ export function foldConversation(prev: readonly ConversationEntry[], items: read
     next.push({ ...it });
   }
   return next.length > MAX_ENTRIES ? next.slice(next.length - MAX_ENTRIES) : next;
+}
+
+/** Agents named in a message, in order of first mention. Matches an agent's
+ *  display name (whole words, case-insensitive) or its id. Names shorter than 3
+ *  characters are ignored — too likely to hit ordinary words. */
+export function findAgentMentions<T extends { id: string; name: string }>(
+  text: string, agents: readonly T[], selfId?: string
+): T[] {
+  const hits: Array<{ at: number; agent: T }> = [];
+  const lower = text.toLowerCase();
+  for (const a of agents) {
+    if (a.id === selfId) continue;
+    let at = a.id.length >= 3 ? lower.indexOf(a.id.toLowerCase()) : -1;
+    const name = a.name.trim();
+    if (name.length >= 3) {
+      const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+      const m = new RegExp(`(^|[^\\p{L}\\p{N}_])${esc}(?![\\p{L}\\p{N}_])`, 'iu').exec(text);
+      if (m && (at < 0 || m.index < at)) at = m.index + m[1].length;
+    }
+    if (at >= 0) hits.push({ at, agent: a });
+  }
+  return hits.sort((x, y) => x.at - y.at).map((h) => h.agent);
 }

@@ -154,3 +154,28 @@ test('no menu: plain numbered lists without a cursor, or menus scrolled far up',
   assert.equal(detectTerminalMenu(old), null);
   assert.equal(detectTerminalMenu([]), null);
 });
+
+test('agent mentions: by name or id, whole words, in order, self excluded', () => {
+  const agents = [
+    { id: 'qa-code-reviewer-mw9', name: 'QA & Code Reviewer' },
+    { id: 'god', name: 'Michael' },
+    { id: 'addon-ui-dev', name: 'Addon UI Developer' },
+    { id: 'x1', name: 'QA' },
+  ];
+  const text = "J'ai confié la popup à addon UI developer, puis qa-code-reviewer-mw9 relira. Michael suit.";
+  assert.deepEqual(conv.findAgentMentions(text, agents, 'god').map((a) => a.id), ['addon-ui-dev', 'qa-code-reviewer-mw9']);
+  assert.deepEqual(conv.findAgentMentions('Developers rock', agents), []);
+});
+
+test('tool targets: hive outbox writes and MCP-style recipients', () => {
+  assert.deepEqual(conv.toolTargets('Write', {
+    file_path: 'C:\\hive\\agents\\god\\outbox\\m1.json',
+    content: JSON.stringify({ to: 'addon-ui-dev', act: 'request', subject: 'Popup' })
+  }), ['addon-ui-dev']);
+  assert.deepEqual(conv.toolTargets('Write', { file_path: '/tmp/x.json', content: '{"to":"a"}' }), []);
+  assert.deepEqual(conv.toolTargets('mcp__hive__send', { to: ['a', 'b'] }), ['a', 'b']);
+  const items = conv.parseTranscriptChunk(JSON.stringify({ type: 'assistant', uuid: 'a', message: { content: [
+    { type: 'tool_use', id: 't', name: 'Write', input: { file_path: '/h/outbox/m.json', content: '{"to":"qa"}' } }
+  ] } }) + '\n');
+  assert.deepEqual(items[0].targets, ['qa']);
+});
