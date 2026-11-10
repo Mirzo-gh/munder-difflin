@@ -15,6 +15,7 @@ import { MarkdownPreview } from '@/markdown/MarkdownPreview';
 import { foldConversation, type ConversationEntry } from '@shared/conversation';
 import { Icon } from './Icon';
 import { readTerminalScreen, sendTerminalKeys } from './terminalPool';
+import { useTerminalFontSize, setTerminalFontSize, getTerminalFontSize, DEFAULT_TERMINAL_FONT_SIZE } from './terminalFontSize';
 import { detectTerminalMenu, menuKeystrokes, type TerminalMenu } from '@shared/terminalMenu';
 
 const POLL_MS = 900;
@@ -92,13 +93,16 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
   };
 
   const busy = agent.status === 'working' || agent.status === 'thinking';
+  // Shares the raw terminal's zoom (− 12px + / Ctrl+= / Ctrl+-), one notch up:
+  // proportional UI text reads smaller than the mono grid at the same size.
+  const fontSize = useTerminalFontSize();
   const menu = useTerminalMenu(agent.ptyId);
   const blocked = agent.status === 'blocked' && !menu;
 
   return (
     <div style={{
       flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column',
-      background: 'var(--cth-paper-100)', fontFamily: 'var(--cth-font-ui)'
+      background: 'var(--cth-paper-100)', fontFamily: 'var(--cth-font-ui)', fontSize: fontSize + 1
     }}>
       <div
         ref={scrollRef}
@@ -115,7 +119,7 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
           <div style={{
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
             justifyContent: 'center', gap: 8, textAlign: 'center', color: 'var(--cth-ink-500)',
-            fontSize: 13, padding: 16
+            fontSize: '1em', padding: 16
           }}>
             <div>{state.path ? t('conversation.empty') : t('conversation.noTranscript')}</div>
             <button type="button" onClick={onShowRaw} style={linkButton}>{t('conversation.showRaw')}</button>
@@ -126,7 +130,7 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
         ))}
         {busy && (
           <div role="status" style={{
-            display: 'flex', alignItems: 'center', gap: 6, fontSize: 12,
+            display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.92em',
             color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-ui)'
           }}>
             <CliSpinner />
@@ -141,7 +145,7 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
           background: 'var(--cth-lemon-light)', boxShadow: 'inset 0 1px 0 var(--cth-ink-900)',
-          fontSize: 12, color: 'var(--cth-ink-900)', flexShrink: 0
+          fontSize: '0.92em', color: 'var(--cth-ink-900)', flexShrink: 0
         }}>
           <span style={{ flex: 1, minWidth: 0 }}>
             {agent.blockReason?.summary ?? t('conversation.needsInput')}
@@ -169,7 +173,7 @@ function CliSpinner() {
   }, []);
   return (
     <span aria-hidden="true" style={{
-      display: 'inline-block', width: 14, textAlign: 'center', fontSize: 14,
+      display: 'inline-block', width: 14, textAlign: 'center', fontSize: '1.15em',
       color: 'var(--cth-coral)', fontFamily: 'var(--cth-font-mono)'
     }}>
       {SPINNER_FRAMES[frame]}
@@ -216,7 +220,7 @@ function TerminalMenuCard({ menu, ptyId, accent, onShowRaw }: {
     <div style={{
       flexShrink: 0, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6,
       background: 'var(--cth-lemon-light)', boxShadow: 'inset 0 1px 0 var(--cth-ink-900)',
-      color: 'var(--cth-ink-900)', fontSize: 13
+      color: 'var(--cth-ink-900)', fontSize: '1em'
     }}>
       <div style={{ fontWeight: 600, overflowWrap: 'anywhere' }}>
         {menu.question || t('conversation.menuTitle')}
@@ -229,7 +233,7 @@ function TerminalMenuCard({ menu, ptyId, accent, onShowRaw }: {
           onClick={() => void choose(o.index)}
           style={{
             textAlign: 'left', padding: '6px 10px', borderRadius: 6, cursor: sending ? 'default' : 'pointer',
-            border: 'none', fontFamily: 'var(--cth-font-ui)', fontSize: 13, color: 'var(--cth-ink-900)',
+            border: 'none', fontFamily: 'var(--cth-font-ui)', fontSize: '1em', color: 'var(--cth-ink-900)',
             background: o.index === menu.selected ? `var(--cth-${accent}-light)` : 'var(--cth-paper-100)',
             boxShadow: o.index === menu.selected ? 'inset 0 0 0 1px var(--cth-ink-900)' : 'inset 0 0 0 1px var(--cth-ink-300)',
             opacity: sending ? 0.6 : 1, overflowWrap: 'anywhere'
@@ -249,13 +253,13 @@ function TerminalMenuCard({ menu, ptyId, accent, onShowRaw }: {
 }
 
 const eventStyle: React.CSSProperties = {
-  alignSelf: 'stretch', textAlign: 'center', fontSize: 11, color: 'var(--cth-ink-500)',
+  alignSelf: 'stretch', textAlign: 'center', fontSize: '0.85em', color: 'var(--cth-ink-500)',
   fontFamily: 'var(--cth-font-mono)'
 };
 
 const linkButton: React.CSSProperties = {
   background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-  color: 'var(--cth-ink-900)', textDecoration: 'underline', fontSize: 12,
+  color: 'var(--cth-ink-900)', textDecoration: 'underline', fontSize: '0.92em',
   fontFamily: 'var(--cth-font-ui)'
 };
 
@@ -270,12 +274,12 @@ const EntryView = memo(function EntryView({ entry, accent, cwd }: {
           <div style={{
             maxWidth: '85%', padding: '8px 12px', borderRadius: 12,
             background: `var(--cth-${accent}-light)`, boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
-            color: 'var(--cth-ink-900)', fontSize: 13, lineHeight: '19px',
+            color: 'var(--cth-ink-900)', fontSize: '1em', lineHeight: 1.45,
             whiteSpace: 'pre-wrap', overflowWrap: 'anywhere'
           }}>
             {entry.text}
             {entry.images ? (
-              <div style={{ marginTop: entry.text ? 4 : 0, fontSize: 11, color: 'var(--cth-ink-500)' }}>
+              <div style={{ marginTop: entry.text ? 4 : 0, fontSize: '0.85em', color: 'var(--cth-ink-500)' }}>
                 {t('conversation.images', { count: entry.images })}
               </div>
             ) : null}
@@ -284,14 +288,14 @@ const EntryView = memo(function EntryView({ entry, accent, cwd }: {
       );
     case 'assistant':
       return (
-        <div style={{ color: 'var(--cth-ink-900)', fontSize: 13, lineHeight: '20px', overflowWrap: 'anywhere', minWidth: 0 }}>
+        <div style={{ color: 'var(--cth-ink-900)', fontSize: '1em', lineHeight: 1.5, overflowWrap: 'anywhere', minWidth: 0 }}>
           <MarkdownPreview source={entry.text} variant="card" root={cwd} />
         </div>
       );
     case 'thinking':
       return (
         <Collapsible label={t('conversation.thinking')} muted>
-          <div style={{ whiteSpace: 'pre-wrap', fontSize: 12, color: 'var(--cth-ink-500)', fontStyle: 'italic' }}>
+          <div style={{ whiteSpace: 'pre-wrap', fontSize: '0.92em', color: 'var(--cth-ink-500)', fontStyle: 'italic' }}>
             {entry.text}
           </div>
         </Collapsible>
@@ -333,7 +337,7 @@ const EntryView = memo(function EntryView({ entry, accent, cwd }: {
 const preStyle: React.CSSProperties = {
   margin: '6px 0 0', padding: 8, maxHeight: 280, overflow: 'auto',
   background: 'var(--cth-cream-100)', borderRadius: 6,
-  fontFamily: 'var(--cth-font-mono)', fontSize: 11, lineHeight: '16px',
+  fontFamily: 'var(--cth-font-mono)', fontSize: '0.85em', lineHeight: 1.45,
   whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', color: 'var(--cth-ink-700)'
 };
 
@@ -353,7 +357,7 @@ function Collapsible({ label, children, boxed, muted }: {
         style={{
           display: 'flex', alignItems: 'center', gap: 6, width: '100%', minWidth: 0,
           background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left',
-          fontFamily: 'var(--cth-font-mono)', fontSize: 11,
+          fontFamily: 'var(--cth-font-mono)', fontSize: '0.85em',
           color: muted ? 'var(--cth-ink-500)' : 'var(--cth-ink-900)'
         }}
       >
@@ -361,6 +365,29 @@ function Collapsible({ label, children, boxed, muted }: {
         {label}
       </button>
       {open && <div>{children}</div>}
+    </div>
+  );
+}
+
+const zoomBtn: React.CSSProperties = {
+  minWidth: 18, height: 18, padding: '0 4px', display: 'inline-flex', alignItems: 'center',
+  justifyContent: 'center', fontFamily: 'var(--cth-font-ui)', fontSize: 12, lineHeight: 1,
+  color: 'var(--cth-ink-700)', background: 'var(--cth-paper-100)',
+  border: '1px solid var(--cth-ink-300)', borderRadius: 'var(--cth-radius-sm)', cursor: 'pointer'
+};
+
+/** Same text-size control as the raw terminal's header, on the same setting. */
+function ZoomControls() {
+  const { t } = useTranslation();
+  const size = useTerminalFontSize();
+  return (
+    <div style={{ marginLeft: 'auto', display: 'inline-flex', gap: 2 }}>
+      <button type="button" style={zoomBtn} aria-label={t('conversation.zoomOut')} title={t('conversation.zoomOut')}
+        onClick={() => setTerminalFontSize(getTerminalFontSize() - 1)}>−</button>
+      <button type="button" style={zoomBtn} title={t('conversation.zoomReset')}
+        onClick={() => setTerminalFontSize(DEFAULT_TERMINAL_FONT_SIZE)}>{size}px</button>
+      <button type="button" style={zoomBtn} aria-label={t('conversation.zoomIn')} title={t('conversation.zoomIn')}
+        onClick={() => setTerminalFontSize(getTerminalFontSize() + 1)}>+</button>
     </div>
   );
 }
@@ -392,6 +419,7 @@ export function TerminalModeSwitch({ mode, onChange }: {
       <Icon name="terminal" />
       {opt('conversation', t('conversation.modeConversation'))}
       {opt('raw', t('conversation.modeRaw'))}
+      {mode === 'conversation' && <ZoomControls />}
     </div>
   );
 }

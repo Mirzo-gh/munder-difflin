@@ -192,7 +192,10 @@
     "images": "{{count}} صورة مرفقة",
     "menuTitle": "الوكيل يطلب منك الاختيار",
     "menuEscape": "إلغاء (Esc)",
-    "thinkingNow": "يفكر…"
+    "thinkingNow": "يفكر…",
+    "zoomIn": "تكبير النص (Ctrl +)",
+    "zoomOut": "تصغير النص (Ctrl −)",
+    "zoomReset": "إعادة حجم النص (Ctrl 0)"
   },
   "toolWaterfall": {
     "fresh": "جديد {{tokens}}ر",
