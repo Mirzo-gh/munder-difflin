@@ -253,7 +253,8 @@
     "ackSeen": "Received by the agent",
     "ackDone": "Handled by the agent",
     "addReaction": "Add a reaction",
-    "removeReaction": "Remove this reaction"
+    "removeReaction": "Remove this reaction",
+    "jumpToLatest": "Jump to the latest message"
   },
   "toolWaterfall": {
     "fresh": "fresh {{tokens}}t",

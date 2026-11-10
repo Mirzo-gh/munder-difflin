@@ -89,16 +89,66 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
     return () => { alive = false; if (timer) clearTimeout(timer); };
   }, [agent.id]);
 
-  // Keep the newest message in view while the user is following along.
-  useLayoutEffect(() => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  /** When the user last clicked inside the thread (expanding a block grows it:
+   *  that growth must not yank the view to the bottom). */
+  const clickedAtRef = useRef(0);
+  const toBottom = () => {
     const el = scrollRef.current;
-    if (el && followRef.current) el.scrollTop = el.scrollHeight;
-  }, [state.entries]);
+    if (el) el.scrollTop = el.scrollHeight;
+  };
+
+  // A new agent (switching windows) always opens at the bottom of its thread.
+  useLayoutEffect(() => { followRef.current = true; setAway(false); setUnseen(false); toBottom(); }, [agent.id]);
+  const jumpToLatest = () => {
+    const el = scrollRef.current;
+    followRef.current = true;
+    setAway(false);
+    setUnseen(false);
+    if (el) el.scrollTop = el.scrollHeight;
+  };
+
+  // While you follow along, new messages and tool activity keep the view at the
+  // bottom. Once you scroll up yourself it stays put, and an arrow (with a dot
+  // when something new arrived) brings you back to the latest message.
+  const [away, setAway] = useState(false);
+  const [unseen, setUnseen] = useState(false);
+  const messageCount = useMemo(
+    () => state.entries.reduce((n, e) => (e.kind === 'user' || e.kind === 'assistant' ? n + 1 : n), 0),
+    [state.entries]
+  );
+  const lastCountRef = useRef({ agentId: agent.id, count: messageCount });
+  useLayoutEffect(() => {
+    const last = lastCountRef.current;
+    lastCountRef.current = { agentId: agent.id, count: messageCount };
+    if (followRef.current) toBottom();
+    else if (last.agentId === agent.id && messageCount > last.count) setUnseen(true);
+  }, [state.entries, messageCount, agent.id]);
+
+  // Content keeps growing after render (markdown, inbox cards, syntax colouring
+  // load asynchronously) and the view can be resized or re-shown (Raw ↔
+  // Conversation, the Questions sidebar): stay pinned to the bottom through it.
+  useEffect(() => {
+    const el = scrollRef.current;
+    const inner = contentRef.current;
+    if (!el || !inner || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      if (!followRef.current) return;
+      if (Date.now() - clickedAtRef.current < 800) return;
+      el.scrollTop = el.scrollHeight;
+    });
+    ro.observe(el);
+    ro.observe(inner);
+    return () => ro.disconnect();
+  }, []);
 
   const onScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
-    followRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < STICK_PX;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < STICK_PX;
+    followRef.current = atBottom;
+    setAway(!atBottom);
+    if (atBottom) setUnseen(false);
   };
 
   const busy = agent.status === 'working' || agent.status === 'thinking';
@@ -130,7 +180,7 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
   // Follow along when you send something.
   useLayoutEffect(() => {
     const el = scrollRef.current;
-    if (el && pending.length) { followRef.current = true; el.scrollTop = el.scrollHeight; }
+    if (el && pending.length) { followRef.current = true; setAway(false); setUnseen(false); el.scrollTop = el.scrollHeight; }
   }, [pending.length]);
 
   return (
@@ -141,8 +191,13 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
       <div
         ref={scrollRef}
         onScroll={onScroll}
+        onPointerDown={() => { clickedAtRef.current = Date.now(); }}
+        style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}
+      >
+      <div
+        ref={contentRef}
         style={{
-          flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden',
+          minHeight: '100%', boxSizing: 'border-box',
           padding: '12px 12px 20px', display: 'flex', flexDirection: 'column', gap: 10
         }}
       >
@@ -183,6 +238,33 @@ export function ConversationView({ agent, onShowRaw }: ConversationViewProps) {
           <PendingBubbleView key={p.id} agentId={agent.id} bubble={p} accent={agent.accent} paused={paused} />
         ))}
       </div>
+      </div>
+      {away && (
+        <div style={{ position: 'relative', height: 0, flexShrink: 0 }}>
+          <button
+            type="button"
+            className="cth-jump-latest"
+            onClick={jumpToLatest}
+            title={t('conversation.jumpToLatest')}
+            aria-label={t('conversation.jumpToLatest')}
+            style={{
+              position: 'absolute', left: '50%', bottom: 10, transform: 'translateX(-50%)', zIndex: 4,
+              width: 32, height: 32, borderRadius: 16, border: 'none', cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--cth-paper-100)', color: 'var(--cth-ink-900)',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.25), inset 0 0 0 1px var(--cth-ink-300)'
+            }}
+          >
+            <span style={{ display: 'inline-flex', transform: 'rotate(90deg)' }}><Icon name="arrow-right" /></span>
+            {unseen && (
+              <span style={{
+                position: 'absolute', top: 1, right: 1, width: 9, height: 9, borderRadius: 5,
+                background: 'var(--cth-coral)', boxShadow: '0 0 0 2px var(--cth-paper-100)'
+              }} />
+            )}
+          </button>
+        </div>
+      )}
       {plan.length > 0 && <PlanPanel steps={plan} />}
       {menu && agent.ptyId && (
         <TerminalMenuCard key={menu.key} menu={menu} ptyId={agent.ptyId} accent={agent.accent} onShowRaw={onShowRaw} />

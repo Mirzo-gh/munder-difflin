@@ -253,7 +253,8 @@
     "ackSeen": "代理已收到",
     "ackDone": "代理已处理",
     "addReaction": "添加表情回应",
-    "removeReaction": "移除此回应"
+    "removeReaction": "移除此回应",
+    "jumpToLatest": "跳到最新消息"
   },
   "toolWaterfall": {
     "fresh": "新计 {{tokens}}t",

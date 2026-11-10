@@ -253,7 +253,8 @@
     "ackSeen": "استلمها الوكيل",
     "ackDone": "عالجها الوكيل",
     "addReaction": "أضف تفاعلًا",
-    "removeReaction": "أزل هذا التفاعل"
+    "removeReaction": "أزل هذا التفاعل",
+    "jumpToLatest": "انتقل إلى أحدث رسالة"
   },
   "toolWaterfall": {
     "fresh": "جديد {{tokens}}ر",
