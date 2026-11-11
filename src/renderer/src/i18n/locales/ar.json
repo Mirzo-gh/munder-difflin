@@ -194,6 +194,13 @@
     "answerInTerminal": "أجب في الطرفية",
     "thinking": "تفكير",
     "images": "{{count}} صورة مرفقة",
+    "media": {
+      "image": "صورة {{n}}",
+      "missing": "غير موجود: {{path}}",
+      "artifact": "عنصر Claude",
+      "artifactKind": "عنصر",
+      "open": "فتح"
+    },
     "menuTitle": "الوكيل يطلب منك الاختيار",
     "menuEscape": "إلغاء (Esc)",
     "thinkingNow": "يفكر…",

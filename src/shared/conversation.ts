@@ -16,7 +16,7 @@
 /** One raw item extracted from a transcript line, before tool results are
  *  folded into their tool call. */
 export type RawConversationItem =
-  | { kind: 'user'; id: string; ts?: string; text: string; images?: number }
+  | { kind: 'user'; id: string; ts?: string; text: string; images?: number; imageUrls?: string[] }
   | { kind: 'assistant'; id: string; ts?: string; text: string }
   | { kind: 'thinking'; id: string; ts?: string; text: string }
   | { kind: 'tool'; id: string; ts?: string; name: string; summary: string; input: string; targets?: string[]; plan?: PlanOp }
@@ -238,6 +238,21 @@ function userString(id: string, ts: string | undefined, raw: string): RawConvers
   return { kind: 'user', id, ts, text };
 }
 
+/** Inline images bigger than this stay a count, not a thumbnail: the entry
+ *  lives in renderer memory for the whole session. */
+const MAX_INLINE_IMAGE_CHARS = 4 * 1024 * 1024;
+const INLINE_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+
+/** A `data:` URL for an image pasted straight into Claude Code (a base64
+ *  `image` block in the transcript), or undefined. */
+function inlineImageUrl(source: unknown): string | undefined {
+  const s = (source ?? {}) as Record<string, unknown>;
+  if (s.type !== 'base64' || typeof s.data !== 'string' || typeof s.media_type !== 'string') return undefined;
+  if (!INLINE_IMAGE_TYPES.has(s.media_type) || s.data.length > MAX_INLINE_IMAGE_CHARS) return undefined;
+  if (!/^[A-Za-z0-9+/=\s]+$/.test(s.data.slice(0, 256))) return undefined;
+  return `data:${s.media_type};base64,${s.data}`;
+}
+
 /** Parse ONE transcript record into zero or more raw items. */
 export function parseTranscriptRecord(rec: unknown): RawConversationItem[] {
   if (!rec || typeof rec !== 'object') return [];
@@ -260,6 +275,7 @@ export function parseTranscriptRecord(rec: unknown): RawConversationItem[] {
     if (!Array.isArray(content)) return [];
     const texts: string[] = [];
     let images = 0;
+    const imageUrls: string[] = [];
     content.forEach((b, i) => {
       const blk = (b ?? {}) as Record<string, unknown>;
       if (blk.type === 'tool_result' && typeof blk.tool_use_id === 'string') {
@@ -270,10 +286,16 @@ export function parseTranscriptRecord(rec: unknown): RawConversationItem[] {
         else if (item) out.push(item);
       } else if (blk.type === 'image') {
         images++;
+        const url = inlineImageUrl(blk.source);
+        if (url) imageUrls.push(url);
       }
     });
     if (texts.length || images) {
-      out.push({ kind: 'user', id, ts, text: texts.join('\n\n'), ...(images ? { images } : {}) });
+      out.push({
+        kind: 'user', id, ts, text: texts.join('\n\n'),
+        ...(images ? { images } : {}),
+        ...(imageUrls.length ? { imageUrls } : {})
+      });
     }
     return out;
   }

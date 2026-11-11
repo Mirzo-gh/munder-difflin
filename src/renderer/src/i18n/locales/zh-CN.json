@@ -194,6 +194,13 @@
     "answerInTerminal": "在终端中回答",
     "thinking": "思考",
     "images": "已附加 {{count}} 张图片",
+    "media": {
+      "image": "图片 {{n}}",
+      "missing": "未找到：{{path}}",
+      "artifact": "Claude 工件",
+      "artifactKind": "工件",
+      "open": "打开"
+    },
     "menuTitle": "代理请你做出选择",
     "menuEscape": "取消 (Esc)",
     "thinkingNow": "思考中…",

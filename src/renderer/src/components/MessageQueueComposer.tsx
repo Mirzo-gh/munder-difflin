@@ -10,6 +10,8 @@ import { isComposingKey } from '@shared/imeGuard';
 import { useRtl } from '@/i18n/useDirection';
 import { supportsConversation, useTerminalViewMode } from './ConversationView';
 import { ChatPlusMenu } from './ChatPlusMenu';
+import { ComposerThumb } from './MessageMedia';
+import { isImagePath } from '@shared/imageTypes';
 import { parseInboxNudge } from '@shared/hiveNudge';
 import { InboxNudgeSummary } from './InboxMail';
 import { markQueuedDismissed, useDeliveryPaused } from './ConversationExtras';
@@ -193,7 +195,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
             color: 'var(--cth-ink-900)'
           }}
         >
-          <Icon name="folder" />
+          {isImagePath(a.path) ? <ComposerThumb path={a.path} name={a.name} /> : <Icon name="folder" />}
           <span style={{
             overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', maxWidth: 180
           }}>{a.name}</span>
@@ -468,7 +470,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
                 color: 'var(--cth-ink-900)'
               }}
             >
-              <Icon name="folder" />
+              {isImagePath(a.path) ? <ComposerThumb path={a.path} name={a.name} /> : <Icon name="folder" />}
               <span style={{
                 overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', maxWidth: 180
               }}>{a.name}</span>

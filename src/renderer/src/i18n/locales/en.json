@@ -194,6 +194,13 @@
     "answerInTerminal": "Answer in terminal",
     "thinking": "Thinking",
     "images": "{{count}} image(s) attached",
+    "media": {
+      "image": "Image {{n}}",
+      "missing": "Not found: {{path}}",
+      "artifact": "Claude artifact",
+      "artifactKind": "Artifact",
+      "open": "Open"
+    },
     "menuTitle": "The agent is asking you to choose",
     "menuEscape": "Cancel (Esc)",
     "thinkingNow": "Thinking…",
