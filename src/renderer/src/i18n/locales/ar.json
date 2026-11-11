@@ -216,6 +216,16 @@
     "inboxFromUnknown": "رسالة",
     "inboxFromHuman": "أنت",
     "inboxFromSystem": "النظام",
+    "taskMail": {
+      "done": "أنهيت «{{title}}»",
+      "request": "مطلوب: «{{title}}»",
+      "inform": "مستجدات «{{title}}»",
+      "propose": "اقتراح بشأن «{{title}}»",
+      "query": "سؤال بشأن «{{title}}»",
+      "agree": "موافق على «{{title}}»",
+      "refuse": "لا يمكنني تنفيذ «{{title}}»",
+      "other": "«{{title}}»"
+    },
     "plan": "الخطة",
     "showAll": "عرض الكل",
     "showLess": "عرض أقل",

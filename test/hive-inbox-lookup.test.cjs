@@ -69,3 +69,15 @@ test('falls back to the sender outbox archive, then to the hive log', async (t) 
   const got = hive.inboxMessagesById('a1', ['s1', 'gone']);
   assert.deepEqual(got.map((m) => [m.id, m.from, m.subject, m.body]), [['s1', 'b2', 'subject s1', 'full body'], ['gone', 'god', 'only in log', '']]);
 });
+
+test('names the ledger task the subject is about', async (t) => {
+  const { hive, inbox } = await freshHive(t);
+  fs.writeFileSync(path.join(hive.root(), 'tasks.json'), JSON.stringify({ tasks: [
+    { id: 'O1c', title: 'Veille en direct', status: 'doing' }
+  ] }));
+  fs.writeFileSync(path.join(inbox, 'm5.json'), JSON.stringify(msg('m5', { act: 'done', subject: 'O1c terminé — feat/x @ aa9e2df' })));
+  fs.writeFileSync(path.join(inbox, 'm6.json'), JSON.stringify(msg('m6', { subject: 'Bonjour' })));
+  const [m5, m6] = hive.inboxMessagesById('a1', ['m5', 'm6']);
+  assert.deepEqual(m5.task, { id: 'O1c', title: 'Veille en direct' });
+  assert.equal(m6.task, undefined);
+});

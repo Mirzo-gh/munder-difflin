@@ -216,6 +216,16 @@
     "inboxFromUnknown": "Message",
     "inboxFromHuman": "you",
     "inboxFromSystem": "harness",
+    "taskMail": {
+      "done": "Finished \"{{title}}\"",
+      "request": "To do: \"{{title}}\"",
+      "inform": "Update on \"{{title}}\"",
+      "propose": "Proposal for \"{{title}}\"",
+      "query": "Question about \"{{title}}\"",
+      "agree": "Agreed on \"{{title}}\"",
+      "refuse": "Can't do \"{{title}}\"",
+      "other": "\"{{title}}\""
+    },
     "plan": "Plan",
     "showAll": "Show all",
     "showLess": "Show less",

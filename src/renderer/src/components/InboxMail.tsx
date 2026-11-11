@@ -13,6 +13,7 @@ import { useStore, type Agent } from '@/store/store';
 import { MarkdownPreview } from '@/markdown/MarkdownPreview';
 import { PixelBadge } from './PixelBadge';
 import { AgentMonogram } from './AgentMonogram';
+import { cleanTaskTitle, frenchTaskLine, looksFrench } from '@shared/taskMail';
 
 type HiveMessage = Awaited<ReturnType<Window['cth']['hiveInboxMessages']>>[number];
 
@@ -68,6 +69,25 @@ export function useInboxMessages(agentId: string, ids: string[]): { messages: Ma
   }, [agentId, key]);
 
   return { messages, loading };
+}
+
+/**
+ * The headline of a mail: when it is about a task of the ledger, a sentence
+ * around that task's title ("J'ai terminé « … »"), in the hive's own language
+ * (French titles get the French sentence, whatever the UI language); else the
+ * subject as written. `raw` is the subject, to show underneath or on hover.
+ */
+function useMailHeadline(message: HiveMessage): { headline: string; raw: string | null } {
+  const { t } = useTranslation();
+  const subject = message.subject?.trim() || message.body?.trim().split('\n')[0] || message.id;
+  const task = message.task;
+  if (!task?.title?.trim()) return { headline: subject, raw: null };
+  const title = cleanTaskTitle(task.title);
+  const act = message.act ?? '';
+  const headline = looksFrench(`${task.title} ${message.subject ?? ''}`)
+    ? frenchTaskLine(act, title)
+    : t(`conversation.taskMail.${['done', 'request', 'inform', 'propose', 'query', 'agree', 'refuse'].includes(act) ? act : 'other'}`, { title });
+  return { headline, raw: subject === headline ? null : subject };
 }
 
 /** Resolve a hive id (`from`) to a floor agent, live or archived. */
@@ -232,7 +252,7 @@ function MailRow({ message }: { message: HiveMessage }) {
   // Line the subject and body up under the text, past the portrait or the bare badge.
   const indent = sender ? 32 : 22;
   const [open, setOpen] = useState(false);
-  const subject = message.subject?.trim() || message.body?.trim().split('\n')[0] || message.id;
+  const { headline, raw } = useMailHeadline(message);
   const hasBody = !!message.body?.trim();
   const toggle = () => { if (hasBody) setOpen((o) => !o); };
   return (
@@ -260,12 +280,23 @@ function MailRow({ message }: { message: HiveMessage }) {
             <span aria-hidden="true" style={{ color: 'var(--cth-ink-500)', width: 10, flexShrink: 0 }}>{open ? '▾' : '▸'}</span>
           )}
         </div>
-        <div style={{
-          paddingLeft: indent, marginTop: 2, fontWeight: 600, color: 'var(--cth-ink-900)',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0
+        <div title={message.task?.title} style={{
+          paddingLeft: indent, marginTop: 2, fontWeight: 600, color: 'var(--cth-ink-900)', minWidth: 0,
+          // A task title is a sentence: let it wrap onto a second line before cutting.
+          ...(raw
+            ? { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowWrap: 'anywhere' }
+            : { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })
         }}>
-          {subject}
+          {headline}
         </div>
+        {raw && (
+          <div title={raw} style={{
+            paddingLeft: indent, marginTop: 1, fontSize: '0.82em', color: 'var(--cth-ink-500)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0
+          }}>
+            {raw}
+          </div>
+        )}
       </div>
       {open && hasBody && (
         <div style={{ padding: `0 0 6px ${indent}px`, fontSize: '0.95em', overflowWrap: 'anywhere', minWidth: 0 }}>
@@ -288,15 +319,8 @@ export function InboxNudgeSummary({ agentId, ids }: { agentId: string; ids: stri
         return (
           <span key={id} title={id} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
             <span aria-hidden="true" style={{ color: 'var(--cth-ink-500)' }}>↙</span>
-            {m ? (
-              <>
-                <Sender from={m.from} compact />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                  {m.subject?.trim() || id}
-                </span>
-              </>
-            ) : (
-              <span style={{ color: 'var(--cth-ink-500)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {m ? <SummaryLine message={m} /> : (
+<span style={{ color: 'var(--cth-ink-500)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {t('conversation.inboxFromUnknown')}
               </span>
             )}
@@ -304,5 +328,18 @@ export function InboxNudgeSummary({ agentId, ids }: { agentId: string; ids: stri
         );
       })}
     </span>
+  );
+}
+
+/** One mail in the queue line: sender chip, then the headline (raw subject on hover). */
+function SummaryLine({ message }: { message: HiveMessage }) {
+  const { headline, raw } = useMailHeadline(message);
+  return (
+    <>
+      <Sender from={message.from} compact />
+      <span title={raw ?? undefined} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+        {headline}
+      </span>
+    </>
   );
 }

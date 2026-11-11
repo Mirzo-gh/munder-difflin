@@ -216,6 +216,16 @@
     "inboxFromUnknown": "消息",
     "inboxFromHuman": "你",
     "inboxFromSystem": "系统",
+    "taskMail": {
+      "done": "已完成「{{title}}」",
+      "request": "待办：「{{title}}」",
+      "inform": "关于「{{title}}」的进展",
+      "propose": "关于「{{title}}」的提议",
+      "query": "关于「{{title}}」的问题",
+      "agree": "同意「{{title}}」",
+      "refuse": "无法完成「{{title}}」",
+      "other": "「{{title}}」"
+    },
     "plan": "计划",
     "showAll": "显示全部",
     "showLess": "收起",
