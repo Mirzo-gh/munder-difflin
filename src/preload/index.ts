@@ -74,6 +74,8 @@ export interface HiveMessage {
   requires_reply: boolean;
   needs_human: boolean;
   created_at: string;
+  /** The ledger task the subject names (inbox lookup only). */
+  task?: { id: string; title: string };
 }
 
 export interface HiveRegistry {

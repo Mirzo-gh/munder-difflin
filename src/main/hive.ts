@@ -54,6 +54,7 @@ type McpDefaultsMap = { [id: string]: { enabled: boolean } } | undefined;
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 import type { MessageAct } from '../shared/messageAct';
+import { findMailTask, type MailTask } from '../shared/taskMail';
 export type { MessageAct };
 
 /** What `settleInbox` did to a released worker's mailbox. */
@@ -82,6 +83,9 @@ export interface HiveMessage {
   requires_reply: boolean;
   needs_human: boolean;
   created_at: string;
+  /** Not on disk: the ledger card the subject names, added by
+   *  inboxMessagesById so the inbox card can read as a sentence. */
+  task?: MailTask;
 }
 
 /** One question→answer exchange with the human, recorded ON the task card so
@@ -2056,7 +2060,15 @@ export class HiveManager {
         }
       } catch { /* no log yet */ }
     }
-    return wanted.filter((x) => found.has(x)).map((x) => found.get(x)!);
+    const result = wanted.filter((x) => found.has(x)).map((x) => found.get(x)!);
+    // Name the task each mail is about (by its title in tasks.json): agents
+    // write subjects for each other, the human reads the card's title.
+    const ledger = this.tasks() as { tasks?: unknown };
+    const cards = Array.isArray(ledger?.tasks) ? (ledger.tasks as Array<{ id?: unknown; title?: unknown }>) : [];
+    return result.map((m) => {
+      const task = findMailTask(m.subject, m.conversation, cards);
+      return task ? { ...m, task } : m;
+    });
   }
   /** Read an agent's OUTBOX (messages it has authored/sent). Symmetric with
    *  inbox(); the router drains live outbox files into recipients' inboxes and

@@ -25,6 +25,8 @@ import { useTerminalFontSize, setTerminalFontSize, getTerminalFontSize, DEFAULT_
 import { detectTerminalMenu, menuKeystrokes, type TerminalMenu } from '@shared/terminalMenu';
 import { parseInboxNudge } from '@shared/hiveNudge';
 import { AgentChip, InboxNudgeCard } from './InboxMail';
+import { splitAttachedFiles } from '@shared/messageMedia';
+import { ArtifactCards, MessageAttachments } from './MessageMedia';
 import { PendingStatus, Reactable, useDeliveryPaused, usePendingBubbles, type Ack, type PendingBubble } from './ConversationExtras';
 
 const POLL_MS = 900;
@@ -392,22 +394,37 @@ const linkButton: React.CSSProperties = {
   fontFamily: 'var(--cth-font-ui)'
 };
 
-/** Your message, as a bubble on the right. */
-function UserBubble({ text, images, accent, dim }: { text: string; images?: number; accent: Agent['accent']; dim?: boolean }) {
+/** Your message, as a bubble on the right — with what you attached shown as
+ *  thumbnails / file chips above it instead of the raw "Attached files:" paths. */
+function UserBubble({ text: raw, images, imageUrls, accent, dim }: {
+  text: string; images?: number; imageUrls?: string[]; accent: Agent['accent']; dim?: boolean;
+}) {
   const { t } = useTranslation();
+  const { text, files } = useMemo(() => splitAttachedFiles(raw), [raw]);
+  // Images Claude Code holds inline but too big to preview stay a count.
+  const unseen = (images ?? 0) - (imageUrls?.length ?? 0);
+  const hasMedia = files.length > 0 || !!imageUrls?.length;
   return (
     <div style={{
-      maxWidth: '100%', padding: '8px 12px', borderRadius: 12,
-      background: `var(--cth-${accent}-light)`, boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
-      color: 'var(--cth-ink-900)', fontSize: '1em', lineHeight: 1.45,
-      whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', opacity: dim ? 0.7 : undefined
+      display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6,
+      maxWidth: '100%', minWidth: 0, opacity: dim ? 0.7 : undefined
     }}>
-      {text}
-      {images ? (
-        <div style={{ marginTop: text ? 4 : 0, fontSize: '0.85em', color: 'var(--cth-ink-500)' }}>
-          {t('conversation.images', { count: images })}
+      {hasMedia && <MessageAttachments files={files} imageUrls={imageUrls} />}
+      {(text || unseen > 0 || !hasMedia) && (
+        <div style={{
+          maxWidth: '100%', padding: '8px 12px', borderRadius: 12,
+          background: `var(--cth-${accent}-light)`, boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
+          color: 'var(--cth-ink-900)', fontSize: '1em', lineHeight: 1.45,
+          whiteSpace: 'pre-wrap', overflowWrap: 'anywhere'
+        }}>
+          {text}
+          {unseen > 0 ? (
+            <div style={{ marginTop: text ? 4 : 0, fontSize: '0.85em', color: 'var(--cth-ink-500)' }}>
+              {t('conversation.images', { count: unseen })}
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
@@ -436,7 +453,7 @@ const EntryView = memo(function EntryView({ entry, accent, cwd, selfId, ack }: {
       if (nudgeIds) return <InboxNudgeCard agentId={selfId} ids={nudgeIds} />;
       return (
         <Reactable reactKey={`${selfId}:${entry.id}`} align="end" ack={ack}>
-          <UserBubble text={entry.text} images={entry.images} accent={accent} />
+          <UserBubble text={entry.text} images={entry.images} imageUrls={entry.imageUrls} accent={accent} />
         </Reactable>
       );
     }
@@ -445,6 +462,7 @@ const EntryView = memo(function EntryView({ entry, accent, cwd, selfId, ack }: {
         <Reactable reactKey={`${selfId}:${entry.id}`} align="start">
           <div style={{ color: 'var(--cth-ink-900)', fontSize: '1em', lineHeight: 1.5, overflowWrap: 'anywhere', minWidth: 0 }}>
             <MarkdownPreview source={entry.text} variant="card" root={cwd} />
+            <ArtifactCards text={entry.text} />
             <AgentMentions text={entry.text} selfId={selfId} />
           </div>
         </Reactable>

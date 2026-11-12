@@ -194,6 +194,13 @@
     "answerInTerminal": "Answer in terminal",
     "thinking": "Thinking",
     "images": "{{count}} image(s) attached",
+    "media": {
+      "image": "Image {{n}}",
+      "missing": "Not found: {{path}}",
+      "artifact": "Claude artifact",
+      "artifactKind": "Artifact",
+      "open": "Open"
+    },
     "menuTitle": "The agent is asking you to choose",
     "menuEscape": "Cancel (Esc)",
     "thinkingNow": "Thinking…",
@@ -216,6 +223,16 @@
     "inboxFromUnknown": "Message",
     "inboxFromHuman": "you",
     "inboxFromSystem": "harness",
+    "taskMail": {
+      "done": "Finished \"{{title}}\"",
+      "request": "To do: \"{{title}}\"",
+      "inform": "Update on \"{{title}}\"",
+      "propose": "Proposal for \"{{title}}\"",
+      "query": "Question about \"{{title}}\"",
+      "agree": "Agreed on \"{{title}}\"",
+      "refuse": "Can't do \"{{title}}\"",
+      "other": "\"{{title}}\""
+    },
     "plan": "Plan",
     "showAll": "Show all",
     "showLess": "Show less",

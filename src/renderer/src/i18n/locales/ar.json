@@ -194,6 +194,13 @@
     "answerInTerminal": "أجب في الطرفية",
     "thinking": "تفكير",
     "images": "{{count}} صورة مرفقة",
+    "media": {
+      "image": "صورة {{n}}",
+      "missing": "غير موجود: {{path}}",
+      "artifact": "عنصر Claude",
+      "artifactKind": "عنصر",
+      "open": "فتح"
+    },
     "menuTitle": "الوكيل يطلب منك الاختيار",
     "menuEscape": "إلغاء (Esc)",
     "thinkingNow": "يفكر…",
@@ -216,6 +223,16 @@
     "inboxFromUnknown": "رسالة",
     "inboxFromHuman": "أنت",
     "inboxFromSystem": "النظام",
+    "taskMail": {
+      "done": "أنهيت «{{title}}»",
+      "request": "مطلوب: «{{title}}»",
+      "inform": "مستجدات «{{title}}»",
+      "propose": "اقتراح بشأن «{{title}}»",
+      "query": "سؤال بشأن «{{title}}»",
+      "agree": "موافق على «{{title}}»",
+      "refuse": "لا يمكنني تنفيذ «{{title}}»",
+      "other": "«{{title}}»"
+    },
     "plan": "الخطة",
     "showAll": "عرض الكل",
     "showLess": "عرض أقل",

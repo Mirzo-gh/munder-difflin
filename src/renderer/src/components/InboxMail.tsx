@@ -11,8 +11,9 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStore, type Agent } from '@/store/store';
 import { MarkdownPreview } from '@/markdown/MarkdownPreview';
-import { PixelBadge } from './PixelBadge';
+import { PixelBadge, StatusDot } from './PixelBadge';
 import { AgentMonogram } from './AgentMonogram';
+import { cleanTaskTitle, frenchTaskLine, looksFrench } from '@shared/taskMail';
 
 type HiveMessage = Awaited<ReturnType<Window['cth']['hiveInboxMessages']>>[number];
 
@@ -70,6 +71,25 @@ export function useInboxMessages(agentId: string, ids: string[]): { messages: Ma
   return { messages, loading };
 }
 
+/**
+ * The headline of a mail: when it is about a task of the ledger, a sentence
+ * around that task's title ("J'ai terminé « … »"), in the hive's own language
+ * (French titles get the French sentence, whatever the UI language); else the
+ * subject as written. `raw` is the subject, to show underneath or on hover.
+ */
+function useMailHeadline(message: HiveMessage): { headline: string; raw: string | null } {
+  const { t } = useTranslation();
+  const subject = message.subject?.trim() || message.body?.trim().split('\n')[0] || message.id;
+  const task = message.task;
+  if (!task?.title?.trim()) return { headline: subject, raw: null };
+  const title = cleanTaskTitle(task.title);
+  const act = message.act ?? '';
+  const headline = looksFrench(`${task.title} ${message.subject ?? ''}`)
+    ? frenchTaskLine(act, title)
+    : t(`conversation.taskMail.${['done', 'request', 'inform', 'propose', 'query', 'agree', 'refuse'].includes(act) ? act : 'other'}`, { title });
+  return { headline, raw: subject === headline ? null : subject };
+}
+
 /** Resolve a hive id (`from`) to a floor agent, live or archived. */
 function useFloorAgent(id: string): Agent | undefined {
   const agents = useStore((s) => s.agents) ?? EMPTY_AGENTS;
@@ -83,15 +103,17 @@ function useFloorAgent(id: string): Agent | undefined {
  * A clickable agent chip (initial, name, live status) that opens that agent's
  * terminal tab. Shared with the Conversation view's agent mentions.
  */
-export function AgentChip({ agent, arrow, compact }: { agent: Agent; arrow?: boolean; compact?: boolean }) {
+export function AgentChip({ agent, arrow, compact, shrink }: { agent: Agent; arrow?: boolean; compact?: boolean; shrink?: boolean }) {
   const select = useStore((s) => s.select);
   const setSidebarTab = useStore((s) => s.setSidebarTab);
   const fullscreenAgentId = useStore((s) => s.fullscreenAgentId);
   const setFullscreen = useStore((s) => s.setFullscreen);
+  const { t } = useTranslation();
+  const status = agent.archived ? 'ghost' : agent.status;
   return (
     <button
       type="button"
-      title={agent.cwd}
+      title={shrink ? `${agent.name} · ${t(`badge.${status}`)}\n${agent.cwd}` : agent.cwd}
       onClick={(e) => {
         e.stopPropagation();
         if (fullscreenAgentId) setFullscreen(null);
@@ -101,7 +123,9 @@ export function AgentChip({ agent, arrow, compact }: { agent: Agent; arrow?: boo
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
         padding: compact ? '1px 6px 1px 2px' : '3px 8px 3px 4px',
-        borderRadius: 999, border: 'none', cursor: 'pointer', maxWidth: '100%', flexShrink: 0,
+        borderRadius: 999, border: 'none', cursor: 'pointer', maxWidth: '100%',
+        // `shrink`: in a tight row the chip gives way first, its name cut with an ellipsis.
+        flexShrink: shrink ? 1 : 0, minWidth: shrink ? 0 : undefined, overflow: shrink ? 'hidden' : undefined,
         background: 'var(--cth-cream-50)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
         fontFamily: 'var(--cth-font-ui)', fontSize: '0.85em', color: 'var(--cth-ink-900)',
         opacity: agent.archived ? 0.6 : 1
@@ -113,8 +137,22 @@ export function AgentChip({ agent, arrow, compact }: { agent: Agent; arrow?: boo
         alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700,
         background: `var(--cth-${agent.accent})`, color: 'var(--cth-on-accent)'
       }}>{agent.name.trim().slice(0, 1).toUpperCase()}</span>
-      <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agent.name}</span>
-      <PixelBadge status={agent.archived ? 'ghost' : agent.status} />
+      <span style={{
+        fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        ...(shrink ? { flexShrink: 1, minWidth: '2.5em' } : {})
+      }}>{agent.name}</span>
+      {shrink ? (
+        // Tight row: the status word gives way first, then the name; the dot stays.
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 7, flexShrink: 1000 }}>
+          <StatusDot status={status} />
+          <span style={{
+            fontSize: 11, lineHeight: '16px', color: 'var(--cth-ink-500)', userSelect: 'none',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0
+          }}>{t(`badge.${status}`)}</span>
+        </span>
+      ) : (
+        <PixelBadge status={status} />
+      )}
     </button>
   );
 }
@@ -127,11 +165,15 @@ function senderLabel(from: string, t: (k: string) => string): string {
 }
 
 /** The sender of a hive message: an agent chip, or a plain label for the human / harness. */
-function Sender({ from, compact }: { from: string; compact?: boolean }) {
+function Sender({ from, compact, shrink }: { from: string; compact?: boolean; shrink?: boolean }) {
   const { t } = useTranslation();
   const agent = useFloorAgent(from);
-  if (agent) return <AgentChip agent={agent} compact={compact} />;
-  return <span style={{ fontWeight: 600, flexShrink: 0, color: 'var(--cth-ink-700)' }}>{senderLabel(from, t)}</span>;
+  if (agent) return <AgentChip agent={agent} compact={compact} shrink={shrink} />;
+  return <span style={{
+    fontWeight: 600, color: 'var(--cth-ink-700)', ...(shrink
+      ? { flexShrink: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
+      : { flexShrink: 0 })
+  }}>{senderLabel(from, t)}</span>;
 }
 
 /**
@@ -232,7 +274,7 @@ function MailRow({ message }: { message: HiveMessage }) {
   // Line the subject and body up under the text, past the portrait or the bare badge.
   const indent = sender ? 32 : 22;
   const [open, setOpen] = useState(false);
-  const subject = message.subject?.trim() || message.body?.trim().split('\n')[0] || message.id;
+  const { headline, raw } = useMailHeadline(message);
   const hasBody = !!message.body?.trim();
   const toggle = () => { if (hasBody) setOpen((o) => !o); };
   return (
@@ -249,7 +291,7 @@ function MailRow({ message }: { message: HiveMessage }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: '0.95em' }}>
           <ReceiveBadge from={message.from} />
           <span style={{ color: 'var(--cth-ink-500)', flexShrink: 0 }}>{t('conversation.inboxFrom')}</span>
-          <Sender from={message.from} />
+          <Sender from={message.from} shrink />
           <span style={{ flex: 1, minWidth: 8 }} />
           {message.act && (
             <span style={{
@@ -260,12 +302,23 @@ function MailRow({ message }: { message: HiveMessage }) {
             <span aria-hidden="true" style={{ color: 'var(--cth-ink-500)', width: 10, flexShrink: 0 }}>{open ? '▾' : '▸'}</span>
           )}
         </div>
-        <div style={{
-          paddingLeft: indent, marginTop: 2, fontWeight: 600, color: 'var(--cth-ink-900)',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0
+        <div title={message.task?.title} style={{
+          paddingLeft: indent, marginTop: 2, fontWeight: 600, color: 'var(--cth-ink-900)', minWidth: 0,
+          // A task title is a sentence: let it wrap onto a second line before cutting.
+          ...(raw
+            ? { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowWrap: 'anywhere' }
+            : { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })
         }}>
-          {subject}
+          {headline}
         </div>
+        {raw && (
+          <div title={raw} style={{
+            paddingLeft: indent, marginTop: 1, fontSize: '0.82em', color: 'var(--cth-ink-500)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0
+          }}>
+            {raw}
+          </div>
+        )}
       </div>
       {open && hasBody && (
         <div style={{ padding: `0 0 6px ${indent}px`, fontSize: '0.95em', overflowWrap: 'anywhere', minWidth: 0 }}>
@@ -288,15 +341,8 @@ export function InboxNudgeSummary({ agentId, ids }: { agentId: string; ids: stri
         return (
           <span key={id} title={id} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
             <span aria-hidden="true" style={{ color: 'var(--cth-ink-500)' }}>↙</span>
-            {m ? (
-              <>
-                <Sender from={m.from} compact />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                  {m.subject?.trim() || id}
-                </span>
-              </>
-            ) : (
-              <span style={{ color: 'var(--cth-ink-500)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {m ? <SummaryLine message={m} /> : (
+<span style={{ color: 'var(--cth-ink-500)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {t('conversation.inboxFromUnknown')}
               </span>
             )}
@@ -304,5 +350,18 @@ export function InboxNudgeSummary({ agentId, ids }: { agentId: string; ids: stri
         );
       })}
     </span>
+  );
+}
+
+/** One mail in the queue line: sender chip, then the headline (raw subject on hover). */
+function SummaryLine({ message }: { message: HiveMessage }) {
+  const { headline, raw } = useMailHeadline(message);
+  return (
+    <>
+      <Sender from={message.from} compact shrink />
+      <span title={raw ?? undefined} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+        {headline}
+      </span>
+    </>
   );
 }
